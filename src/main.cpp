@@ -61,6 +61,12 @@ void handleRoot()
   web_server.send(200, "text/html", html);
 }
 
+void on_config_saved()
+{
+  log_v("on_config_saved");
+  ESP.restart();
+}
+
 void initialize_camera()
 {
   log_v("Initialize camera");
@@ -102,12 +108,6 @@ void start_rtsp_server()
   initialize_camera();
   auto frame_rate = atol(frame_rate_val);
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
-}
-
-void on_config_saved()
-{
-  log_v("on_config_saved");
-  start_rtsp_server();
 }
 
 void on_connected()
