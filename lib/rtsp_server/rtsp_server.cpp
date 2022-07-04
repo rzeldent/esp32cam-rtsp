@@ -1,6 +1,5 @@
 #include "rtsp_server.h"
 #include <esp32-hal-log.h>
-#include <ESPmDNS.h>
 #include <OV2640Streamer.h>
 
 // URI: e.g. rtsp://192.168.178.27:554/mjpeg/1
@@ -9,9 +8,6 @@ rtsp_server::rtsp_server(OV2640 &cam, unsigned long interval, int port /*= 554*/
 {
 	log_i("Starting RTSP server");
 	WiFiServer::begin();
-	// Add service to mDNS - rtsp
-	MDNS.addService("rtsp", "tcp", 554);
-
 	timer_.every(interval, client_handler, this);
 }
 

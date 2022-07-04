@@ -1,16 +1,11 @@
 #include <Arduino.h>
-
 #include <soc/rtc_cntl_reg.h>
-
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
-
 #include <OV2640.h>
-
+#include <ESPmDNS.h>
 #include <rtsp_server.h>
-
 #include <frame_size.h>
-
 #include <esp32cam.h>
 
 char frame_rate_val[6];
@@ -54,7 +49,7 @@ void handleRoot()
   html += "<h3>Settings</h3>";
   html += "<ul>";
   html += "<li>Frame size: " + String(frame_size_val) + "</li>";
-  html += "<li>Frame rate: " + String(frame_rate_val) + "</li>";
+  html += "<li>Frame rate: " + String(frame_rate_val) + " ms</li>";
   html += "</ul>";
   html += "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
   html += "</body></html>";
@@ -149,6 +144,15 @@ void setup()
                 { iotWebConf.handleConfig(); });
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
+
+  // Set DNS to thingname
+  if (!MDNS.begin(iotWebConf.getThingName()))
+    log_e("Error setting up MDNS responder!");
+ 
+  // Add service to mDNS - http
+  MDNS.addService("http", "tcp", 80);
+  	// Add service to mDNS - rtsp
+	MDNS.addService("rtsp", "tcp", 554);
 }
 
 void loop()
