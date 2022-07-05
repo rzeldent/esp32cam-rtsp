@@ -7,6 +7,8 @@
 #include <rtsp_server.h>
 #include <frame_size.h>
 #include <camera_config.h>
+#include <format_duration.h>
+#include <format_si.h>
 #include <settings.h>
 
 char camera_config_val[sizeof(camera_config_entry)];
@@ -45,6 +47,7 @@ void handle_root()
   html += "<title>" APP_TITLE " v" APP_VERSION "</title></head>";
   html += "<body>";
   html += "<h2>Status page for " + String(iotWebConf.getThingName()) + "</h2><hr />";
+
   html += "<h3>ESP32</h3>";
   html += "<ul>";
   html += "<li>CPU model: " + String(ESP.getChipModel()) + "</li>";
@@ -53,13 +56,22 @@ void handle_root()
   html += "<li>IPv4 address: " + WiFi.localIP().toString() + "</li>";
   html += "<li>IPv6 address: " + WiFi.localIPv6().toString() + "</li>";
   html += "</ul>";
+
   html += "<h3>Settings</h3>";
   html += "<ul>";
   html += "<li>Camera type: " + String(camera_config_val) + "</li>";
   html += "<li>Frame size: " + String(frame_size_val) + "</li>";
-  html += "<li>Frame rate: " + String(frame_rate_val) + " ms</li>";
+  html += "<li>Frame rate: " + String(frame_rate_val) + " ms (" + String(1000.0 / atol(frame_rate_val), 1) + " f/s)</li>";
   html += "<li>JPEG quality: " + String(jpeg_quality_val) + " (0-100)</li>";
   html += "</ul>";
+
+  html += "<h3>Diagnostics</h3>";
+  html += "<ul>";
+  html += "<li>Uptime: " + String(format_duration(millis() / 1000)) + "</li>";
+  html += "<li>Free heap: " + format_si(ESP.getFreeHeap()) + "b</li>";
+  html += "<li>Max free block: " + format_si(ESP.getMaxAllocHeap()) + "b</li>";
+  html += "</ul>";
+
   html += "<br/>camera stream: <a href=\"" + url + "\">" + url + "</a>";
   html += "<br />";
   html += "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
@@ -84,14 +96,14 @@ void handle_restart()
     html += "<title>" APP_TITLE " v" APP_VERSION "</title></head>";
     html += "<body>";
     web_server.send(200, "text/html", html);
-    log_v("Restarting...");
+    log_v("Restarting... Press refresh to connect again");
     sleep(250);
     ESP.restart();
   }
   else
   {
     // Redirect to root page.
-    web_server.sendHeader("Location", "/", true );
+    web_server.sendHeader("Location", "/", true);
     web_server.send(302, "text/plain", "");
   }
 }
@@ -100,6 +112,24 @@ void on_config_saved()
 {
   log_v("on_config_saved");
   config_changed = true;
+}
+
+bool form_validator(iotwebconf::WebRequestWrapper *webRequestWrapper)
+{
+  log_v("Validating form");
+  auto frame_rate = webRequestWrapper->arg(config_frame_rate.getId()).toInt();
+  if (frame_rate <= 10)
+  {
+    log_w("Frame rate must be greater than 10 ms (100 f/s)");
+    return false;
+  }
+
+  auto jpeg_quality = webRequestWrapper->arg(config_jpg_quality.getId()).toInt();
+  if (jpeg_quality < 1 || jpeg_quality > 100)
+  {
+    log_w("JPEG quality must be between 1 and 100");
+    return false;
+  }
 }
 
 void initialize_camera()
@@ -159,6 +189,7 @@ void setup()
   config_group_stream_settings.addItem(&config_frame_size);
   config_group_stream_settings.addItem(&config_jpg_quality);
   iotWebConf.addParameterGroup(&config_group_stream_settings);
+  iotWebConf.setFormValidator(form_validator);
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
