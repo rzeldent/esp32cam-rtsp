@@ -31,6 +31,7 @@ std::unique_ptr<rtsp_server> camera_server;
 // Web server
 WebServer web_server(80);
 IotWebConf iotWebConf(WIFI_SSID, &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
+
 bool config_changed = false;
 
 void handle_root()
@@ -132,9 +133,9 @@ bool form_validator(iotwebconf::WebRequestWrapper *webRequestWrapper)
   }
 }
 
-void initialize_camera()
+bool initialize_camera()
 {
-  log_v("Initialize camera");
+  log_v("initialize_camera");
   log_i("Camera config: %s", camera_config_val);
   auto camera_config = lookup_camera_config(camera_config_val);
   log_i("Frame size: %s", frame_size_val);
@@ -145,16 +146,17 @@ void initialize_camera()
 
   camera_config.frame_size = frame_size;
   camera_config.jpeg_quality = jpeg_quality;
-  if (cam.init(camera_config) == ESP_OK)
-    log_i("Camera found");
-  else
-    log_e("No camera found");
+  return cam.init(camera_config) == ESP_OK;
 }
 
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  initialize_camera();
+  if (!initialize_camera())
+  {
+    log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_rate_val, jpeg_quality_val);
+    return;
+  }
   auto frame_rate = atol(frame_rate_val);
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
   // Add service to mDNS - rtsp
@@ -203,7 +205,7 @@ void setup()
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
-  // Set DNS to thingname
+  // Set DNS to thing name
   MDNS.begin(iotWebConf.getThingName());
   // Add service to mDNS - http
   MDNS.addService("http", "tcp", 80);
