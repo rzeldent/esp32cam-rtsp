@@ -18,9 +18,9 @@ char jpeg_quality_val[4];
 
 auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
 auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
-auto config_frame_rate = iotwebconf::NumberParameter("Frame rate (ms)", "fr", frame_rate_val, sizeof(frame_rate_val), DEFAULT_FRAMERATE);
+auto config_frame_rate = iotwebconf::NumberParameter("Frame rate (ms)", "fr", frame_rate_val, sizeof(frame_rate_val), DEFAULT_FRAMERATE, nullptr, "min=\"10\"");
 auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAMESIZE);
-auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY);
+auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
 
 // Camera
 OV2640 cam;
@@ -115,24 +115,6 @@ void on_config_saved()
   config_changed = true;
 }
 
-bool form_validator(iotwebconf::WebRequestWrapper *webRequestWrapper)
-{
-  log_v("Validating form");
-  auto frame_rate = webRequestWrapper->arg(config_frame_rate.getId()).toInt();
-  if (frame_rate <= 10)
-  {
-    log_w("Frame rate must be greater than 10 ms (100 f/s)");
-    return false;
-  }
-
-  auto jpeg_quality = webRequestWrapper->arg(config_jpg_quality.getId()).toInt();
-  if (jpeg_quality < 1 || jpeg_quality > 100)
-  {
-    log_w("JPEG quality must be between 1 and 100");
-    return false;
-  }
-}
-
 bool initialize_camera()
 {
   log_v("initialize_camera");
@@ -191,7 +173,6 @@ void setup()
   config_group_stream_settings.addItem(&config_frame_size);
   config_group_stream_settings.addItem(&config_jpg_quality);
   iotWebConf.addParameterGroup(&config_group_stream_settings);
-  iotWebConf.setFormValidator(form_validator);
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
