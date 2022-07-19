@@ -56,6 +56,7 @@ This will put the ESP32-CAM board in download mode.
 
 ### FTDI adapter
 When using an FTDI adapter, make sure the adapter is set to 3.3 volt before connecting. Use the wiring schema below.
+
 ![ESP FTDI wiring](assets/ESP32CAM-to-FTDI.png)
 
 After programming remove the wire to tge GPIO00 pin to exit the download mode.
