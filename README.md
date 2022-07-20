@@ -1,5 +1,7 @@
 # ESP32CAM-RTSP
 
+![example event parameter](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg?event=push)
+
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol) server.
 Easy configuration through the web interface. Stable.
 
