@@ -11,8 +11,6 @@ jobs:
         with:
           python-version: '3.x'
           architecture: 'x64'
-      - name: Show python version
-        run: python --version
       - name: Install PlatformIO
         run: python -m pip install platformio
       - name: Build firmware
@@ -20,5 +18,5 @@ jobs:
       - name: Archive
         uses: actions/upload-artifact@v2
         with:
-          name: firmware
+          name: firmware.bin
           path: .pio/build/*/firmware.bin
