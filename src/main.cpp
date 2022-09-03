@@ -32,6 +32,7 @@ std::unique_ptr<rtsp_server> camera_server;
 WebServer web_server(80);
 IotWebConf iotWebConf(WIFI_SSID, &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
+// Keep track of config changes. This will allow a reset of the device
 bool config_changed = false;
 
 void handle_root()
@@ -44,9 +45,11 @@ void handle_root()
   auto url = "rtsp://" + String(iotWebConf.getThingName()) + ".local:" + String(RTSP_PORT) + "/mjpeg/1";
 
   String html;
-  html += "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
-  html += "<title>" APP_TITLE " v" APP_VERSION "</title></head>";
-  html += "<body>";
+  html += "<!DOCTYPE html><html lang=\"en\">"
+          "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
+          "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
+          "<body>";
+
   html += "<h2>Status page for " + String(iotWebConf.getThingName()) + "</h2><hr />";
 
   html += "<h3>ESP32</h3>";
@@ -76,6 +79,7 @@ void handle_root()
   html += "<br/>camera stream: <a href=\"" + url + "\">" + url + "</a>";
   html += "<br />";
   html += "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
+
   if (config_changed)
   {
     html += "<br />";
@@ -89,24 +93,23 @@ void handle_root()
 void handle_restart()
 {
   log_v("Handle restart");
-  if (config_changed)
-  {
-    String html;
-    html += "<h2>Restarting...</h2>";
-    html += "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
-    html += "<title>" APP_TITLE " v" APP_VERSION "</title></head>";
-    html += "<body>";
-    web_server.send(200, "text/html", html);
-    log_v("Restarting... Press refresh to connect again");
-    sleep(250);
-    ESP.restart();
-  }
-  else
+  if (!config_changed)
   {
     // Redirect to root page.
     web_server.sendHeader("Location", "/", true);
     web_server.send(302, "text/plain", "");
+    return;
   }
+
+  String html;
+  html += "<h2>Restarting...</h2>";
+  html += "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
+  html += "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>";
+  html += "<body>";
+  web_server.send(200, "text/html", html);
+  log_v("Restarting... Press refresh to connect again");
+  sleep(250);
+  ESP.restart();
 }
 
 void on_config_saved()
@@ -139,6 +142,7 @@ void start_rtsp_server()
     log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_rate_val, jpeg_quality_val);
     return;
   }
+
   auto frame_rate = atol(frame_rate_val);
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
   // Add service to mDNS - rtsp
