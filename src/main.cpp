@@ -46,7 +46,7 @@ void handle_root()
   const char *root_page_template =
       "<!DOCTYPE html><html lang=\"en\">"
       "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
-      "<head><title>{{Title}}" APP_TITLE " v" APP_VERSION "</title></head>"
+      "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
       "<body>"
       "<h2>Status page for {{ThingName}}</h2><hr />"
 
@@ -79,8 +79,6 @@ void handle_root()
       "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
 
   const template_substitution_t root_page_substitutions[] = {
-      {"Title", APP_TITLE},
-      {"Version", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()},
       {"ChipModel", ESP.getChipModel()},
       {"CpuFreqMHz", String(ESP.getCpuFreqMHz())},
@@ -100,10 +98,8 @@ void handle_root()
   auto html = template_render(root_page_template, root_page_substitutions);
 
   if (config_changed)
-  {
     html += "<br />"
             "<br/><h3 style=\"color:red\">Configuration has changed. Please <a href=\"restart\">restart</a> the device.</h3>";
-  }
 
   html += "</body></html>";
   web_server.send(200, "text/html", html);
@@ -120,11 +116,11 @@ void handle_restart()
     return;
   }
 
-  String html;
-  html += "<h2>Restarting...</h2>";
-  html += "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
-  html += "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>";
-  html += "<body>";
+  const char *html =
+      "<h2>Restarting...</h2>"
+      "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
+      "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
+      "<body>";
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
   sleep(250);
