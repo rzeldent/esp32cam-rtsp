@@ -9,16 +9,17 @@
 #include <camera_config.h>
 #include <format_duration.h>
 #include <format_si.h>
+#include <template_render.h>
 #include <settings.h>
 
 char camera_config_val[sizeof(camera_config_entry)];
-char frame_rate_val[6];
+char frame_duration_val[6];
 char frame_size_val[sizeof(frame_size_entry_t)];
 char jpeg_quality_val[4];
 
 auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
 auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
-auto config_frame_rate = iotwebconf::NumberParameter("Frame rate (ms)", "fr", frame_rate_val, sizeof(frame_rate_val), DEFAULT_FRAMERATE, nullptr, "min=\"10\"");
+auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAMEDURATION, nullptr, "min=\"10\"");
 auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAMESIZE);
 auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
 
@@ -42,48 +43,66 @@ void handle_root()
   if (iotWebConf.handleCaptivePortal())
     return;
 
-  auto url = "rtsp://" + String(iotWebConf.getThingName()) + ".local:" + String(RTSP_PORT) + "/mjpeg/1";
+  const char *root_page_template =
+      "<!DOCTYPE html><html lang=\"en\">"
+      "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
+      "<head><title>{{Title}}" APP_TITLE " v" APP_VERSION "</title></head>"
+      "<body>"
+      "<h2>Status page for {{ThingName}}</h2><hr />"
 
-  String html;
-  html += "<!DOCTYPE html><html lang=\"en\">"
-          "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
-          "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
-          "<body>";
+      "<h3>ESP32</h3>"
+      "<ul>"
+      "<li>CPU model: {{ChipModel}}</li>"
+      "<li>CPU speed: {{CpuFreqMHz}}Mhz</li>"
+      "<li>Mac address: {{MacAddress}}</li>"
+      "<li>IPv4 address: {{IpV4}}</li>"
+      "<li>IPv6 address: {{IpV6}}</li>"
+      "</ul>"
 
-  html += "<h2>Status page for " + String(iotWebConf.getThingName()) + "</h2><hr />";
+      "<h3>Settings</h3>"
+      "<ul>"
+      "<li>Camera type: {{CameraType}}</li>"
+      "<li>Frame size: {{FrameSize}}</li>"
+      "<li>Frame rate: {{FrameDuration}} ms ({{FrameFrequency}} f/s)</li>"
+      "<li>JPEG quality: {{JpegQuality}} (0-100)</li>"
+      "</ul>"
 
-  html += "<h3>ESP32</h3>";
-  html += "<ul>";
-  html += "<li>CPU model: " + String(ESP.getChipModel()) + "</li>";
-  html += "<li>CPU speed: " + String(ESP.getCpuFreqMHz()) + "Mhz</li>";
-  html += "<li>Mac address: " + WiFi.macAddress() + "</li>";
-  html += "<li>IPv4 address: " + WiFi.localIP().toString() + "</li>";
-  html += "<li>IPv6 address: " + WiFi.localIPv6().toString() + "</li>";
-  html += "</ul>";
+      "<h3>Diagnostics</h3>"
+      "<ul>"
+      "<li>Uptime: {{Uptime}}</li>"
+      "<li>Free heap: {{FreeHeap}}b</li>"
+      "<li>Max free block: {{MaxAllocHeap}}b</li>"
+      "</ul>"
 
-  html += "<h3>Settings</h3>";
-  html += "<ul>";
-  html += "<li>Camera type: " + String(camera_config_val) + "</li>";
-  html += "<li>Frame size: " + String(frame_size_val) + "</li>";
-  html += "<li>Frame rate: " + String(frame_rate_val) + " ms (" + String(1000.0 / atol(frame_rate_val), 1) + " f/s)</li>";
-  html += "<li>JPEG quality: " + String(jpeg_quality_val) + " (0-100)</li>";
-  html += "</ul>";
+      "<br/>camera stream: <a href=\"rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1\">rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1</a>"
+      "<br />"
+      "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
 
-  html += "<h3>Diagnostics</h3>";
-  html += "<ul>";
-  html += "<li>Uptime: " + String(format_duration(millis() / 1000)) + "</li>";
-  html += "<li>Free heap: " + format_si(ESP.getFreeHeap()) + "b</li>";
-  html += "<li>Max free block: " + format_si(ESP.getMaxAllocHeap()) + "b</li>";
-  html += "</ul>";
+  const template_substitution_t root_page_substitutions[] = {
+      {"Title", APP_TITLE},
+      {"Version", APP_VERSION},
+      {"ThingName", iotWebConf.getThingName()},
+      {"ChipModel", ESP.getChipModel()},
+      {"CpuFreqMHz", String(ESP.getCpuFreqMHz())},
+      {"MacAddress", WiFi.macAddress()},
+      {"IpV4", WiFi.localIP().toString()},
+      {"IpV6", WiFi.localIPv6().toString()},
+      {"CameraType", camera_config_val},
+      {"FrameSize", frame_size_val},
+      {"FrameDuration", frame_duration_val},
+      {"FrameFrequency", String(1000.0 / atol(frame_duration_val), 1)},
+      {"JpegQuality", jpeg_quality_val},
+      {"Uptime", String(format_duration(millis() / 1000))},
+      {"FreeHeap", format_si(ESP.getFreeHeap())},
+      {"MaxAllocHeap", format_si(ESP.getMaxAllocHeap())},
+      {"RtspPort", String(RTSP_PORT)}};
 
-  html += "<br/>camera stream: <a href=\"" + url + "\">" + url + "</a>";
-  html += "<br />";
-  html += "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
+  auto html = template_render(root_page_template, root_page_substitutions);
 
   if (config_changed)
   {
-    html += "<br />";
-    html += "<br/><h3 style=\"color:red\">Configuration has changed. Please <a href=\"restart\">restart</a> the device.</h3>";
+    html += "<br />"
+            "<br/><h3 style=\"color:red\">Configuration has changed. Please <a href=\"restart\">restart</a> the device.</h3>";
   }
 
   html += "</body></html>";
@@ -127,7 +146,7 @@ bool initialize_camera()
   auto frame_size = lookup_frame_size(frame_size_val);
   log_i("JPEG quality: %s", jpeg_quality_val);
   auto jpeg_quality = atoi(jpeg_quality_val);
-  log_i("Framerate: %s ms", frame_rate_val);
+  log_i("Frame rate: %s ms", frame_duration_val);
 
   camera_config.frame_size = frame_size;
   camera_config.jpeg_quality = jpeg_quality;
@@ -139,11 +158,11 @@ void start_rtsp_server()
   log_v("start_rtsp_server");
   if (!initialize_camera())
   {
-    log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_rate_val, jpeg_quality_val);
+    log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_duration_val, jpeg_quality_val);
     return;
   }
 
-  auto frame_rate = atol(frame_rate_val);
+  auto frame_rate = atol(frame_duration_val);
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
   // Add service to mDNS - rtsp
   MDNS.addService("rtsp", "tcp", 554);
@@ -168,7 +187,7 @@ void setup()
   Serial.setDebugOutput(true);
 #endif
 
-  log_i("CPU Freq = %d Mhz", getCpuFrequencyMhz());
+  log_i("CPU Freq: %d Mhz", getCpuFrequencyMhz());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("Starting " APP_TITLE "...");
 
