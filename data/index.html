@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <title>{{AppTitle}} v{{AppVersion}}</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>{{ThingName}}</h1>
+        <hr>
+
+        {{#ConfigChanged}}
+        <div class="alert alert-danger" role="alert">
+            <p>The configuration has been changed. It is recommended to restart the device</p>
+            <p>This can be done by pressing the restart button below</p>
+            <button type="button" class="btn btn-danger" onclick="location.href='restart'">Restart</button>
+        </div>
+        {{/ConfigChanged}}
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">ESP32</h5>
+            <div class="card-body">
+                <p>CPU model: {{ChipModel}}</p>
+                <p>CPU speed: {{CpuFreqMHz}}Mhz</p>
+                <p>Mac address: {{MacAddress}}</p>
+                <p>IPv4 address: {{IpV4}}</p>
+                <p>IPv6 address: {{IpV6}}</p>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Settings</h5>
+            <div class="card-body">
+                <p>Camera type: {{CameraType}}</p>
+                <p>Frame size: {{FrameSize}}</p>
+                <p>Frame rate: {{FrameDuration}} ms ({{FrameFrequency}} f/s)</p>
+                <p>JPEG quality: {{JpegQuality}} (0-100)</p>
+                {{#CameraInitialized}}
+                <div class="alert alert-success" role="alert">
+                    Camera was initialized successfully!
+                </div>
+                {{/CameraInitialized}}
+                {{^CameraInitialized}}
+                <div class="alert alert-danger" role="alert">
+                    Failed to initialize the camera! No streaming possible. Please change the camera settings and
+                    restart
+                </div>
+                {{/CameraInitialized}}
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Diagnostics</h5>
+            <div class="card-body">
+                <p>Uptime: {{Uptime}}</p>
+                <p>Free heap: {{FreeHeap}}b</p>
+                <p>Max free block: {{MaxAllocHeap}}b</p>
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Camera stream</h5>
+            <div class="card-body">
+                The camera stream can be found at the following location:
+                <a
+                    href="rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1">rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1</a>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-lg btn-warning" onclick="location.href='config'">Change
+            configuration</button>
+
+    </div>
+
+</body>
+
+</html>
