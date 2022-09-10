@@ -86,13 +86,13 @@ void handle_root()
 void handle_restart()
 {
   log_v("Handle restart");
-  //  if (!config_changed)
-  //  {
-  // Redirect to root page.
-  //    web_server.sendHeader("Location", "/", true);
-  //    web_server.send(302, "text/plain", "");
-  //    return;
-  //  }
+  if (!config_changed)
+  {
+    // Redirect to root page
+    web_server.sendHeader("Location", "/", true);
+    web_server.send(302, "text/plain", "");
+    return;
+  }
 
   const template_variable_t substitutions[] = {
       {"AppTitle", APP_TITLE},
@@ -106,7 +106,7 @@ void handle_restart()
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
   sleep(1000);
-  // ESP.restart();
+  ESP.restart();
 }
 
 void on_config_saved()
