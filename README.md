@@ -108,9 +108,8 @@ Open the project in a new window. Run the following tasks using the ```Terminal 
 - PlatformIO: Upload Filesystem Image (esp32cam)
 - PlatformIO: Upload (esp32cam)
 
-To monitor the behavior run the task
+To monitor the behavior run the task, run:
 - PlatformIO: Monitor (esp32cam)
-
 
 ## Setting up the ESP32CAM-RTSP
 After the programming of the ESP32, there is no configuration present. This needs to be added.
@@ -121,32 +120,36 @@ After connecting, the browser should automatically open the status page.
 In case this does not happens automatically, connect to [http://192.168.4.1](http://192.168.4.1).
 This page will display the current settings and status. On the bottom, there is a link to the config. Click on this link.
 
-This link brings up the configuration screen.
+This link brings up the configuration screen when connecting fot the first time.
 
 ![Configuration screen](assets/Configuration.png)
 
 Configure at least:
-- The WiFi network settings. No dropdown is present to show available networks! Enter the Access point name manually.
+- The access point to connect to. No dropdown is present to show available networks!
 - A password for accessing the Access point (AP) when starting. (required)
-- the type of the ESP32-CAM board
+- Type of the ESP32-CAM board
 
-When finished press Apply to save the configuration. The screen will redirect to the status screen.
+When finished press ```Apply``` to save the configuration. The screen will redirect to the status screen.
 Here it is possible to reboot the device so the settings take effect.
 It is also possible to restart manually by pressing the reset button. 
+
+## Connecting to the configuration
+After the initial configuration and the device is connected to an Access point, the device can be configured over http.
+
+When a connection is made to [http://esp32cam-rtsp](http://esp32cam-rtsp) the status screen is shown.
+
+![Status screen](assets/index.png)
+
+In case changes have been made to the configuration, this is shown and the possibility to restart is given.
+
+Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
+If this happens, for the user enter 'admin' and for the password the value that has been configured as the Access Point password.
 
 ## Connecting to the RTSP stream
 RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
- :warning: **Please be aware that there is no password present on the stream!**
-
-## Connecting to the configuration
-When a connection is made to [http://esp32cam-rtsp](http://esp32cam-rtsp) the status screen is shown.
-
-![Status screen](assets/index.png)
-
-Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
-If this happens, for the user enter 'admin' and for the password the value that has been configured as the Access Point password.
+:warning: **Please be aware that there is no password present on the stream!**
 
 ## Credits
 esp32cam-ready depends on PlatformIO, Bootstap5 and Micro-RTSP by Kevin Hester.
