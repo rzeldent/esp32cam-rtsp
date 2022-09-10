@@ -9,6 +9,7 @@
 #include <camera_config.h>
 #include <format_duration.h>
 #include <format_si.h>
+#include <SPIFFS.h>
 #include <template_render.h>
 #include <settings.h>
 
@@ -35,6 +36,17 @@ IotWebConf iotWebConf(WIFI_SSID, &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_
 
 // Keep track of config changes. This will allow a reset of the device
 bool config_changed = false;
+// Check if camera is initialized
+bool camera_initialized = false;
+
+void stream_file(const char *spiffs_file, const char *mime_type)
+{
+  // Cache for 86400 seconds (one day)
+  web_server.sendHeader("Cache-Control", "max-age=86400");
+  auto file = SPIFFS.open(spiffs_file);
+  web_server.streamFile(file, mime_type);
+  file.close();
+}
 
 void handle_root()
 {
@@ -43,42 +55,9 @@ void handle_root()
   if (iotWebConf.handleCaptivePortal())
     return;
 
-  const char *root_page_template =
-      "<!DOCTYPE html><html lang=\"en\">"
-      "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
-      "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
-      "<body>"
-      "<h2>Status page for {{ThingName}}</h2><hr />"
-
-      "<h3>ESP32</h3>"
-      "<ul>"
-      "<li>CPU model: {{ChipModel}}</li>"
-      "<li>CPU speed: {{CpuFreqMHz}}Mhz</li>"
-      "<li>Mac address: {{MacAddress}}</li>"
-      "<li>IPv4 address: {{IpV4}}</li>"
-      "<li>IPv6 address: {{IpV6}}</li>"
-      "</ul>"
-
-      "<h3>Settings</h3>"
-      "<ul>"
-      "<li>Camera type: {{CameraType}}</li>"
-      "<li>Frame size: {{FrameSize}}</li>"
-      "<li>Frame rate: {{FrameDuration}} ms ({{FrameFrequency}} f/s)</li>"
-      "<li>JPEG quality: {{JpegQuality}} (0-100)</li>"
-      "</ul>"
-
-      "<h3>Diagnostics</h3>"
-      "<ul>"
-      "<li>Uptime: {{Uptime}}</li>"
-      "<li>Free heap: {{FreeHeap}}b</li>"
-      "<li>Max free block: {{MaxAllocHeap}}b</li>"
-      "</ul>"
-
-      "<br/>camera stream: <a href=\"rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1\">rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1</a>"
-      "<br />"
-      "<br/>Go to <a href=\"config\">configure page</a> to change settings.";
-
-  const template_substitution_t root_page_substitutions[] = {
+  const template_variable_t substitutions[] = {
+      {"AppTitle", APP_TITLE},
+      {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()},
       {"ChipModel", ESP.getChipModel()},
       {"CpuFreqMHz", String(ESP.getCpuFreqMHz())},
@@ -93,38 +72,41 @@ void handle_root()
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_si(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_si(ESP.getMaxAllocHeap())},
-      {"RtspPort", String(RTSP_PORT)}};
+      {"RtspPort", String(RTSP_PORT)},
+      {"ConfigChanged", String(config_changed)},
+      {"CameraInitialized", String(camera_initialized)}};
 
-  auto html = template_render(root_page_template, root_page_substitutions);
-
-  if (config_changed)
-    html += "<br />"
-            "<br/><h3 style=\"color:red\">Configuration has changed. Please <a href=\"restart\">restart</a> the device.</h3>";
-
-  html += "</body></html>";
+  web_server.sendHeader("Cache-Control", "no-cache");
+  auto file = SPIFFS.open("/index.html");
+  auto html = template_render(file.readString(), substitutions);
+  file.close();
   web_server.send(200, "text/html", html);
 }
 
 void handle_restart()
 {
   log_v("Handle restart");
-  if (!config_changed)
-  {
-    // Redirect to root page.
-    web_server.sendHeader("Location", "/", true);
-    web_server.send(302, "text/plain", "");
-    return;
-  }
+  //  if (!config_changed)
+  //  {
+  // Redirect to root page.
+  //    web_server.sendHeader("Location", "/", true);
+  //    web_server.send(302, "text/plain", "");
+  //    return;
+  //  }
 
-  const char *html =
-      "<h2>Restarting...</h2>"
-      "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>"
-      "<head><title>" APP_TITLE " v" APP_VERSION "</title></head>"
-      "<body>";
+  const template_variable_t substitutions[] = {
+      {"AppTitle", APP_TITLE},
+      {"AppVersion", APP_VERSION},
+      {"ThingName", iotWebConf.getThingName()}};
+
+  web_server.sendHeader("Cache-Control", "no-cache");
+  auto file = SPIFFS.open("/restart.html");
+  auto html = template_render(file.readString(), substitutions);
+  file.close();
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
-  sleep(250);
-  ESP.restart();
+  sleep(1000);
+  // ESP.restart();
 }
 
 void on_config_saved()
@@ -152,12 +134,14 @@ bool initialize_camera()
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  if (!initialize_camera())
+  camera_initialized = initialize_camera();
+  if (!camera_initialized)
   {
     log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_duration_val, jpeg_quality_val);
     return;
   }
 
+  log_i("Camera initialized");
   auto frame_rate = atol(frame_duration_val);
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
   // Add service to mDNS - rtsp
@@ -187,6 +171,9 @@ void setup()
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("Starting " APP_TITLE "...");
 
+  if (!SPIFFS.begin())
+    log_e("Error while mounting SPIFFS. Please upload the filesystem");
+
   config_group_stream_settings.addItem(&config_camera_config);
   config_group_stream_settings.addItem(&config_frame_rate);
   config_group_stream_settings.addItem(&config_frame_size);
@@ -202,6 +189,11 @@ void setup()
   web_server.on("/config", []
                 { iotWebConf.handleConfig(); });
   web_server.on("/restart", HTTP_GET, handle_restart);
+
+  // bootstrap
+  web_server.on("/bootstrap.min.css", HTTP_GET, []()
+                { stream_file("/bootstrap.min.css", "text/css"); });
+
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
