@@ -80,7 +80,8 @@ void handle_root()
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", "0x" + String(camera_init_result, 16)},
-      {"CameraInitResultText", esp_err_to_name(camera_init_result)}};
+      {"CameraInitResultText", esp_err_to_name(camera_init_result)},
+      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = template_render(file_data_index_html, substitutions);

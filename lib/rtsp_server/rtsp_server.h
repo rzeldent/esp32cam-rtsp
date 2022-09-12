@@ -14,6 +14,8 @@ public:
 
 	void doLoop();
 
+	size_t num_connected();
+
 private:
 	struct rtsp_client
 	{

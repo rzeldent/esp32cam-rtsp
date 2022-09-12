@@ -10,6 +10,10 @@ rtsp_server::rtsp_server(OV2640 &cam, unsigned long interval, int port /*= 554*/
 	WiFiServer::begin();
 	timer_.every(interval, client_handler, this);
 }
+size_t rtsp_server::num_connected()
+{
+	return clients_.size();
+}
 
 void rtsp_server::doLoop()
 {
