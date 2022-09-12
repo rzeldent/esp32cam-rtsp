@@ -24,13 +24,26 @@
         <div class="card bg-light mb-3">
             <h5 class="card-header">ESP32</h5>
             <div class="card-body">
-                <ul>
-                    <li>CPU model: {{ChipModel}}</li>
-                    <li>CPU speed: {{CpuFreqMHz}}Mhz</li>
-                    <li>Mac address: {{MacAddress}}</li>
-                    <li>IPv4 address: {{IpV4}}</li>
-                    <li>IPv6 address: {{IpV6}}</li>
-                </ul>
+                <div class="row">
+                    <div class="col-4">CPU model:</div>
+                    <div class="col-8">{{ChipModel}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">CPU speed:</div>
+                    <div class="col-8">{{CpuFreqMHz}}Mhz</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Mac address:</div>
+                    <div class="col-8">{{MacAddress}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">IPv4 address:</div>
+                    <div class="col-8">{{IpV4}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">IPv6 address:</div>
+                    <div class="col-8">{{IpV6}}</div>
+                </div>
                 {{#NetworkState.ApMode}}
                 <div class="alert alert-warning" role="alert">
                     <p>Not connected to an access point. Please configure!</p>
@@ -41,33 +54,41 @@
                     <p>Connected to the access point</p>
                 </div>
                 {{/NetworkState.OnLine}}
-                </ul>
             </div>
         </div>
 
         <div class="card bg-light mb-3">
             <h5 class="card-header">Settings</h5>
             <div class="card-body">
-                <ul>
-                    <li>Camera type: {{CameraType}}</li>
-                    <li>Frame rate: {{FrameDuration}} ms ({{FrameFrequency}} f/s)</li>
-                    <li>Frame size: {{FrameSize}}</li>
-                    <li>Frame buffer location: {{FrameBufferLocation}}</li>
-                    <li>Frame buffers: {{FrameBuffers}}</li>
-                    <li>
-                        <div class="d-flex justify-content-start">
-                            JPEG quality:
+                <div class="row">
+                    <div class="col-4">Camera type:</div>
+                    <div class="col-8">{{CameraType}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Frame rate:</div>
+                    <div class="col-8">{{FrameDuration}} ms ({{FrameFrequency}} f/s)</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Frame size:</div>
+                    <div class="col-8">{{FrameSize}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Frame buffer location:</div>
+                    <div class="col-8">{{FrameBufferLocation}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Frame buffers:</div>
+                    <div class="col-8">{{FrameBuffers}}</div>
+                </div>
+                <div class="row">
+                    <p class="col-4">JPEG quality:</p>
+                    <div class="progress col-8">
+                        <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="{{JpegQuality}}"
+                            aria-valuemin="0" aria-valuemax="100">
+                            {{JpegQuality}}
                         </div>
-                        <div class="d-flex justify-content-end">
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" style="width: 25%;"
-                                    aria-valuenow="{{JpegQuality}}" aria-valuemin="0" aria-valuemax="100">
-                                    {{JpegQuality}}
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                </ul>
+                    </div>
+                </div>
                 {{#CameraInitialized}}
                 <div class="alert alert-success" role="alert">
                     <p>Camera was initialized successfully!</p>
@@ -86,11 +107,18 @@
         <div class="card bg-light mb-3">
             <h5 class="card-header">Diagnostics</h5>
             <div class="card-body">
-                <ul>
-                    <li>Uptime: {{Uptime}}</li>
-                    <li>Free heap: {{FreeHeap}}b</li>
-                    <li>Max free block: {{MaxAllocHeap}}b</li>
-                </ul>
+                <div class="row">
+                    <div class="col-4">Uptime:</div>
+                    <div class="col-8">{{Uptime}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Free heap:</div>
+                    <div class="col-8">{{FreeHeap}}b</div>
+                </div>
+                <div class="row">
+                    <div class="col-4">Max free block:</div>
+                    <div class="col-8">{{MaxAllocHeap}}b</div>
+                </div>
             </div>
         </div>
 

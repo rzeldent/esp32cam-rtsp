@@ -82,7 +82,7 @@ void handle_root()
       {"CameraInitResult", "0x" + String(camera_init_result, 16)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)}};
 
-  web_server.sendHeader("Cache-Control", "no-cache");
+  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = template_render(file_data_index_html, substitutions);
   web_server.send(200, "text/html", html);
 }
@@ -103,7 +103,6 @@ void handle_restart()
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()}};
 
-  web_server.sendHeader("Cache-Control", "no-cache");
   auto html = template_render(file_data_restart_html, substitutions);
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
