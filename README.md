@@ -3,7 +3,7 @@
 ![status badge](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg?event=push)
 
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol) server.
-Easy configuration through the web interface. Stable.
+Easy configuration through the web interface.
 
 Flashing this software on a esp32cam module will make it a **RTSP streaming camera** server.
 This allows CCTV systems and applications like  **VLC** to connect directly to the ESP32CAM camera stream.
@@ -24,6 +24,7 @@ This software provides a **configuration web server**, that can be used to:
 - Select the board type,
 - Select the image size,
 - Select the frame rate,
+- Select number of frame buffers
 - Select the JPEG quality
 
 The software provides contains also a mDNS server to be easily discoverable on the local network.
@@ -80,17 +81,15 @@ There are to flavours to do this; using the command line or the graphical interf
 
 ### Using the command line
 
-First the source code and SPIFF partition (data) has to be compiled. Type:
+First the source code has to be compiled. Type:
 ```
 pio run
-pio run buildfs 
 ```
 
-When finished, the SPIFF partition and software have to be uploaded.
+When finished, firmware has to be uploaded.
 Make sure the ESP32-CAM is in download mode (see previous section) and type:
 ```
  pio run -t upload
- pio run -t uploadfs
 ```
 
 When done remove the jumper when using a FTDI adapter or press the reset button on the ESP32-CAM.
@@ -101,11 +100,9 @@ To monitor the output, start a terminal using:
 
 ### Using Visual studio
 
-Open the project in a new window. Run the following tasks using the ```Terminal -> Run Task``` or CTRL+ALT+T command in the menu. Make sure the ESP32-CAM is in download mode during the uploads.
+Open the project in a new window. Run the following tasks using the ```Terminal -> Run Task``` or CTRL+ALT+T command in the menu (or use the icons below on the toolbar). Make sure the ESP32-CAM is in download mode during the uploads.
 
-- PlatformIO: Build Filesystem Image (esp32cam)
 - PlatformIO: Build (esp32cam)
-- PlatformIO: Upload Filesystem Image (esp32cam)
 - PlatformIO: Upload (esp32cam)
 
 To monitor the behavior run the task, run:
@@ -113,7 +110,7 @@ To monitor the behavior run the task, run:
 
 ## Setting up the ESP32CAM-RTSP
 After the programming of the ESP32, there is no configuration present. This needs to be added.
-To connect initially to the device open the WiFi connections and select the WiFi network / accesspoint called **ESP32CAM-RTSP**.
+To connect initially to the device open the WiFi connections and select the WiFi network / access point called **ESP32CAM-RTSP**.
 Initially there is no password present.
 
 After connecting, the browser should automatically open the status page.
@@ -150,6 +147,14 @@ RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
 :warning: **Please be aware that there is no password present on the stream!**
+
+## Issues observed
+
+### Power
+Make sure the power is 5 volts and stable.
+
+### PSRAM
+Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer. 
 
 ## Credits
 esp32cam-ready depends on PlatformIO, Bootstap5 and Micro-RTSP by Kevin Hester.

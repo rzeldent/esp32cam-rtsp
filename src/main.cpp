@@ -9,19 +9,21 @@
 #include <camera_config.h>
 #include <format_duration.h>
 #include <format_si.h>
-#include <SPIFFS.h>
 #include <template_render.h>
+#include <html_data.h>
 #include <settings.h>
 
 char camera_config_val[sizeof(camera_config_entry)];
 char frame_duration_val[6];
 char frame_size_val[sizeof(frame_size_entry_t)];
+char frame_buffers_val[3];
 char jpeg_quality_val[4];
 
 auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
 auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
-auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAMEDURATION, nullptr, "min=\"10\"");
-auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAMESIZE);
+auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAME_DURATION, nullptr, "min=\"10\"");
+auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAME_SIZE);
+auto config_frame_buffers = iotwebconf::NumberParameter("Frame buffers", "fb", frame_buffers_val, sizeof(frame_buffers_val), DEFAULT_FRAME_BUFFERS, nullptr, "min=\"1\" max=\"16\"");
 auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
 
 // Camera
@@ -36,16 +38,14 @@ IotWebConf iotWebConf(WIFI_SSID, &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_
 
 // Keep track of config changes. This will allow a reset of the device
 bool config_changed = false;
-// Check if camera is initialized
-bool camera_initialized = false;
+// Camera initialization result
+esp_err_t camera_init_result;
 
-void stream_file(const char *spiffs_file, const char *mime_type)
+void stream_text_file(const char *contents, const char *mime_type)
 {
   // Cache for 86400 seconds (one day)
   web_server.sendHeader("Cache-Control", "max-age=86400");
-  auto file = SPIFFS.open(spiffs_file);
-  web_server.streamFile(file, mime_type);
-  file.close();
+  web_server.send(200, mime_type, contents);
 }
 
 void handle_root()
@@ -68,18 +68,22 @@ void handle_root()
       {"FrameSize", frame_size_val},
       {"FrameDuration", frame_duration_val},
       {"FrameFrequency", String(1000.0 / atol(frame_duration_val), 1)},
+      {"FrameBufferLocation", psramFound() ? "PSRAM" : "DRAM)"},
+      {"FrameBuffers", frame_buffers_val},
       {"JpegQuality", jpeg_quality_val},
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_si(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_si(ESP.getMaxAllocHeap())},
       {"RtspPort", String(RTSP_PORT)},
       {"ConfigChanged", String(config_changed)},
-      {"CameraInitialized", String(camera_initialized)}};
+      {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
+      {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
+      {"CameraInitialized", String(camera_init_result == ESP_OK)},
+      {"CameraInitResult", "0x" + String(camera_init_result, 16)},
+      {"CameraInitResultText", esp_err_to_name(camera_init_result)}};
 
   web_server.sendHeader("Cache-Control", "no-cache");
-  auto file = SPIFFS.open("/index.html");
-  auto html = template_render(file.readString(), substitutions);
-  file.close();
+  auto html = template_render(file_data_index_html, substitutions);
   web_server.send(200, "text/html", html);
 }
 
@@ -100,12 +104,10 @@ void handle_restart()
       {"ThingName", iotWebConf.getThingName()}};
 
   web_server.sendHeader("Cache-Control", "no-cache");
-  auto file = SPIFFS.open("/restart.html");
-  auto html = template_render(file.readString(), substitutions);
-  file.close();
+  auto html = template_render(file_data_restart_html, substitutions);
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
-  sleep(1000);
+  sleep(100);
   ESP.restart();
 }
 
@@ -115,29 +117,34 @@ void on_config_saved()
   config_changed = true;
 }
 
-bool initialize_camera()
+esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
   log_i("Camera config: %s", camera_config_val);
   auto camera_config = lookup_camera_config(camera_config_val);
   log_i("Frame size: %s", frame_size_val);
   auto frame_size = lookup_frame_size(frame_size_val);
+  log_i("Frame buffers: %s", frame_buffers_val);
+  auto frame_buffers = atoi(frame_buffers_val);
   log_i("JPEG quality: %s", jpeg_quality_val);
   auto jpeg_quality = atoi(jpeg_quality_val);
   log_i("Frame rate: %s ms", frame_duration_val);
 
   camera_config.frame_size = frame_size;
+  camera_config.fb_count = frame_buffers;
+  camera_config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
   camera_config.jpeg_quality = jpeg_quality;
-  return cam.init(camera_config) == ESP_OK;
+
+  return cam.init(camera_config);
 }
 
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  camera_initialized = initialize_camera();
-  if (!camera_initialized)
+  camera_init_result = initialize_camera();
+  if (camera_init_result != ESP_OK)
   {
-    log_e("Failed to initialize camera. Type: %s, frame size: %s, frame rate: %s ms, jpeg quality: %s", camera_config_val, frame_size_val, frame_duration_val, jpeg_quality_val);
+    log_e("Failed to initialize camera: 0x%0xd. Type: %s, frame size: %s, frame buffers: %s, frame rate: %s ms, jpeg quality: %s", camera_init_result, camera_config_val, frame_size_val, frame_buffers_val, frame_duration_val, jpeg_quality_val);
     return;
   }
 
@@ -171,12 +178,10 @@ void setup()
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("Starting " APP_TITLE "...");
 
-  if (!SPIFFS.begin())
-    log_e("Error while mounting SPIFFS. Please upload the filesystem");
-
   config_group_stream_settings.addItem(&config_camera_config);
   config_group_stream_settings.addItem(&config_frame_rate);
   config_group_stream_settings.addItem(&config_frame_size);
+  config_group_stream_settings.addItem(&config_frame_buffers);
   config_group_stream_settings.addItem(&config_jpg_quality);
   iotWebConf.addParameterGroup(&config_group_stream_settings);
   iotWebConf.getApTimeoutParameter()->visible = true;
@@ -192,7 +197,7 @@ void setup()
 
   // bootstrap
   web_server.on("/bootstrap.min.css", HTTP_GET, []()
-                { stream_file("/bootstrap.min.css", "text/css"); });
+                { stream_text_file(file_data_bootstrap_min_css, "text/css"); });
 
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
