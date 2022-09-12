@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <title>{{AppTitle}} v{{AppVersion}}</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>{{ThingName}}</h1>
+        <hr>
+
+        {{#ConfigChanged}}
+        <div class="alert alert-danger" role="alert">
+            <p>The configuration has been changed.</p>
+            <p>It is recommended to restart the device.</p>
+            <button type="button" class="btn btn-danger" onclick="location.href='restart'">Restart</button>
+        </div>
+        {{/ConfigChanged}}
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">ESP32</h5>
+            <div class="card-body">
+                <ul>
+                    <li>CPU model: {{ChipModel}}</li>
+                    <li>CPU speed: {{CpuFreqMHz}}Mhz</li>
+                    <li>Mac address: {{MacAddress}}</li>
+                    <li>IPv4 address: {{IpV4}}</li>
+                    <li>IPv6 address: {{IpV6}}</li>
+                </ul>
+                {{#NetworkState.ApMode}}
+                <div class="alert alert-warning" role="alert">
+                    <p>Not connected to an access point. Please configure!</p>
+                </div>
+                {{/NetworkState.ApMode}}
+                {{#NetworkState.OnLine}}
+                <div class="alert alert-success" role="alert">
+                    <p>Connected to the access point</p>
+                </div>
+                {{/NetworkState.OnLine}}
+                </ul>
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Settings</h5>
+            <div class="card-body">
+                <ul>
+                    <li>Camera type: {{CameraType}}</li>
+                    <li>Frame rate: {{FrameDuration}} ms ({{FrameFrequency}} f/s)</li>
+                    <li>Frame size: {{FrameSize}}</li>
+                    <li>Frame buffer location: {{FrameBufferLocation}}</li>
+                    <li>Frame buffers: {{FrameBuffers}}</li>
+                    <li>
+                        <div class="d-flex justify-content-start">
+                            JPEG quality:
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 25%;"
+                                    aria-valuenow="{{JpegQuality}}" aria-valuemin="0" aria-valuemax="100">
+                                    {{JpegQuality}}
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+                {{#CameraInitialized}}
+                <div class="alert alert-success" role="alert">
+                    <p>Camera was initialized successfully!</p>
+                </div>
+                {{/CameraInitialized}}
+                {{^CameraInitialized}}
+                <div class="alert alert-danger" role="alert">
+                    <p>Failed to initialize the camera!</p>
+                    <p>Result: {{CameraInitResultText}} ({{CameraInitResult}})</p>
+                    <p>Please check hardware or correct the camera settings and restart.</p>
+                </div>
+                {{/CameraInitialized}}
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Diagnostics</h5>
+            <div class="card-body">
+                <ul>
+                    <li>Uptime: {{Uptime}}</li>
+                    <li>Free heap: {{FreeHeap}}b</li>
+                    <li>Max free block: {{MaxAllocHeap}}b</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card bg-light mb-3">
+            <h5 class="card-header">Camera stream</h5>
+            <div class="card-body">
+                </p>The camera stream can be found at the following location:</p>
+                <a
+                    href="rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1">rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1</a>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-warning" onclick="location.href='config'">Settings</button>
+
+    </div>
+
+</body>
+
+</html>
