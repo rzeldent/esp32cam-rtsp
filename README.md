@@ -155,11 +155,19 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 :warning: **Please be aware that there is no password present on the stream!**
 
 ## Issues / Nice to know
-- Sometimes after configuration a reboot is required. If the error screen is shown that it is unable to make a connection, first try to reboot the device,
-- When booting, the device waits 30 seconds for a connection (configurable). You can make a connection to the SSID and log in using the crdentials below,
-- When connected, go to the ip of the device and, when prompted for the credentials, enter 'admin' and the AP password. This field is **required** before saving the credentials,
-- When the password is lost, a fix is to completely erase the ESP32 using the ```pio run -t erase``` command. This will reset the device including configuration. However, reflashing of the firmware is required.
-- When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device. This should reset the device and connect to the access point. Resetting is also a good alternative...
+- Sometimes after configuration a reboot is required.
+  If the error screen is shown that it is unable to make a connection, first try to reboot the device,
+- When booting, the device waits 30 seconds for a connection (configurable).
+  You can make a connection to the SSID and log in using the crdentials below,
+- When connected, go to the ip of the device and, when prompted for the credentials, enter 'admin' and the AP password.
+  This is a **required** field before saving the credentials,
+- When the password is lost, a fix is to completely erase the ESP32 using the ```pio run -t erase``` command.
+  This will reset the device including configuration.
+  If using the esptool, you can do this using ```esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash```.
+  However, after erasing, reflashing of the firmware is required. 
+- When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device.
+  This should reset the device and connect to the access point.
+  Resetting is also a good alternative...
 
 ### Power
 Make sure the power is 5 volts and stable, although the ESP32 is a 3.3V module, this voltage is created on the board.
