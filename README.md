@@ -5,21 +5,24 @@
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol) server.
 Easy configuration through the web interface.
 
-Flashing this software on a esp32cam module will make it a **RTSP streaming camera** server.
-This allows CCTV systems and applications like  **VLC** to connect directly to the ESP32CAM camera stream.
-The RTSP protocol also allows to stream directly to a server using **ffmpeg**.
-This makes the module a camera server allowing **recording** and  so the stream can be **stored on a disk** and replayed later.
+Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server.
+The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
+It is also possible to to stream directly to a server using [ffmpeg](https://ffmpeg.org).
+This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
 
-This software supports the following ESP32-CAM modules:
+This software supports the following ESP32-CAM (and alike) modules:
 - ESP32CAM
 - AI THINKER
 - TTGO T-CAM
+- WROVER-KIT
+- M5STACK
 
 ![ESP32CAM module](assets/ESP32-CAM.jpg)
 
 This software provides a **configuration web server**, that can be used to:
+- Provide information about the state of the device, wifi connection and camera,
 - Set the WiFi parameters,
-- Set the timeout for connecting to the Access point,
+- Set the timeout for connecting to the access point,
 - Set an access password,
 - Select the board type,
 - Select the image size,
@@ -28,17 +31,19 @@ This software provides a **configuration web server**, that can be used to:
 - Select the JPEG quality
 
 The software provides contains also a mDNS server to be easily discoverable on the local network.
+It advertises HTTP (port 80) and RTSP (port 554)
 
 ## Required
 
-- ESP32-CAM module
-- USB to Serial (TTL level) converter or the piggyback board ESP32-CAM-MB
+- ESP32-CAM module or similar,
+- USB to Serial (TTL level) converter, piggyback board ESP32-CAM-MB or other way to connect to the device,
 - [**PlatformIO**](https://platformio.org/) software (free download)
 
 ## Installing and running PlatformIO
+PlatformIO is available for all major operating systems: Windows, Linux and MacOS. It is also provided as a plugin to [Visual Studio Code](https://visualstudio.microsoft.com).
 More information can be found at: [https://docs.platformio.org/en/latest/installation.html](https://docs.platformio.org/en/latest/installation.html) below the basics.
 
-### Debian based systems command-line
+### Debian based systems command-line install
 Install platformIO
 ```
  sudo apt-get install python-pip
@@ -46,7 +51,7 @@ Install platformIO
  pio upgrade
 ```
 
-### Windows / Linux and Mac
+### Windows, Linux and MacOS
 Install [**Visual Studio code**](https://code.visualstudio.com) and install the PlatformIO plugin.
 For command line usage Python and PlatformIO-Core is sufficient.
 
@@ -77,7 +82,8 @@ cd esp32cam-rtsp
 ```
 
 Next, the firmware has to be build and deployed to the ESP32.
-There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code. I recommend to use VIsual Studio Code as it is free to use and offers more insight.
+There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code.
+I recommend to use VIsual Studio Code as it is free to use and offers more insight.
 
 ### Using the command line
 
@@ -131,7 +137,7 @@ Here it is possible to reboot the device so the settings take effect.
 It is also possible to restart manually by pressing the reset button. 
 
 ## Connecting to the configuration
-After the initial configuration and the device is connected to an Access point, the device can be configured over http.
+After the initial configuration and the device is connected to an access point, the device can be configured over http.
 
 When a connection is made to [http://esp32cam-rtsp](http://esp32cam-rtsp) the status screen is shown.
 
@@ -148,14 +154,19 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
 :warning: **Please be aware that there is no password present on the stream!**
 
-## Issues observed
+## Issues / Nice to know
+- Sometimes after configuration a reboot is required. If the error screen is shown that it is unable to make a connection, first try to reboot the device,
+- When booting, the device waits 30 seconds for a connection (configurable). You can make a connection to the SSID and log in using the crdentials below,
+- When connected, go to the ip of the device and, when prompted for the credentials, enter 'admin' and the AP password. This field is **required** before saving the credentials,
+- When the password is lost, a fix is to completely erase the ESP32 using the ```pio run -t erase``` command. This will reset the device including configuration. However, reflashing of the firmware is required.
+- When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device. This should reset the device and connect to the access point. Resetting is also a good alternative...
 
 ### Power
-Make sure the power is 5 volts and stable.
+Make sure the power is 5 volts and stable. If not, it has been reported that restarts occur when starting up.
 
 ### PSRAM
-Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer. 
+Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer.
+Detecting and using this special RAM is handled automatically. The availability of PSRAM can be seen in the HTML status overview.
 
 ## Credits
 esp32cam-ready depends on PlatformIO, Bootstap5 and Micro-RTSP by Kevin Hester.
-
