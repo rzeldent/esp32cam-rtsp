@@ -162,11 +162,18 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 - When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device. This should reset the device and connect to the access point. Resetting is also a good alternative...
 
 ### Power
-Make sure the power is 5 volts and stable. If not, it has been reported that restarts occur when starting up.
+Make sure the power is 5 volts and stable, although the ESP32 is a 3.3V module, this voltage is created on the board.
+If not stable, it has been reported that restarts occur when starting up (probably when power is required for WiFi).
+The software disableds the brown out protection so there is some margin in the voltage.
 
 ### PSRAM
 Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer.
-Detecting and using this special RAM is handled automatically. The availability of PSRAM can be seen in the HTML status overview.
+Detecting and using this special RAM is handled automatically.
+The availability of PSRAM can be seen in the HTML status overview.
+
+### Camera modules
+Be carefull when connecting the camera module.
+Make sure it is connected the right way around (Camera poining away from the board) and the ribbon cable inserted to the end before locking it.
 
 ## Credits
 esp32cam-ready depends on PlatformIO, Bootstap5 and Micro-RTSP by Kevin Hester.
