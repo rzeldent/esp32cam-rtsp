@@ -5,7 +5,7 @@
 
 #define WIFI_SSID "ESP32CAM-RTSP"
 #define WIFI_PASSWORD nullptr
-#define CONFIG_VERSION "1.0"
+#define CONFIG_VERSION "1.1"
 
 #define RTSP_PORT 554
 #define DEFAULT_CAMERA_CONFIG "AI THINKER"
