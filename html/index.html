@@ -144,7 +144,7 @@
                             <div class="col-8">{{FrameBuffers}}</div>
                         </div>
                         <div class="row">
-                            <p class="col-4">JPEG quality:</p>
+                            <div class="col-4">JPEG quality:</div>
                             <div class="col-8">{{JpegQuality}} (0-100)</div>
                         </div>
                         {{#CameraInitialized}}
@@ -170,16 +170,19 @@
             <div class="card bg-light mb-3">
                 <h5 class="card-header">Camera stream</h5>
                 <div class="card-body">
-                    </p>The camera stream can be found at the following location:</p>
+                    </p>The camera stream can be found at the following location:
                     <a
                         href="rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1">rtsp://{{ThingName}}.local:{{RtspPort}}/mjpeg/1</a>
+                    </p>
+                    <img class="rounded mx-auto d-block" src="snapshot" alt="Camera image" width="25%">
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="d-grid gap-2 col-6 mx-auto">
-            <button type="button" class="btn btn-lg btn-warning" onclick="location.href='config'">Settings</button>
-        </div>
+    <div class="d-grid gap-2 col-6 mx-auto">
+        <button type="button" class="btn btn-lg btn-warning" onclick="location.href='config'">Settings</button>
+    </div>
 
     </div>
 
