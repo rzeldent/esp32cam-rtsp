@@ -71,6 +71,11 @@ void handle_root()
       {"FlashSize", format_memory(ESP.getFlashChipSize(), 0)},
       {"HeapSize", format_memory(ESP.getHeapSize())},
       {"PsRamSize", format_memory(ESP.getPsramSize(), 0)},
+      // Diagnostics
+      {"Uptime", String(format_duration(millis() / 1000))},
+      {"FreeHeap", format_memory(ESP.getFreeHeap())},
+      {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
+      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"},
       // Network
       {"MacAddress", WiFi.macAddress()},
       {"AccessPoint", WiFi.SSID()},
@@ -91,12 +96,7 @@ void handle_root()
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", "0x" + String(camera_init_result, 16)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
-      // Diagnostics
-      {"Uptime", String(format_duration(millis() / 1000))},
-      {"FreeHeap", format_memory(ESP.getFreeHeap())},
-      {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
-      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"},
-      // URL
+      // RTSP
       {"RtspPort", String(RTSP_PORT)}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -112,7 +112,7 @@ void handle_restart()
   {
     // Redirect to root page
     web_server.sendHeader("Location", "/", true);
-    web_server.send(302, "text/plain", "");
+    web_server.send(302, "text/plain", "Restart not possible.");
     return;
   }
 
@@ -126,6 +126,27 @@ void handle_restart()
   log_v("Restarting... Press refresh to connect again");
   sleep(100);
   ESP.restart();
+}
+
+void handle_snapshot()
+{
+  log_v("handle_jpg");
+  if (camera_init_result != ESP_OK)
+  {
+     web_server.send(404, "text/plain", "Camera is not initialized");
+     return;
+  }
+  
+  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  web_server.sendContent("HTTP/1.1 200 OK\r\n"
+                         "Content-Disposition: inline; filename=snapshot.jpg\r\n"
+                         "Content-Type: image/jpeg\r\n\r\n");
+    // Make a copy in memory to prevent interaction with RTSP
+  auto fb_len = cam.getSize();
+  cam.run();
+  auto fb = (uint8_t*)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
+  web_server.sendContent(reinterpret_cast<const char *>(fb), fb_len);
+  delete []fb;
 }
 
 void on_config_saved()
@@ -211,6 +232,8 @@ void setup()
   web_server.on("/config", []
                 { iotWebConf.handleConfig(); });
   web_server.on("/restart", HTTP_GET, handle_restart);
+  // Camera snapshot
+  web_server.on("/snapshot", handle_snapshot);
 
   // bootstrap
   web_server.on("/bootstrap.min.css", HTTP_GET, []()
