@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-String format_value(float value)
+String format_value(double value)
 {
     if (value == 0.0)
         return "0";
@@ -13,11 +13,15 @@ String format_value(float value)
     // No decimal places
     if (value >= 1)
         return String(value, 0);
-    if (value < 0.001f)
+    if (value < 0.00001)
+        return String(value, 6);
+    if (value < 0.0001)
+        return String(value, 5);
+    if (value < 0.001)
         return String(value, 4);
-    if (value < 0.01f)
+    if (value < 0.01)
         return String(value, 3);
-    if (value < 0.1f)
+    if (value < 0.1)
         return String(value, 2);
     return String(value, 1);
 }
@@ -32,7 +36,7 @@ String format_si(double value, int decimal_places = 2)
 
     auto value_abs = fabs(value);
     if (value_abs < 1E-9)
-        return String(value * 1E9, decimal_places) + "p";
+        return String(value * 1E12, decimal_places) + "p";
     if (value_abs < 1E-6)
         return String(value * 1E9, decimal_places) + "n";
     if (value_abs < 1E-3)
@@ -49,6 +53,20 @@ String format_si(double value, int decimal_places = 2)
         return String(value / 1E9, decimal_places) + "G";
     if (value_abs < 1E15)
         return String(value / 1E12, decimal_places) + "T";
-        
+
     return "NaN";
+}
+
+String format_memory(size_t bytes, int decimal_places = 2)
+{
+    const char *suffix[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+    auto val = (double)bytes;
+    auto suffix_index = 0;
+    while (val >= 1024.0)
+    {
+        val /= 1024;
+        suffix_index++;
+    }
+
+    return String(val, decimal_places) + " " + suffix[suffix_index];
 }
