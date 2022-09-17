@@ -8,7 +8,7 @@
 #include <frame_size.h>
 #include <camera_config.h>
 #include <format_duration.h>
-#include <format_si.h>
+#include <format_number.h>
 #include <template_render.h>
 #include <html_data.h>
 #include <settings.h>
@@ -55,15 +55,32 @@ void handle_root()
   if (iotWebConf.handleCaptivePortal())
     return;
 
+  const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
+
   const template_variable_t substitutions[] = {
+      // Config Changed?
+      {"ConfigChanged", String(config_changed)},
+      // Version / CPU
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()},
       {"ChipModel", ESP.getChipModel()},
+      {"ChipRevision", String(ESP.getChipRevision())},
       {"CpuFreqMHz", String(ESP.getCpuFreqMHz())},
+      {"CpuCores", String(ESP.getChipCores())},
+      {"FlashSize", format_memory(ESP.getFlashChipSize(), 0)},
+      {"HeapSize", format_memory(ESP.getHeapSize())},
+      {"PsRamSize", format_memory(ESP.getPsramSize(), 0)},
+      // Network
       {"MacAddress", WiFi.macAddress()},
+      {"AccessPoint", WiFi.SSID()},
+      {"SignalStrength", String(WiFi.RSSI())},
       {"IpV4", WiFi.localIP().toString()},
       {"IpV6", WiFi.localIPv6().toString()},
+      {"WifiMode", wifi_modes[WiFi.getMode()]},
+      {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
+      {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
+      // Camera
       {"CameraType", camera_config_val},
       {"FrameSize", frame_size_val},
       {"FrameDuration", frame_duration_val},
@@ -71,17 +88,16 @@ void handle_root()
       {"FrameBufferLocation", psramFound() ? "PSRAM" : "DRAM)"},
       {"FrameBuffers", frame_buffers_val},
       {"JpegQuality", jpeg_quality_val},
-      {"Uptime", String(format_duration(millis() / 1000))},
-      {"FreeHeap", format_si(ESP.getFreeHeap())},
-      {"MaxAllocHeap", format_si(ESP.getMaxAllocHeap())},
-      {"RtspPort", String(RTSP_PORT)},
-      {"ConfigChanged", String(config_changed)},
-      {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
-      {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", "0x" + String(camera_init_result, 16)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
-      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"}};
+      // Diagnostics
+      {"Uptime", String(format_duration(millis() / 1000))},
+      {"FreeHeap", format_memory(ESP.getFreeHeap())},
+      {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
+      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"},
+      // URL
+      {"RtspPort", String(RTSP_PORT)}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = template_render(file_data_index_html, substitutions);
@@ -91,7 +107,8 @@ void handle_root()
 void handle_restart()
 {
   log_v("Handle restart");
-  if (!config_changed)
+  // If configuration is not changed and camera working, do not allow a restart
+  if (!config_changed && camera_init_result == ESP_OK)
   {
     // Redirect to root page
     web_server.sendHeader("Location", "/", true);
