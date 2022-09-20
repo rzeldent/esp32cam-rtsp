@@ -60,6 +60,11 @@ void handle_root()
   if (iotWebConf.handleCaptivePortal())
     return;
 
+  // Format hostname
+  auto hostname = "esp32-" + WiFi.macAddress();
+  hostname.replace(":", "");
+
+  // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
 
   const template_variable_t substitutions[] = {
@@ -82,6 +87,7 @@ void handle_root()
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
       {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"},
       // Network
+      {"HostName", hostname},
       {"MacAddress", WiFi.macAddress()},
       {"AccessPoint", WiFi.SSID()},
       {"SignalStrength", String(WiFi.RSSI())},
@@ -145,12 +151,12 @@ void handle_snapshot()
   // Make a copy in memory to prevent interaction with RTSP
   cam.run();
   auto fb_len = cam.getSize();
-  auto fb = memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
+  auto fb = (const char*)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
-  web_server.sendContent(reinterpret_cast<const char *>(fb), fb_len);
-  delete[] fb;
+  web_server.sendContent(fb, fb_len);
+  delete []fb;
 }
 
 void on_config_saved()
