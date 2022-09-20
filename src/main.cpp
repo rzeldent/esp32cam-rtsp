@@ -145,7 +145,7 @@ void handle_snapshot()
   // Make a copy in memory to prevent interaction with RTSP
   cam.run();
   auto fb_len = cam.getSize();
-  auto fb = (uint8_t *)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
+  auto fb = memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
