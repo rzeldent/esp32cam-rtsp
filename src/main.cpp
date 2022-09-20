@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <soc/rtc_cntl_reg.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
@@ -245,15 +246,35 @@ void setup()
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
-  // Set DNS to thing name
-  MDNS.begin(iotWebConf.getThingName());
-  // Add service to mDNS - http
-  MDNS.addService("http", "tcp", 80);
+  ArduinoOTA
+      .onStart([]()
+               { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
+      .onEnd([]()
+             { log_w("OTA update done!"); })
+      .onProgress([](unsigned int progress, unsigned int total)
+                  { log_i("OTA Progress: %u%%\r", (progress / (total / 100))); })
+      .onError([](ota_error_t error)
+               {
+      switch (error)
+      {
+      case OTA_AUTH_ERROR: log_e("OTA: Auth Failed"); break;
+      case OTA_BEGIN_ERROR: log_e("OTA: Begin Failed"); break;
+      case OTA_CONNECT_ERROR: log_e("OTA: Connect Failed"); break;
+      case OTA_RECEIVE_ERROR: log_e("OTA: Receive Failed"); break;
+      case OTA_END_ERROR: log_e("OTA: End Failed"); break;
+      default: log_e("OTA error: %u", error);
+      } });
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+
+  // Start (OTA) Over The Air programming  when connected
+  iotWebConf.setWifiConnectionCallback([]()
+                                       { ArduinoOTA.begin(); });
 }
 
 void loop()
 {
   iotWebConf.doLoop();
+  ArduinoOTA.handle();
 
   if (camera_server)
     camera_server->doLoop();
