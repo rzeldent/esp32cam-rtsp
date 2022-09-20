@@ -107,12 +107,12 @@
                             <div class="col-8">{{IpV6}}</div>
                         </div>
                         {{#NetworkState.ApMode}}
-                        <div class="alert alert-warning" role="alert">
+                        <div class="mt-4 alert alert-warning" role="alert">
                             <p>Not connected to an access point. Consider configuring the access point.</p>
                         </div>
                         {{/NetworkState.ApMode}}
                         {{#NetworkState.OnLine}}
-                        <div class="alert alert-success" role="alert">
+                        <div class="mt-4 alert alert-success" role="alert">
                             <p>Connected to the access point</p>
                         </div>
                         {{/NetworkState.OnLine}}
@@ -148,12 +148,12 @@
                             <div class="col-8">{{JpegQuality}} (0-100)</div>
                         </div>
                         {{#CameraInitialized}}
-                        <div class="alert alert-success" role="alert">
+                        <div class="mt-4 alert alert-success" role="alert">
                             <p>Camera was initialized successfully!</p>
                         </div>
                         {{/CameraInitialized}}
                         {{^CameraInitialized}}
-                        <div class="alert alert-danger" role="alert">
+                        <div class="mt-4 alert alert-danger" role="alert">
                             <p>Failed to initialize the camera!</p>
                             <p>Result: {{CameraInitResultText}} ({{CameraInitResult}})</p>
                             <p>Please check hardware or correct the camera settings and restart.</p>
