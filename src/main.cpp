@@ -243,11 +243,6 @@ void setup()
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
-  // Set DNS to thing name
-  MDNS.begin(iotWebConf.getThingName());
-  // Add service to mDNS - http
-  MDNS.addService("http", "tcp", 80);
-
   ArduinoOTA
       .onStart([]()
                { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
@@ -266,9 +261,11 @@ void setup()
       case OTA_END_ERROR: log_e("OTA: End Failed"); break;
       default: log_e("OTA error: %u", error);
       } });
-  // Start (OTA) Over The Air programming
   ArduinoOTA.setPassword(OTA_PASSWORD);
-  ArduinoOTA.begin();
+
+  // Start (OTA) Over The Air programming  when connected
+  iotWebConf.setWifiConnectionCallback([]()
+                                       { ArduinoOTA.begin(); });
 }
 
 void loop()
