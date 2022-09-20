@@ -61,8 +61,9 @@ void handle_root()
     return;
 
   // Format hostname
-  auto hostname = "esp32-" + WiFi.macAddress();
+  auto hostname = "esp32-" + WiFi.macAddress() + ".local";
   hostname.replace(":", "");
+  hostname.toLowerCase();
 
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
@@ -148,10 +149,9 @@ void handle_snapshot()
     return;
   }
 
-  // Make a copy in memory to prevent interaction with RTSP
   cam.run();
   auto fb_len = cam.getSize();
-  auto fb = (const char*)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
+  auto fb = (const char*)memcpy(new uint8_t[fb_len], cam.getfb(), fb_len);
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
@@ -206,6 +206,9 @@ void start_rtsp_server()
 void on_connected()
 {
   log_v("on_connected");
+   // Start (OTA) Over The Air programming  when connected
+  ArduinoOTA.begin();
+  // Start the RTSP Server
   start_rtsp_server();
 }
 
@@ -271,10 +274,6 @@ void setup()
       default: log_e("OTA error: %u", error);
       } });
   ArduinoOTA.setPassword(OTA_PASSWORD);
-
-  // Start (OTA) Over The Air programming  when connected
-  iotWebConf.setWifiConnectionCallback([]()
-                                       { ArduinoOTA.begin(); });
 }
 
 void loop()
