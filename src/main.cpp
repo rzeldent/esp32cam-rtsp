@@ -11,6 +11,7 @@
 #include <format_number.h>
 #include <template_render.h>
 #include <html_data.h>
+#include <html_data_gzip.h>
 #include <settings.h>
 
 char camera_config_val[sizeof(camera_config_entry)];
@@ -41,11 +42,19 @@ bool config_changed = false;
 // Camera initialization result
 esp_err_t camera_init_result;
 
-void stream_text_file(const char *contents, const char *mime_type)
+void stream_text_file(const char *content, const char *mime_type)
 {
   // Cache for 86400 seconds (one day)
   web_server.sendHeader("Cache-Control", "max-age=86400");
-  web_server.send(200, mime_type, contents);
+  web_server.send(200, mime_type, content);
+}
+
+void stream_text_file_gzip(const unsigned char *content, size_t length, const char *mime_type)
+{
+  // Cache for 86400 seconds (one day)
+  web_server.sendHeader("Cache-Control", "max-age=86400");
+  web_server.sendContent(mime_type);
+  web_server.sendContent(reinterpret_cast<const char *>(content), length);
 }
 
 void handle_root()
@@ -133,20 +142,20 @@ void handle_snapshot()
   log_v("handle_jpg");
   if (camera_init_result != ESP_OK)
   {
-     web_server.send(404, "text/plain", "Camera is not initialized");
-     return;
+    web_server.send(404, "text/plain", "Camera is not initialized");
+    return;
   }
-  
+
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.sendContent("HTTP/1.1 200 OK\r\n"
                          "Content-Disposition: inline; filename=snapshot.jpg\r\n"
                          "Content-Type: image/jpeg\r\n\r\n");
-    // Make a copy in memory to prevent interaction with RTSP
+  // Make a copy in memory to prevent interaction with RTSP
   auto fb_len = cam.getSize();
   cam.run();
-  auto fb = (uint8_t*)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
+  auto fb = (uint8_t *)memcpy(new uint8_t[cam.getSize()], cam.getfb(), fb_len);
   web_server.sendContent(reinterpret_cast<const char *>(fb), fb_len);
-  delete []fb;
+  delete[] fb;
 }
 
 void on_config_saved()
@@ -237,7 +246,9 @@ void setup()
 
   // bootstrap
   web_server.on("/bootstrap.min.css", HTTP_GET, []()
-                { stream_text_file(file_data_bootstrap_min_css, "text/css"); });
+                { 
+                  web_server.sendHeader("Content-encoding", "gzip");
+                  stream_text_file_gzip(file_data_bootstrap_min_css, sizeof(file_data_bootstrap_min_css), "text/css"); });
 
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
