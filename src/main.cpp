@@ -206,6 +206,8 @@ void start_rtsp_server()
 void on_connected()
 {
   log_v("on_connected");
+  // Turn LED off (has inverted logic GPIO33)
+  digitalWrite(LED_BUILTIN, true);
    // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
   // Start the RTSP Server
@@ -218,6 +220,7 @@ void setup()
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
   pinMode(LED_BUILTIN, OUTPUT);
+  // Turn LED on (has inverted logic GPIO33)
   digitalWrite(LED_BUILTIN, false);
 
 #ifdef CORE_DEBUG_LEVEL
