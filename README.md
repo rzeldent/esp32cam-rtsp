@@ -67,7 +67,7 @@ When using an FTDI adapter, make sure the adapter is set to 3.3 volt before conn
 
 ![ESP FTDI wiring](assets/ESP32CAM-to-FTDI.png)
 
-After programming remove the wire to tge GPIO00 pin to exit the download mode.
+After programming remove the wire to tge GPIO0 pin to exit the download mode.
 
 ## Compiling and deploying the software
 
@@ -155,10 +155,11 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 :warning: **Please be aware that there is no password present on the stream!**
 
 ## Issues / Nice to know
+- The red LED on the back of the device indicates the device is not connected.
 - Sometimes after configuration a reboot is required.
   If the error screen is shown that it is unable to make a connection, first try to reboot the device,
 - When booting, the device waits 30 seconds for a connection (configurable).
-  You can make a connection to the SSID and log in using the crdentials below,
+  You can make a connection to the SSID and log in using the credentials below,
 - When connected, go to the ip of the device and, when prompted for the credentials, enter 'admin' and the AP password.
   This is a **required** field before saving the credentials,
 - When the password is lost, a fix is to completely erase the ESP32 using the ```pio run -t erase``` command.
@@ -172,7 +173,7 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 ### Power
 Make sure the power is 5 volts and stable, although the ESP32 is a 3.3V module, this voltage is created on the board.
 If not stable, it has been reported that restarts occur when starting up (probably when power is required for WiFi).
-The software disableds the brown out protection so there is some margin in the voltage.
+The software disables the brown out protection so there is some margin in the voltage.
 
 ### PSRAM
 Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer.
@@ -180,8 +181,8 @@ Detecting and using this special RAM is handled automatically.
 The availability of PSRAM can be seen in the HTML status overview.
 
 ### Camera modules
-Be carefull when connecting the camera module.
-Make sure it is connected the right way around (Camera poining away from the board) and the ribbon cable inserted to the end before locking it.
+Be careful when connecting the camera module.
+Make sure it is connected the right way around (Camera pointing away from the board) and the ribbon cable inserted to the end before locking it.
 
 ## Credits
-esp32cam-ready depends on PlatformIO, Bootstap5 and Micro-RTSP by Kevin Hester.
+esp32cam-ready depends on PlatformIO, Bootstrap5 and Micro-RTSP by Kevin Hester.
