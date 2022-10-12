@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string.h>
-#include <sensor.h>
+#include <esp_camera.h>
 
 typedef char camera_config_name_t[18];
 
