@@ -148,7 +148,7 @@ Configure at least:
 
 When finished press ```Apply``` to save the configuration. The screen will redirect to the status screen.
 Here it is possible to reboot the device so the settings take effect.
-It is also possible to restart manually by pressing the reset button. 
+It is also possible to restart manually by pressing the reset button.
 
 ## Connecting to the configuration
 
@@ -182,7 +182,7 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 - When the password is lost, a fix is to completely erase the ESP32 using the ```pio run -t erase``` command.
   This will reset the device including configuration.
   If using the esptool, you can do this using ```esptool.py --chip esp32 --port /dev/ttyUSB0 erase_flash```.
-  However, after erasing, re-flashing of the firmware is required. 
+  However, after erasing, re-flashing of the firmware is required.
 - When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device.
   This should reset the device and connect to the access point.
   Resetting is also a good alternative...
