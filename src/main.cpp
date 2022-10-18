@@ -149,14 +149,19 @@ void handle_snapshot()
     return;
   }
 
-  cam.run();
+  if (cam.getfb() == nullptr)
+  {
+    web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
+    return;
+  }
+
   auto fb_len = cam.getSize();
-  auto fb = (const char*)memcpy(new uint8_t[fb_len], cam.getfb(), fb_len);
+  auto fb = (const char *)memcpy(new uint8_t[fb_len], cam.getfb(), fb_len);
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
   web_server.sendContent(fb, fb_len);
-  delete []fb;
+  delete[] fb;
 }
 
 void on_config_saved()
@@ -208,7 +213,7 @@ void on_connected()
   log_v("on_connected");
   // Turn LED off (has inverted logic GPIO33)
   digitalWrite(LED_BUILTIN, true);
-   // Start (OTA) Over The Air programming  when connected
+  // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
   // Start the RTSP Server
   start_rtsp_server();
