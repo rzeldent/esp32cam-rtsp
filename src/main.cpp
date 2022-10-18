@@ -142,7 +142,7 @@ void handle_restart()
 
 void handle_snapshot()
 {
-  log_v("handle_jpg");
+  log_v("handle_snapshot");
   if (camera_init_result != ESP_OK)
   {
     web_server.send(404, "text/plain", "Camera is not initialized");
