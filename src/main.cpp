@@ -149,10 +149,9 @@ void handle_snapshot()
     return;
   }
 
-  cam.run();
-  if (cam.getSize() == 0 || cam.getfb() == nullptr)
+  if (cam.getfb() == nullptr)
   {
-    web_server.send(404, "text/plain", "Unable to obtain framebuffer");
+    web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
     return;
   }
 
