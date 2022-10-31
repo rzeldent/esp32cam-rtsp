@@ -20,6 +20,7 @@ char frame_duration_val[6];
 char frame_size_val[sizeof(frame_size_entry_t)];
 char frame_buffers_val[3];
 char jpeg_quality_val[4];
+char flash_led_intensity_val[4];
 
 auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
 auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
@@ -27,6 +28,7 @@ auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd"
 auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAME_SIZE);
 auto config_frame_buffers = iotwebconf::NumberParameter("Frame buffers", "fb", frame_buffers_val, sizeof(frame_buffers_val), DEFAULT_FRAME_BUFFERS, nullptr, "min=\"1\" max=\"16\"");
 auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
+auto config_flash_led_intensity = iotwebconf::NumberParameter("Flash LED intensity", "li", flash_led_intensity_val, sizeof(flash_led_intensity_val), DEFAULT_LIGHT_INTENSITY, nullptr, "min=\"0\" max=\"100\"");
 
 // Camera
 OV2640 cam;
@@ -108,6 +110,7 @@ void handle_root()
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", "0x" + String(camera_init_result, 16)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
+      {"FlashLedIntensity", flash_led_intensity_val},
       // RTSP
       {"RtspPort", String(RTSP_PORT)}};
 
@@ -167,6 +170,9 @@ void handle_snapshot()
 void on_config_saved()
 {
   log_v("on_config_saved");
+  // Set flash led intensity
+  analogWrite(LED_FLASH, atoi(flash_led_intensity_val));
+
   config_changed = true;
 }
 
@@ -211,8 +217,10 @@ void start_rtsp_server()
 void on_connected()
 {
   log_v("on_connected");
-  // Turn LED off (has inverted logic GPIO33)
+  // Turn LED off (has inverted logic GPIO33) => red LED off => connected
   digitalWrite(LED_BUILTIN, true);
+  // Set flash led intensity
+  analogWrite(LED_FLASH, atoi(flash_led_intensity_val));
   // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
   // Start the RTSP Server
@@ -225,8 +233,12 @@ void setup()
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
   pinMode(LED_BUILTIN, OUTPUT);
-  // Turn LED on (has inverted logic GPIO33)
+  // Turn LED on (has inverted logic GPIO33) => red LED on => not connected
   digitalWrite(LED_BUILTIN, false);
+
+  pinMode(LED_FLASH, OUTPUT);
+  // Turn flash led off
+  analogWrite(LED_FLASH, 0);
 
 #ifdef CORE_DEBUG_LEVEL
   Serial.begin(115200);
@@ -242,6 +254,7 @@ void setup()
   config_group_stream_settings.addItem(&config_frame_size);
   config_group_stream_settings.addItem(&config_frame_buffers);
   config_group_stream_settings.addItem(&config_jpg_quality);
+  config_group_stream_settings.addItem(&config_flash_led_intensity);
   iotWebConf.addParameterGroup(&config_group_stream_settings);
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
