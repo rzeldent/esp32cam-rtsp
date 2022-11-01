@@ -163,7 +163,7 @@
                         {{^CameraInitialized}}
                         <div class="mt-4 alert alert-danger" role="alert">
                             <p>Failed to initialize the camera!</p>
-                            <p>Result: {{CameraInitResultText}} ({{CameraInitResult}})</p>
+                            <p>Result: {{CameraInitResultText}}</p>
                             <p>Please check hardware or correct the camera settings and restart.</p>
                             <button type="button" class="btn btn-danger"
                                 onclick="location.href='restart'">Restart</button>
@@ -176,20 +176,41 @@
 
         <div class="row">
             <div class="card bg-light mb-3">
-                <h5 class="card-header">Camera stream</h5>
+                <h5 class="card-header">Special URLs / API</h5>
                 <div class="card-body">
-                    </p>The camera stream can be found at the following location:
-                    <a href="rtsp://{{HostName}}:{{RtspPort}}/mjpeg/1">rtsp://{{HostName}}:{{RtspPort}}/mjpeg/1</a>
-                    </p>
-                    <!-- <img class="rounded mx-auto d-block" src="snapshot" alt="Camera image" width="25%">-->
+                    <div class="row">
+                        <span>
+                            The camera RTSP stream can be found at:
+                            <a
+                                href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{HostName}}:{{RtspPort}}/mjpeg/1</a>
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span>
+                            A snapshot of the camera can be found at:
+                            <a href="http://{{IpV4}}/snapshot">http://{{HostName}}/snapshot</a>
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span>
+                            The intensity of the flash led (0-255) can be controlled using:
+                            <a href="http://{{IpV4}}/flash?v=0">http://{{HostName}}/flash?v=value</a>.
+                            If no value is present, the configuration value is used.
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span>
+                            Restarting the camera can be done using:
+                            <a href="http://{{IpV4}}/restart">http://{{HostName}}/restart</a>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="d-grid gap-2 col-6 mx-auto">
-        <button type="button" class="btn btn-lg btn-warning" onclick="location.href='config'">Settings</button>
-    </div>
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <button type="button" class="btn btn-lg btn-warning" onclick="location.href='config'">Settings</button>
+        </div>
 
     </div>
 

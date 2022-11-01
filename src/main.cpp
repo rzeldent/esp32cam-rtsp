@@ -108,7 +108,6 @@ void handle_root()
       {"FrameBuffers", frame_buffers_val},
       {"JpegQuality", jpeg_quality_val},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
-      {"CameraInitResult", "0x" + String(camera_init_result, 16)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
       {"FlashLedIntensity", flash_led_intensity_val},
       // RTSP
@@ -122,14 +121,6 @@ void handle_root()
 void handle_restart()
 {
   log_v("Handle restart");
-  // If configuration is not changed and camera working, do not allow a restart
-  if (!config_changed && camera_init_result == ESP_OK)
-  {
-    // Redirect to root page
-    web_server.sendHeader("Location", "/", true);
-    web_server.send(302, "text/plain", "Restart not possible.");
-    return;
-  }
 
   const moustache_variable_t substitutions[] = {
       {"AppTitle", APP_TITLE},
@@ -165,6 +156,18 @@ void handle_snapshot()
   web_server.send(200, "image/jpeg", "");
   web_server.sendContent(fb, fb_len);
   delete[] fb;
+}
+
+void handle_flash()
+{
+  log_v("handle_flash");
+  // If no value present, use value from config
+  auto value = web_server.hasArg("v") ? web_server.arg("v") : flash_led_intensity_val;
+  // If conversion fails, v = 0
+  auto v = (uint8_t)min(value.toInt(), 255l);
+  analogWrite(LED_FLASH, v);
+  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  web_server.send(200);
 }
 
 void on_config_saved()
@@ -268,6 +271,8 @@ void setup()
   web_server.on("/restart", HTTP_GET, handle_restart);
   // Camera snapshot
   web_server.on("/snapshot", handle_snapshot);
+  // Camera flash light
+  web_server.on("/flash", HTTP_GET, handle_flash);
 
   // bootstrap
   web_server.on("/bootstrap.min.css", HTTP_GET, []()
