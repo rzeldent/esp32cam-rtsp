@@ -170,6 +170,29 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
 :warning: **Please be aware that there is no password present on the stream!**
 
+## API
+
+There is a minimum API present to perform some tasks using HTTP requests.
+The URLs are below:
+
+### GET: /restart
+
+Calling this URL will restart the device.
+
+### GET: /config
+
+Calling this URL will start the form for configuring the device in the browser.
+
+### GET: /snapshot
+
+Calling this URL will return a JPEG snapshot of the camera in the browser.
+
+### GET: /flash?v={value}
+
+Calling this URL will set the intensity of the flash LED.
+The values must for {value} must be between 0 and 255.
+If no v parameter is present, it will be set to the value of the configuration.
+
 ## Issues / Nice to know
 
 - The red LED on the back of the device indicates the device is not connected.
