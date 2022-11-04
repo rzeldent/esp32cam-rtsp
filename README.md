@@ -172,26 +172,32 @@ This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
 ## API
 
-There is a minimum API present to perform some tasks using HTTP requests.
+There is a minimum API present to perform some tasks using HTTP requests. For some requests authentication is required.
+The authentication used is basic authentication. The user is always admin and the password the access point key.\
+If using a browser, remember that the authentication is stored in the browser session so needs to be entered only once.
+
 The URLs are below:
 
 ### GET: /restart
 
-Calling this URL will restart the device.
+Calling this URL will restart the device. Authentication is required.
 
 ### GET: /config
 
-Calling this URL will start the form for configuring the device in the browser.
+Calling this URL will start the form for configuring the device in the browser. Authentication is required.
 
 ### GET: /snapshot
 
 Calling this URL will return a JPEG snapshot of the camera in the browser.
 
-### GET: /flash?v={value}
+This request can also be used (for example using cURL) to save the snapshot to a file.
 
-Calling this URL will set the intensity of the flash LED.
-The values must for {value} must be between 0 and 255.
-If no v parameter is present, it will be set to the value of the configuration.
+### GET: /flash?v={intensity}
+
+Calling this URL will set the intensity of the flash LED. Authentication is required.
+
+The parameter v for the intensity must be between 0 (off) and 255 (max).
+If no v parameter is present, it will be set to the value of the flash LED intensity from configuration.
 
 ## Issues / Nice to know
 
