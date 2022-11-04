@@ -122,6 +122,12 @@ void handle_restart()
 {
   log_v("Handle restart");
 
+  if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
+  {
+    web_server.requestAuthentication();
+    return;
+  }
+
   const moustache_variable_t substitutions[] = {
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
@@ -161,6 +167,13 @@ void handle_snapshot()
 void handle_flash()
 {
   log_v("handle_flash");
+
+  if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
+  {
+    web_server.requestAuthentication();
+    return;
+  }
+
   // If no value present, use value from config
   auto value = web_server.hasArg("v") ? web_server.arg("v") : flash_led_intensity_val;
   // If conversion fails, v = 0
