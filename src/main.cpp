@@ -150,19 +150,18 @@ void handle_snapshot()
   }
 
   cam.run();
-  if (cam.getfb() == nullptr)
+  auto fb_len = cam.getSize();
+  auto fb = (const char*)cam.getfb();
+  if (fb == nullptr)
   {
     web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
     return;
   }
 
-  auto fb_len = cam.getSize();
-  auto fb = (const char *)memcpy(new uint8_t[fb_len], cam.getfb(), fb_len);
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
   web_server.sendContent(fb, fb_len);
-  delete[] fb;
 }
 
 void handle_flash()
@@ -220,7 +219,7 @@ void start_rtsp_server()
   camera_init_result = initialize_camera();
   if (camera_init_result != ESP_OK)
   {
-    log_e("Failed to initialize camera: 0x%0xd. Type: %s, frame size: %s, frame buffers: %s, frame rate: %s ms, jpeg quality: %s", camera_init_result, camera_config_val, frame_size_val, frame_buffers_val, frame_duration_val, jpeg_quality_val);
+    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame buffers: %s, frame rate: %s ms, jpeg quality: %s", camera_init_result, camera_config_val, frame_size_val, frame_buffers_val, frame_duration_val, jpeg_quality_val);
     return;
   }
 
