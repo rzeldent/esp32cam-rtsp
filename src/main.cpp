@@ -149,7 +149,11 @@ void handle_snapshot()
     return;
   }
 
-  cam.run();
+  // Remove old images stored in the framebuffer
+  auto frame_buffers = atoi(frame_buffers_val);
+  while (frame_buffers--)
+    cam.run();
+  
   auto fb_len = cam.getSize();
   auto fb = (const char*)cam.getfb();
   if (fb == nullptr)
@@ -188,7 +192,6 @@ void on_config_saved()
   log_v("on_config_saved");
   // Set flash led intensity
   analogWrite(LED_FLASH, atoi(flash_led_intensity_val));
-
   config_changed = true;
 }
 
