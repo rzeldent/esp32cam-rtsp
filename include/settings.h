@@ -5,7 +5,7 @@
 
 #define WIFI_SSID "ESP32CAM-RTSP"
 #define WIFI_PASSWORD nullptr
-#define CONFIG_VERSION "1.2"
+#define CONFIG_VERSION "1.3"
 
 #define OTA_PASSWORD "ESP32CAM-RTSP"
 
