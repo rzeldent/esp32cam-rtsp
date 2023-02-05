@@ -70,7 +70,7 @@ void handle_root()
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
 
-  const moustache_variable_t substitutions[] = {
+  moustache_variable_t substitutions[] = {
       // Config Changed?
       {"ConfigChanged", String(config_changed)},
       // Version / CPU
@@ -128,7 +128,7 @@ void handle_restart()
     return;
   }
 
-  const moustache_variable_t substitutions[] = {
+  moustache_variable_t substitutions[] = {
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()}};
