@@ -37,9 +37,9 @@ for file_name in file_names:
 
     html_mimified = htmlmin.minify(html, remove_empty_space=True)
     html_mimified_gzip = gzip.compress(bytes(html_mimified, 'utf-8'))
-    html_mimified_gzip_values = ','.join(f'0x{i:02x}' for x in html_mimified_gzip)
+    html_mimified_gzip_values = ','.join(f'0x{i:02x}' for i in html_mimified_gzip)
 
-    output_file.write(f'constexpr unsigned char {file_data_name}[] = {{{html_mimified_gzip_values}}};\n\n')
+    output_file.write(f'constexpr unsigned char {file_data_name}[] = {{\n{html_mimified_gzip_values}\n}};\n\n')
 
 output_file.close()
 
