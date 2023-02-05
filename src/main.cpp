@@ -10,7 +10,7 @@
 #include <camera_config.h>
 #include <format_duration.h>
 #include <format_number.h>
-#include <template_render.h>
+#include <moustache.h>
 #include <html_data.h>
 #include <settings.h>
 
@@ -58,7 +58,7 @@ void handle_root()
 
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
 
-  const template_variable_t substitutions[] = {
+  moustache_variable_t substitutions[] = {
       // Config Changed?
       {"ConfigChanged", String(config_changed)},
       // Version / CPU
@@ -101,7 +101,7 @@ void handle_root()
       {"RtspPort", String(RTSP_PORT)}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  auto html = template_render(file_data_index_html, substitutions);
+  auto html = moustache_render(file_data_index_html, substitutions);
   web_server.send(200, "text/html", html);
 }
 
@@ -117,12 +117,12 @@ void handle_restart()
     return;
   }
 
-  const template_variable_t substitutions[] = {
+  moustache_variable_t substitutions[] = {
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()}};
 
-  auto html = template_render(file_data_restart_html, substitutions);
+  auto html = moustache_render(file_data_restart_html, substitutions);
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
   sleep(100);
