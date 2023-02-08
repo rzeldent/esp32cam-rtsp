@@ -3,10 +3,9 @@
 #include <string.h>
 #include <esp_camera.h>
 
-typedef char camera_config_name_t[11];
 typedef struct
 {
-    const camera_config_name_t name;
+    const char name[11];
     const camera_config_t config;
 } camera_config_entry_t;
 
@@ -146,9 +145,8 @@ const camera_config_t lookup_camera_config(const char *name)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : camera_configs)
-        if (strncmp(entry.name, name, sizeof(camera_config_name_t)) == 0)
+        if (strncmp(entry.name, name, sizeof(entry.name)) == 0)
             return entry.config;
 
     return camera_config_t{};
 }
-

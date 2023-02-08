@@ -2,10 +2,9 @@
 
 #include <string.h>
 
-typedef char camera_effect_name_t[11];
 typedef struct
 {
-    const camera_effect_name_t name;
+    const char name[11];
     const int value;
 } camera_effect_entry_t;
 
@@ -22,7 +21,7 @@ const int lookup_camera_effect(const char *name)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : camera_effects)
-        if (strncmp(entry.name, name, sizeof(camera_effect_entry_t)) == 0)
+        if (strncmp(entry.name, name, sizeof(entry.name)) == 0)
             return entry.value;
 
     return 0;

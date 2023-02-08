@@ -3,10 +3,9 @@
 #include <string.h>
 #include <esp_camera.h>
 
-typedef char camera_gainceiling_name_t[5];
 typedef struct
 {
-    const camera_gainceiling_name_t name;
+    const char name[5];
     const gainceiling_t value;
 } camera_gainceiling_entry_t;
 
@@ -23,7 +22,7 @@ const gainceiling_t lookup_camera_gainceiling(const char *name)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : camera_gain_ceilings)
-        if (strncmp(entry.name, name, sizeof(camera_gainceiling_entry_t)) == 0)
+        if (strncmp(entry.name, name, sizeof(entry.name)) == 0)
             return entry.value;
 
     return GAINCEILING_2X;

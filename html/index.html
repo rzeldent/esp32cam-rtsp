@@ -80,6 +80,19 @@
         <div class="row">
             <div class="col-sm-6">
                 <div class="card bg-light mb-3">
+                    <h5 class="card-header">Peripheral</h5>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">Board type:</div>
+                            <div class="col-8">{{BoardType}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">LED intensity:</div>
+                            <div class="col-8">{{LedIntensity}} [0-100]</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card bg-light mb-3">
                     <h5 class="card-header">Network</h5>
                     <div class="card-body">
                         <div class="row">
@@ -120,19 +133,6 @@
                             <p>Connected to the access point</p>
                         </div>
                         {{/NetworkState.OnLine}}
-                    </div>
-                </div>
-                <div class="card bg-light mb-3">
-                    <h5 class="card-header">Peripheral</h5>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-4">Board type:</div>
-                            <div class="col-8">{{BoardType}}</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-4">LED intensity:</div>
-                            <div class="col-8">{{LedIntensity}} [0-100]</div>
-                        </div>
                     </div>
                 </div>
             </div>
