@@ -3,9 +3,8 @@
 #include <string.h>
 #include <esp_camera.h>
 
-typedef char camera_config_name_t[18];
-
-typedef struct camera_config_entry
+typedef char camera_config_name_t[11];
+typedef struct
 {
     const camera_config_name_t name;
     const camera_config_t config;
@@ -137,19 +136,94 @@ constexpr camera_config_t esp32cam_wrover_kit_settings = {
     .fb_count = 2};
 
 constexpr const camera_config_entry_t camera_configs[] = {
-
     {"ESP32CAM", esp32cam_settings},
     {"AI THINKER", esp32cam_aithinker_settings},
     {"TTGO T-CAM", esp32cam_ttgo_t_settings},
     {"M5 STACK", esp32cam_m5stack_settings},
     {"WROVER KIT", esp32cam_wrover_kit_settings}};
 
-const camera_config_t lookup_camera_config(const char *pin)
+const camera_config_t lookup_camera_config(const char *name)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : camera_configs)
-        if (strncmp(entry.name, pin, sizeof(camera_config_name_t)) == 0)
+        if (strncmp(entry.name, name, sizeof(camera_config_name_t)) == 0)
             return entry.config;
 
     return camera_config_t{};
+}
+
+typedef char camera_effect_name_t[11];
+typedef struct
+{
+    const camera_effect_name_t name;
+    const int value;
+} camera_effect_entry_t;
+
+constexpr const camera_effect_entry_t camera_effects[] = {
+    {"Normal", 0},
+    {"Negative", 1},
+    {"Grayscale", 2},
+    {"Red tint", 3},
+    {"Green tint", 4},
+    {"Blue tint", 5},
+    {"Sepia", 6}};
+
+const int lookup_camera_effect(const char *name)
+{
+    // Lookup table for the frame name to framesize_t
+    for (const auto &entry : camera_effects)
+        if (strncmp(entry.name, name, sizeof(camera_effect_entry_t)) == 0)
+            return entry.value;
+
+    return 0;
+}
+
+typedef char camera_white_balance_mode_name_t[7];
+typedef struct
+{
+    const camera_white_balance_mode_name_t name;
+    const int value;
+} camera_white_balance_mode_entry_t;
+
+constexpr const camera_white_balance_mode_entry_t camera_white_balance_modes[] = {
+    {"Auto", 0},
+    {"Sunny", 1},
+    {"Cloudy", 2},
+    {"Office", 3},
+    {"Home", 4}};
+
+const int lookup_camera_white_balance_mode(const char *name)
+{
+    // Lookup table for the frame name to framesize_t
+    for (const auto &entry : camera_white_balance_modes)
+        if (strncmp(entry.name, name, sizeof(camera_white_balance_mode_entry_t)) == 0)
+            return entry.value;
+
+    return 0;
+}
+
+typedef char camera_gain_ceiling_name_t[5];
+typedef struct
+{
+    const camera_gain_ceiling_name_t name;
+    const gainceiling_t value;
+} camera_gain_ceiling_entry_t;
+
+constexpr const camera_gain_ceiling_entry_t camera_gain_ceilings[] = {
+    {"2X", GAINCEILING_2X},
+    {"4X", GAINCEILING_4X},
+    {"8X", GAINCEILING_8X},
+    {"16X", GAINCEILING_16X},
+    {"32X", GAINCEILING_32X},
+    {"64X", GAINCEILING_64X},
+    {"128X", GAINCEILING_128X}};
+
+const gainceiling_t lookup_camera_gain_ceiling_mode(const char *name)
+{
+    // Lookup table for the frame name to framesize_t
+    for (const auto &entry : camera_gain_ceilings)
+        if (strncmp(entry.name, name, sizeof(camera_gain_ceiling_entry_t)) == 0)
+            return entry.value;
+
+    return GAINCEILING_2X;
 }

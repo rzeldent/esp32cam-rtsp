@@ -15,20 +15,39 @@
 #include <html_data_gzip.h>
 #include <settings.h>
 
-char camera_config_val[sizeof(camera_config_entry)];
-char frame_duration_val[6];
-char frame_size_val[sizeof(frame_size_entry_t)];
-char frame_buffers_val[3];
-char jpeg_quality_val[4];
-char flash_led_intensity_val[4];
+auto param_group_board = iotwebconf::ParameterGroup("board", "Board settings");
+auto param_board = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_configs[0])>>("bt").label("Board").optionValues((const char *)&camera_configs).optionNames((const char *)&camera_configs).optionCount(sizeof(camera_configs) / sizeof(camera_configs[0])).nameLength(sizeof(camera_configs[0])).defaultValue(DEFAULT_CAMERA_CONFIG).build();
 
-auto config_group_stream_settings = iotwebconf::ParameterGroup("settings", "Streaming settings");
-auto config_camera_config = iotwebconf::SelectParameter("Camera config", "config", camera_config_val, sizeof(camera_config_val), (const char *)camera_configs, (const char *)camera_configs, sizeof(camera_configs) / sizeof(camera_configs[0]), sizeof(camera_configs[0]), DEFAULT_CAMERA_CONFIG);
-auto config_frame_rate = iotwebconf::NumberParameter("Frame duration (ms)", "fd", frame_duration_val, sizeof(frame_duration_val), DEFAULT_FRAME_DURATION, nullptr, "min=\"10\"");
-auto config_frame_size = iotwebconf::SelectParameter("Frame size", "fs", frame_size_val, sizeof(frame_size_val), (const char *)frame_sizes, (const char *)frame_sizes, sizeof(frame_sizes) / sizeof(frame_sizes[0]), sizeof(frame_sizes[0]), DEFAULT_FRAME_SIZE);
-auto config_frame_buffers = iotwebconf::NumberParameter("Frame buffers", "fb", frame_buffers_val, sizeof(frame_buffers_val), DEFAULT_FRAME_BUFFERS, nullptr, "min=\"1\" max=\"16\"");
-auto config_jpg_quality = iotwebconf::NumberParameter("JPEG quality", "q", jpeg_quality_val, sizeof(jpeg_quality_val), DEFAULT_JPEG_QUALITY, nullptr, "min=\"1\" max=\"100\"");
-auto config_flash_led_intensity = iotwebconf::NumberParameter("Flash LED intensity", "li", flash_led_intensity_val, sizeof(flash_led_intensity_val), DEFAULT_LIGHT_INTENSITY, nullptr, "min=\"0\" max=\"100\"");
+auto param_group_camera = iotwebconf::ParameterGroup("camera", "Camera settings");
+auto param_frame_duration = iotwebconf::Builder<iotwebconf::UIntTParameter<unsigned long>>("fd").label("Frame duration (ms)").defaultValue(DEFAULT_FRAME_DURATION).min(10).build();
+auto param_frame_size = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(frame_sizes[0])>>("fs").label("Frame size").optionValues((const char *)&frame_sizes).optionNames((const char *)&frame_sizes).optionCount(sizeof(frame_sizes) / sizeof(frame_sizes[0])).nameLength(sizeof(frame_sizes[0])).defaultValue(DEFAULT_FRAME_SIZE).build();
+auto param_frame_buffers = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("fb").label("Frame buffers").defaultValue(DEFAULT_FRAME_BUFFERS).min(1).max(16).build();
+auto param_jpg_quality = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("q").label("JPG quality").defaultValue(DEFAULT_JPEG_QUALITY).min(1).max(100).build();
+auto param_brightness = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("b").label("Brightness").defaultValue(DEFAULT_BRIGHTNESS).min(-2).max(2).build();
+auto param_contrast = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("c").label("Contrast").defaultValue(DEFAULT_CONTRAST).min(-2).max(2).build();
+auto param_saturation = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("s").label("Saturation").defaultValue(DEFAULT_SATURATION).min(-2).max(2).build();
+auto param_special_effect = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_effects[0])>>("e").label("Effect").optionValues((const char *)&camera_effects).optionNames((const char *)&camera_effects).optionCount(sizeof(camera_effects) / sizeof(camera_effects[0])).nameLength(sizeof(camera_effects[0])).defaultValue(DEFAULT_EFFECT).build();
+auto param_white_balance = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("wb").label("White balance").defaultValue(DEFAULT_WHITE_BALANCE).build();
+auto param_automatic_white_balance_gain = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("awbg").label("Automatic white balance gain").defaultValue(DEFAULT_WHITE_BALANCE_GAIN).build();
+auto param_white_balance_mode = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_white_balance_modes[0])>>("wbm").label("White balance mode").optionValues((const char *)&camera_white_balance_modes).optionNames((const char *)&camera_white_balance_modes).optionCount(sizeof(camera_white_balance_modes) / sizeof(camera_white_balance_modes[0])).nameLength(sizeof(camera_white_balance_modes[0])).defaultValue(DEFAULT_WHITE_BALANCE_MODE).build();
+auto param_exposure_control = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("ec").label("Exposure control").defaultValue(DEFAULT_EXPOSURE_CONTROL).build();
+auto param_aec2 = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("aec2").label("AEC2").defaultValue(DEFAULT_AEC2).build();
+auto param_ae_level = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("ael").label("AE level").defaultValue(DEFAULT_AE_LEVEL).min(-2).max(2).build();
+auto param_aec_value = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("aecv").label("AEC value").defaultValue(DEFAULT_AEC_VALUE).min(9).max(1200).build();
+auto param_gain_control = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("gc").label("Gain control").defaultValue(DEFAULT_GAIN_CONTROL).build();
+auto param_agc_gain = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("agcg").label("AGC gain").defaultValue(DEFAULT_AGC_GAIN).min(0).max(30).build();
+auto param_gain_ceiling = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_gain_ceilings[0])>>("gcl").label("Gain ceilings").optionValues((const char *)&camera_gain_ceilings).optionNames((const char *)&camera_gain_ceilings).optionCount(sizeof(camera_gain_ceilings) / sizeof(camera_gain_ceilings[0])).nameLength(sizeof(camera_gain_ceilings[0])).defaultValue(DEFAULT_GAIN_CEILING).build();
+auto param_bpc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("bpc").label("BPC").defaultValue(DEFAULT_BPC).build();
+auto param_wpc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("wpc").label("WPC").defaultValue(DEFAULT_WPC).build();
+auto param_raw_gamma = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("rg").label("Raw gamma").defaultValue(DEFAULT_RAW_GAMMA).build();
+auto param_lenc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("lenc").label("LENC").defaultValue(DEFAULT_LENC).build();
+auto param_horizontal_mirror = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("hm").label("Horizontal mirror").defaultValue(DEFAULT_HORIZONTAL_MIRROR).build();
+auto param_vertical_flip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").label("Vertical mirror").defaultValue(DEFAULT_VERTICAL_MIRROR).build();
+auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").label("DCW").defaultValue(DEFAULT_DCW).build();
+auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
+
+auto param_group_peripheral = iotwebconf::ParameterGroup("io", "peripheral settings");
+auto param_led_intensity = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("li").label("LED intensity").defaultValue(DEFAULT_LED_INTENSITY).min(0).max(100).build();
 
 // Camera
 OV2640 cam;
@@ -100,16 +119,40 @@ void handle_root()
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
-      {"CameraType", camera_config_val},
-      {"FrameSize", frame_size_val},
-      {"FrameDuration", frame_duration_val},
-      {"FrameFrequency", String(1000.0 / atol(frame_duration_val), 1)},
+      {"CameraType", String(param_board.value())},
+      {"FrameSize", String(param_frame_size.value())},
+      {"FrameDuration", String(param_frame_duration.value())},
+      {"FrameFrequency", String(1000.0 / param_frame_duration.value(), 1)},
       {"FrameBufferLocation", psramFound() ? "PSRAM" : "DRAM)"},
-      {"FrameBuffers", frame_buffers_val},
-      {"JpegQuality", jpeg_quality_val},
+      {"FrameBuffers", String(param_frame_buffers.value())},
+      {"JpegQuality", String(param_jpg_quality.value())},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
-      {"FlashLedIntensity", flash_led_intensity_val},
+      // Settings
+      {"Brightness", String(param_brightness.value())},
+      {"Contrast", String(param_contrast.value())},
+      {"Saturation", String(param_saturation.value())},
+      {"Effect", String(param_special_effect.value())},
+      {"WhiteBalance", String(param_white_balance.value())},
+      {"AutomaticWhiteBalancebGain", String(param_automatic_white_balance_gain.value())},
+      {"WhiteBalanceMode", String(param_white_balance_mode.value())},
+      {"ExposureControl", String(param_exposure_control.value())},
+      {"AEC2", String(param_aec2.value())},
+      {"AELevel", String(param_ae_level.value())},
+      {"AECValue", String(param_aec_value.value())},
+      {"GainControl", String(param_gain_control.value())},
+      {"AGCGain", String(param_agc_gain.value())},
+      {"GainCeiling", String(param_gain_ceiling.value())},
+      {"BPC", String(param_bpc.value())},
+      {"WPC", String(param_wpc.value())},
+      {"RawGamma", String(param_raw_gamma.value())},
+      {"LENC", String(param_lenc.value())},
+      {"HorizontalMirror", String(param_horizontal_mirror.value())},
+      {"VericalFlip", String(param_vertical_flip.value())},
+      {"WCW", String(param_dcw.value())},
+      {"ColorBar", String(param_colorbar.value())},
+      // LED
+      {"FlashLedIntensity", String(param_led_intensity.value())},
       // RTSP
       {"RtspPort", String(RTSP_PORT)}};
 
@@ -150,12 +193,12 @@ void handle_snapshot()
   }
 
   // Remove old images stored in the framebuffer
-  auto frame_buffers = atoi(frame_buffers_val);
+  auto frame_buffers = param_frame_buffers.value();
   while (frame_buffers--)
     cam.run();
-  
+
   auto fb_len = cam.getSize();
-  auto fb = (const char*)cam.getfb();
+  auto fb = (const char *)cam.getfb();
   if (fb == nullptr)
   {
     web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
@@ -179,10 +222,17 @@ void handle_flash()
   }
 
   // If no value present, use value from config
-  auto value = web_server.hasArg("v") ? web_server.arg("v") : flash_led_intensity_val;
-  // If conversion fails, v = 0
-  auto v = (uint8_t)min(value.toInt(), 255l);
-  analogWrite(LED_FLASH, v);
+  if (web_server.hasArg("v"))
+  {
+    auto v = (uint8_t)min(web_server.arg("v").toInt(), 255L);
+    // If conversion fails, v = 0
+    analogWrite(LED_FLASH, v);
+  }
+  else
+  {
+    analogWrite(LED_FLASH, param_led_intensity.value());
+  }
+
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.send(200);
 }
@@ -191,29 +241,55 @@ void on_config_saved()
 {
   log_v("on_config_saved");
   // Set flash led intensity
-  analogWrite(LED_FLASH, atoi(flash_led_intensity_val));
+  analogWrite(LED_FLASH, param_led_intensity.value());
   config_changed = true;
 }
 
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
-  log_i("Camera config: %s", camera_config_val);
-  auto camera_config = lookup_camera_config(camera_config_val);
-  log_i("Frame size: %s", frame_size_val);
-  auto frame_size = lookup_frame_size(frame_size_val);
-  log_i("Frame buffers: %s", frame_buffers_val);
-  auto frame_buffers = atoi(frame_buffers_val);
-  log_i("JPEG quality: %s", jpeg_quality_val);
-  auto jpeg_quality = atoi(jpeg_quality_val);
-  log_i("Frame rate: %s ms", frame_duration_val);
+  log_i("Camera config: %s", param_board.value());
+  auto camera_config = lookup_camera_config(param_board.value());
+  log_i("Frame size: %s", param_frame_size.value());
+  auto frame_size = lookup_frame_size(param_frame_size.value());
+  log_i("Frame buffers: %d", param_frame_buffers.value());
+  // auto frame_buffers = atoi(frame_buffers_val);
+  log_i("JPEG quality: %d", param_jpg_quality.value());
+  log_i("Frame duration: %d ms", param_frame_duration.value());
 
   camera_config.frame_size = frame_size;
-  camera_config.fb_count = frame_buffers;
+  camera_config.fb_count = param_frame_buffers.value();
   camera_config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
-  camera_config.jpeg_quality = jpeg_quality;
+  camera_config.jpeg_quality = param_jpg_quality.value();
 
   return cam.init(camera_config);
+}
+
+void update_camera_settings()
+{
+  auto camera = esp_camera_sensor_get();
+  camera->set_brightness(camera, param_brightness.value());
+  camera->set_contrast(camera, param_contrast.value());
+  camera->set_saturation(camera, param_saturation.value());
+  camera->set_special_effect(camera, lookup_camera_effect(param_special_effect.value()));
+  camera->set_whitebal(camera, param_white_balance.value());
+  camera->set_awb_gain(camera, param_automatic_white_balance_gain.value());
+  camera->set_wb_mode(camera, lookup_camera_white_balance_mode(param_white_balance_mode.value()));
+  camera->set_exposure_ctrl(camera, param_exposure_control.value());
+  camera->set_aec2(camera, param_aec2.value());
+  camera->set_ae_level(camera, param_ae_level.value());
+  camera->set_aec_value(camera, param_aec_value.value());
+  camera->set_gain_ctrl(camera, param_gain_control.value());
+  camera->set_agc_gain(camera, param_agc_gain.value());
+  camera->set_gainceiling(camera, lookup_camera_gain_ceiling_mode(param_gain_ceiling.value()));
+  camera->set_bpc(camera, param_bpc.value());
+  camera->set_wpc(camera, param_wpc.value());
+  camera->set_raw_gma(camera, param_raw_gamma.value());
+  camera->set_lenc(camera, param_lenc.value());
+  camera->set_hmirror(camera, param_horizontal_mirror.value());
+  camera->set_vflip(camera, param_vertical_flip.value());
+  camera->set_dcw(camera, param_dcw.value());
+  camera->set_colorbar(camera, param_colorbar.value());
 }
 
 void start_rtsp_server()
@@ -222,13 +298,16 @@ void start_rtsp_server()
   camera_init_result = initialize_camera();
   if (camera_init_result != ESP_OK)
   {
-    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame buffers: %s, frame rate: %s ms, jpeg quality: %s", camera_init_result, camera_config_val, frame_size_val, frame_buffers_val, frame_duration_val, jpeg_quality_val);
+    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame buffers: %d, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_buffers.value(), param_frame_duration.value(), param_jpg_quality.value());
     return;
   }
 
   log_i("Camera initialized");
-  auto frame_rate = atol(frame_duration_val);
-  camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, frame_rate, RTSP_PORT));
+
+  update_camera_settings();
+  log_i("Camera settings updated");
+
+  camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
   // Add service to mDNS - rtsp
   MDNS.addService("rtsp", "tcp", 554);
 }
@@ -239,7 +318,7 @@ void on_connected()
   // Turn LED off (has inverted logic GPIO33) => red LED off => connected
   digitalWrite(LED_BUILTIN, true);
   // Set flash led intensity
-  analogWrite(LED_FLASH, atoi(flash_led_intensity_val));
+  analogWrite(LED_FLASH, param_led_intensity.value());
   // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
   // Start the RTSP Server
@@ -268,13 +347,40 @@ void setup()
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("Starting " APP_TITLE "...");
 
-  config_group_stream_settings.addItem(&config_camera_config);
-  config_group_stream_settings.addItem(&config_frame_rate);
-  config_group_stream_settings.addItem(&config_frame_size);
-  config_group_stream_settings.addItem(&config_frame_buffers);
-  config_group_stream_settings.addItem(&config_jpg_quality);
-  config_group_stream_settings.addItem(&config_flash_led_intensity);
-  iotWebConf.addParameterGroup(&config_group_stream_settings);
+  param_group_board.addItem(&param_board);
+  iotWebConf.addParameterGroup(&param_group_board);
+
+  param_group_camera.addItem(&param_frame_duration);
+  param_group_camera.addItem(&param_frame_size);
+  param_group_camera.addItem(&param_frame_buffers);
+  param_group_camera.addItem(&param_jpg_quality);
+  param_group_camera.addItem(&param_brightness);
+  param_group_camera.addItem(&param_contrast);
+  param_group_camera.addItem(&param_saturation);
+  param_group_camera.addItem(&param_special_effect);
+  param_group_camera.addItem(&param_white_balance);
+  param_group_camera.addItem(&param_automatic_white_balance_gain);
+  param_group_camera.addItem(&param_white_balance_mode);
+  param_group_camera.addItem(&param_exposure_control);
+  param_group_camera.addItem(&param_aec2);
+  param_group_camera.addItem(&param_ae_level);
+  param_group_camera.addItem(&param_aec_value);
+  param_group_camera.addItem(&param_gain_control);
+  param_group_camera.addItem(&param_agc_gain);
+  param_group_camera.addItem(&param_gain_ceiling);
+  param_group_camera.addItem(&param_bpc);
+  param_group_camera.addItem(&param_wpc);
+  param_group_camera.addItem(&param_raw_gamma);
+  param_group_camera.addItem(&param_lenc);
+  param_group_camera.addItem(&param_horizontal_mirror);
+  param_group_camera.addItem(&param_vertical_flip);
+  param_group_camera.addItem(&param_dcw);
+  param_group_camera.addItem(&param_colorbar);
+  iotWebConf.addParameterGroup(&param_group_camera);
+
+  param_group_peripheral.addItem(&param_led_intensity);
+  iotWebConf.addParameterGroup(&param_group_peripheral);
+
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
