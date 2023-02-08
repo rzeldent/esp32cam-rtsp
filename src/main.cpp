@@ -6,8 +6,11 @@
 #include <OV2640.h>
 #include <ESPmDNS.h>
 #include <rtsp_server.h>
-#include <frame_size.h>
-#include <camera_config.h>
+#include <lookup_camera_config.h>
+#include <lookup_camera_effect.h>
+#include <lookup_camera_frame_size.h>
+#include <lookup_camera_gainceiling.h>
+#include <lookup_camera_wb_mode.h>
 #include <format_duration.h>
 #include <format_number.h>
 #include <moustache.h>
@@ -27,22 +30,22 @@ auto param_brightness = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("b")
 auto param_contrast = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("c").label("Contrast").defaultValue(DEFAULT_CONTRAST).min(-2).max(2).build();
 auto param_saturation = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("s").label("Saturation").defaultValue(DEFAULT_SATURATION).min(-2).max(2).build();
 auto param_special_effect = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_effects[0])>>("e").label("Effect").optionValues((const char *)&camera_effects).optionNames((const char *)&camera_effects).optionCount(sizeof(camera_effects) / sizeof(camera_effects[0])).nameLength(sizeof(camera_effects[0])).defaultValue(DEFAULT_EFFECT).build();
-auto param_white_balance = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("wb").label("White balance").defaultValue(DEFAULT_WHITE_BALANCE).build();
-auto param_automatic_white_balance_gain = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("awbg").label("Automatic white balance gain").defaultValue(DEFAULT_WHITE_BALANCE_GAIN).build();
-auto param_white_balance_mode = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_white_balance_modes[0])>>("wbm").label("White balance mode").optionValues((const char *)&camera_white_balance_modes).optionNames((const char *)&camera_white_balance_modes).optionCount(sizeof(camera_white_balance_modes) / sizeof(camera_white_balance_modes[0])).nameLength(sizeof(camera_white_balance_modes[0])).defaultValue(DEFAULT_WHITE_BALANCE_MODE).build();
-auto param_exposure_control = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("ec").label("Exposure control").defaultValue(DEFAULT_EXPOSURE_CONTROL).build();
+auto param_whitebal = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("wb").label("White balance").defaultValue(DEFAULT_WHITE_BALANCE).build();
+auto param_awb_gain = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("awbg").label("Automatic white balance gain").defaultValue(DEFAULT_WHITE_BALANCE_GAIN).build();
+auto param_wb_mode = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_wb_modes[0])>>("wbm").label("White balance mode").optionValues((const char *)&camera_wb_modes).optionNames((const char *)&camera_wb_modes).optionCount(sizeof(camera_wb_modes) / sizeof(camera_wb_modes[0])).nameLength(sizeof(camera_wb_modes[0])).defaultValue(DEFAULT_WHITE_BALANCE_MODE).build();
+auto param_exposure_ctrl = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("ec").label("Exposure control").defaultValue(DEFAULT_EXPOSURE_CONTROL).build();
 auto param_aec2 = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("aec2").label("AEC2").defaultValue(DEFAULT_AEC2).build();
 auto param_ae_level = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("ael").label("AE level").defaultValue(DEFAULT_AE_LEVEL).min(-2).max(2).build();
 auto param_aec_value = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("aecv").label("AEC value").defaultValue(DEFAULT_AEC_VALUE).min(9).max(1200).build();
-auto param_gain_control = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("gc").label("Gain control").defaultValue(DEFAULT_GAIN_CONTROL).build();
+auto param_gain_ctrl = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("gc").label("Gain control").defaultValue(DEFAULT_GAIN_CONTROL).build();
 auto param_agc_gain = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("agcg").label("AGC gain").defaultValue(DEFAULT_AGC_GAIN).min(0).max(30).build();
 auto param_gain_ceiling = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_gain_ceilings[0])>>("gcl").label("Gain ceilings").optionValues((const char *)&camera_gain_ceilings).optionNames((const char *)&camera_gain_ceilings).optionCount(sizeof(camera_gain_ceilings) / sizeof(camera_gain_ceilings[0])).nameLength(sizeof(camera_gain_ceilings[0])).defaultValue(DEFAULT_GAIN_CEILING).build();
 auto param_bpc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("bpc").label("BPC").defaultValue(DEFAULT_BPC).build();
 auto param_wpc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("wpc").label("WPC").defaultValue(DEFAULT_WPC).build();
-auto param_raw_gamma = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("rg").label("Raw gamma").defaultValue(DEFAULT_RAW_GAMMA).build();
+auto param_raw_gma = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("rg").label("Raw gamma").defaultValue(DEFAULT_RAW_GAMMA).build();
 auto param_lenc = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("lenc").label("LENC").defaultValue(DEFAULT_LENC).build();
-auto param_horizontal_mirror = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("hm").label("Horizontal mirror").defaultValue(DEFAULT_HORIZONTAL_MIRROR).build();
-auto param_vertical_flip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").label("Vertical mirror").defaultValue(DEFAULT_VERTICAL_MIRROR).build();
+auto param_hmirror = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("hm").label("Horizontal mirror").defaultValue(DEFAULT_HORIZONTAL_MIRROR).build();
+auto param_vflip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").label("Vertical mirror").defaultValue(DEFAULT_VERTICAL_MIRROR).build();
 auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").label("DCW").defaultValue(DEFAULT_DCW).build();
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
@@ -119,7 +122,7 @@ void handle_root()
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
-      {"CameraType", String(param_board.value())},
+      {"BoardType", String(param_board.value())},
       {"FrameSize", String(param_frame_size.value())},
       {"FrameDuration", String(param_frame_duration.value())},
       {"FrameFrequency", String(1000.0 / param_frame_duration.value(), 1)},
@@ -132,27 +135,27 @@ void handle_root()
       {"Brightness", String(param_brightness.value())},
       {"Contrast", String(param_contrast.value())},
       {"Saturation", String(param_saturation.value())},
-      {"Effect", String(param_special_effect.value())},
-      {"WhiteBalance", String(param_white_balance.value())},
-      {"AutomaticWhiteBalancebGain", String(param_automatic_white_balance_gain.value())},
-      {"WhiteBalanceMode", String(param_white_balance_mode.value())},
-      {"ExposureControl", String(param_exposure_control.value())},
-      {"AEC2", String(param_aec2.value())},
-      {"AELevel", String(param_ae_level.value())},
-      {"AECValue", String(param_aec_value.value())},
-      {"GainControl", String(param_gain_control.value())},
-      {"AGCGain", String(param_agc_gain.value())},
+      {"SpecialEffect", String(param_special_effect.value())},
+      {"WhiteBal", String(param_whitebal.value())},
+      {"AwbGain", String(param_awb_gain.value())},
+      {"WbMode", String(param_wb_mode.value())},
+      {"ExposureCtrl", String(param_exposure_ctrl.value())},
+      {"Aec2", String(param_aec2.value())},
+      {"AeLevel", String(param_ae_level.value())},
+      {"AecValue", String(param_aec_value.value())},
+      {"GainCtrl", String(param_gain_ctrl.value())},
+      {"AgcGain", String(param_agc_gain.value())},
       {"GainCeiling", String(param_gain_ceiling.value())},
-      {"BPC", String(param_bpc.value())},
-      {"WPC", String(param_wpc.value())},
-      {"RawGamma", String(param_raw_gamma.value())},
-      {"LENC", String(param_lenc.value())},
-      {"HorizontalMirror", String(param_horizontal_mirror.value())},
-      {"VericalFlip", String(param_vertical_flip.value())},
-      {"WCW", String(param_dcw.value())},
+      {"Bpc", String(param_bpc.value())},
+      {"Wpc", String(param_wpc.value())},
+      {"RawGma", String(param_raw_gma.value())},
+      {"Lenc", String(param_lenc.value())},
+      {"HMirror", String(param_hmirror.value())},
+      {"VFlip", String(param_vflip.value())},
+      {"Dcw", String(param_dcw.value())},
       {"ColorBar", String(param_colorbar.value())},
       // LED
-      {"FlashLedIntensity", String(param_led_intensity.value())},
+      {"LedIntensity", String(param_led_intensity.value())},
       // RTSP
       {"RtspPort", String(RTSP_PORT)}};
 
@@ -237,14 +240,6 @@ void handle_flash()
   web_server.send(200);
 }
 
-void on_config_saved()
-{
-  log_v("on_config_saved");
-  // Set flash led intensity
-  analogWrite(LED_FLASH, param_led_intensity.value());
-  config_changed = true;
-}
-
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
@@ -272,22 +267,22 @@ void update_camera_settings()
   camera->set_contrast(camera, param_contrast.value());
   camera->set_saturation(camera, param_saturation.value());
   camera->set_special_effect(camera, lookup_camera_effect(param_special_effect.value()));
-  camera->set_whitebal(camera, param_white_balance.value());
-  camera->set_awb_gain(camera, param_automatic_white_balance_gain.value());
-  camera->set_wb_mode(camera, lookup_camera_white_balance_mode(param_white_balance_mode.value()));
-  camera->set_exposure_ctrl(camera, param_exposure_control.value());
+  camera->set_whitebal(camera, param_whitebal.value());
+  camera->set_awb_gain(camera, param_awb_gain.value());
+  camera->set_wb_mode(camera, lookup_camera_wb_mode(param_wb_mode.value()));
+  camera->set_exposure_ctrl(camera, param_exposure_ctrl.value());
   camera->set_aec2(camera, param_aec2.value());
   camera->set_ae_level(camera, param_ae_level.value());
   camera->set_aec_value(camera, param_aec_value.value());
-  camera->set_gain_ctrl(camera, param_gain_control.value());
+  camera->set_gain_ctrl(camera, param_gain_ctrl.value());
   camera->set_agc_gain(camera, param_agc_gain.value());
-  camera->set_gainceiling(camera, lookup_camera_gain_ceiling_mode(param_gain_ceiling.value()));
+  camera->set_gainceiling(camera, lookup_camera_gainceiling(param_gain_ceiling.value()));
   camera->set_bpc(camera, param_bpc.value());
   camera->set_wpc(camera, param_wpc.value());
-  camera->set_raw_gma(camera, param_raw_gamma.value());
+  camera->set_raw_gma(camera, param_raw_gma.value());
   camera->set_lenc(camera, param_lenc.value());
-  camera->set_hmirror(camera, param_horizontal_mirror.value());
-  camera->set_vflip(camera, param_vertical_flip.value());
+  camera->set_hmirror(camera, param_hmirror.value());
+  camera->set_vflip(camera, param_vflip.value());
   camera->set_dcw(camera, param_dcw.value());
   camera->set_colorbar(camera, param_colorbar.value());
 }
@@ -325,6 +320,16 @@ void on_connected()
   start_rtsp_server();
 }
 
+void on_config_saved()
+{
+  log_v("on_config_saved");
+  // Set flash led intensity
+  analogWrite(LED_FLASH, param_led_intensity.value());
+  // Update camera setting
+  update_camera_settings();
+  config_changed = true;
+}
+
 void setup()
 {
   // Disable brownout
@@ -358,22 +363,22 @@ void setup()
   param_group_camera.addItem(&param_contrast);
   param_group_camera.addItem(&param_saturation);
   param_group_camera.addItem(&param_special_effect);
-  param_group_camera.addItem(&param_white_balance);
-  param_group_camera.addItem(&param_automatic_white_balance_gain);
-  param_group_camera.addItem(&param_white_balance_mode);
-  param_group_camera.addItem(&param_exposure_control);
+  param_group_camera.addItem(&param_whitebal);
+  param_group_camera.addItem(&param_awb_gain);
+  param_group_camera.addItem(&param_wb_mode);
+  param_group_camera.addItem(&param_exposure_ctrl);
   param_group_camera.addItem(&param_aec2);
   param_group_camera.addItem(&param_ae_level);
   param_group_camera.addItem(&param_aec_value);
-  param_group_camera.addItem(&param_gain_control);
+  param_group_camera.addItem(&param_gain_ctrl);
   param_group_camera.addItem(&param_agc_gain);
   param_group_camera.addItem(&param_gain_ceiling);
   param_group_camera.addItem(&param_bpc);
   param_group_camera.addItem(&param_wpc);
-  param_group_camera.addItem(&param_raw_gamma);
+  param_group_camera.addItem(&param_raw_gma);
   param_group_camera.addItem(&param_lenc);
-  param_group_camera.addItem(&param_horizontal_mirror);
-  param_group_camera.addItem(&param_vertical_flip);
+  param_group_camera.addItem(&param_hmirror);
+  param_group_camera.addItem(&param_vflip);
   param_group_camera.addItem(&param_dcw);
   param_group_camera.addItem(&param_colorbar);
   iotWebConf.addParameterGroup(&param_group_camera);
