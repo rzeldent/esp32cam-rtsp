@@ -29,7 +29,6 @@ This software provides a **configuration web server**, that can be used to:
 - Select the board type,
 - Select the image size,
 - Select the frame rate,
-- Select number of frame buffers
 - Select the JPEG quality
 - Configure the camera options:
   - Brightness
