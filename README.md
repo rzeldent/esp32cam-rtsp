@@ -31,7 +31,7 @@ This software provides a **configuration web server**, that can be used to:
 - Select the frame rate,
 - Select number of frame buffers
 - Select the JPEG quality
-- Configure the camera options
+- Configure the camera options:
   - Brightness
   - Contrast
   - Saturation
@@ -40,19 +40,19 @@ This software provides a **configuration web server**, that can be used to:
   - Automatic White Balance gain
   - Wite Balance mode
   - Exposure control
-  - AEC2
-  - AE level
-  - AEC value
+  - Auto Exposure (dsp)
+  - Auto Exposure level
+  - Manual exposure value
   - Gain control
-  - AGC gain
-  - Gain ceiling
-  - BPC
-  - WPC
-  - Raw gamma
+  - Manual gain control
+  - Auto gain ceiling
+  - Black pixel correction
+  - White pixel correction
+  - Gamma correction
   - Lens correction
   - Horizontal mirror
   - Vertical flip
-  - DCW
+  - Downside enable
   - Color bar
 
 The software provides contains also a mDNS server to be easily discoverable on the local network.
