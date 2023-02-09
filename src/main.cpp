@@ -24,7 +24,6 @@ auto param_board = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camer
 auto param_group_camera = iotwebconf::ParameterGroup("camera", "Camera settings");
 auto param_frame_duration = iotwebconf::Builder<iotwebconf::UIntTParameter<unsigned long>>("fd").label("Frame duration (ms)").defaultValue(DEFAULT_FRAME_DURATION).min(10).build();
 auto param_frame_size = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(frame_sizes[0])>>("fs").label("Frame size").optionValues((const char *)&frame_sizes).optionNames((const char *)&frame_sizes).optionCount(sizeof(frame_sizes) / sizeof(frame_sizes[0])).nameLength(sizeof(frame_sizes[0])).defaultValue(DEFAULT_FRAME_SIZE).build();
-auto param_frame_buffers = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("fb").label("Frame buffers").defaultValue(DEFAULT_FRAME_BUFFERS).min(1).max(16).build();
 auto param_jpg_quality = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("q").label("JPG quality").defaultValue(DEFAULT_JPEG_QUALITY).min(1).max(100).build();
 auto param_brightness = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("b").label("Brightness").defaultValue(DEFAULT_BRIGHTNESS).min(-2).max(2).build();
 auto param_contrast = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("c").label("Contrast").defaultValue(DEFAULT_CONTRAST).min(-2).max(2).build();
@@ -127,7 +126,7 @@ void handle_root()
       {"FrameDuration", String(param_frame_duration.value())},
       {"FrameFrequency", String(1000.0 / param_frame_duration.value(), 1)},
       {"FrameBufferLocation", psramFound() ? "PSRAM" : "DRAM)"},
-      {"FrameBuffers", String(param_frame_buffers.value())},
+      {"FrameBuffers", String(psramFound() ? 2 : 1)},
       {"JpegQuality", String(param_jpg_quality.value())},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
@@ -196,7 +195,7 @@ void handle_snapshot()
   }
 
   // Remove old images stored in the framebuffer
-  auto frame_buffers = param_frame_buffers.value();
+  auto frame_buffers = psramFound() ? 2 : 1;
   while (frame_buffers--)
     cam.run();
 
@@ -247,16 +246,21 @@ esp_err_t initialize_camera()
   auto camera_config = lookup_camera_config(param_board.value());
   log_i("Frame size: %s", param_frame_size.value());
   auto frame_size = lookup_frame_size(param_frame_size.value());
-  log_i("Frame buffers: %d", param_frame_buffers.value());
-  // auto frame_buffers = atoi(frame_buffers_val);
   log_i("JPEG quality: %d", param_jpg_quality.value());
   log_i("Frame duration: %d ms", param_frame_duration.value());
 
   camera_config.frame_size = frame_size;
-  camera_config.fb_count = param_frame_buffers.value();
-  camera_config.fb_location = psramFound() ? CAMERA_FB_IN_PSRAM : CAMERA_FB_IN_DRAM;
   camera_config.jpeg_quality = param_jpg_quality.value();
-
+  if (psramFound())
+  {
+    camera_config.fb_count = 2;
+    camera_config.fb_location = CAMERA_FB_IN_PSRAM;
+  }
+  else
+  {
+    camera_config.fb_count = 1;
+    camera_config.fb_location = CAMERA_FB_IN_DRAM;
+  }
   return cam.init(camera_config);
 }
 
@@ -293,7 +297,7 @@ void start_rtsp_server()
   camera_init_result = initialize_camera();
   if (camera_init_result != ESP_OK)
   {
-    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame buffers: %d, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_buffers.value(), param_frame_duration.value(), param_jpg_quality.value());
+    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
     return;
   }
 
@@ -357,7 +361,6 @@ void setup()
 
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);
-  param_group_camera.addItem(&param_frame_buffers);
   param_group_camera.addItem(&param_jpg_quality);
   param_group_camera.addItem(&param_brightness);
   param_group_camera.addItem(&param_contrast);
