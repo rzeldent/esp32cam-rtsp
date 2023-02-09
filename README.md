@@ -31,6 +31,29 @@ This software provides a **configuration web server**, that can be used to:
 - Select the frame rate,
 - Select number of frame buffers
 - Select the JPEG quality
+- Configure the camera options
+  - Brightness
+  - Contrast
+  - Saturation
+  - Special effect (Normal, Negative, Grayscale, Red/Green/Blue tint, Sepia)
+  - White balance
+  - Automatic White Balance gain
+  - Wite Balance mode
+  - Exposure control
+  - AEC2
+  - AE level
+  - AEC value
+  - Gain control
+  - AGC gain
+  - Gain ceiling
+  - BPC
+  - WPC
+  - Raw gamma
+  - Lens correction
+  - Horizontal mirror
+  - Vertical flip
+  - DCW
+  - Color bar
 
 The software provides contains also a mDNS server to be easily discoverable on the local network.
 It advertises HTTP (port 80) and RTSP (port 554)
@@ -236,3 +259,18 @@ Make sure it is connected the right way around (Camera pointing away from the bo
 ## Credits
 
 esp32cam-ready depends on PlatformIO, Bootstrap5 and Micro-RTSP by Kevin Hester.
+
+## Change history
+
+- Feb 2023
+  - Added additional settings for camera configuration
+- Nov 2022
+  - Added OTA
+  - Fix for grabbing frame
+  - Fixed bug: Increased WiFi password length
+- Sep 2022
+  - Added GUI with bootstrap
+  - More information in web page
+  - Added camera preview in HTML
+- Jul 2022
+  - Initial version
