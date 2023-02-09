@@ -80,6 +80,19 @@
         <div class="row">
             <div class="col-sm-6">
                 <div class="card bg-light mb-3">
+                    <h5 class="card-header">Peripheral</h5>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">Board type:</div>
+                            <div class="col-8">{{BoardType}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">LED intensity:</div>
+                            <div class="col-8">{{LedIntensity}} [0-100]</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card bg-light mb-3">
                     <h5 class="card-header">Network</h5>
                     <div class="card-body">
                         <div class="row">
@@ -125,12 +138,8 @@
             </div>
             <div class="col-sm-6">
                 <div class="card bg-light mb-3">
-                    <h5 class="card-header">Settings</h5>
+                    <h5 class="card-header">Camera</h5>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-4">Camera type:</div>
-                            <div class="col-8">{{CameraType}}</div>
-                        </div>
                         <div class="row">
                             <div class="col-4">Frame rate:</div>
                             <div class="col-8">{{FrameDuration}} ms ({{FrameFrequency}} f/s)</div>
@@ -149,11 +158,95 @@
                         </div>
                         <div class="row">
                             <div class="col-4">JPEG quality:</div>
-                            <div class="col-8">{{JpegQuality}} (1-100)</div>
+                            <div class="col-8">{{JpegQuality}} [1-100]</div>
                         </div>
                         <div class="row">
-                            <div class="col-4">Flash LED intensity:</div>
-                            <div class="col-8">{{FlashLedIntensity}} (0-100)</div>
+                            <div class="col-4">Brightness:</div>
+                            <div class="col-8">{{Brightness}} [-2,2]</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Contrast:</div>
+                            <div class="col-8">{{Contrast}} [-2,2]</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Saturation:</div>
+                            <div class="col-8">{{Saturation}} [-2,2]</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Special effect:</div>
+                            <div class="col-8">{{SpecialEffect}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">White balance:</div>
+                            <div class="col-8">{{WhiteBal}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">AWB gain:</div>
+                            <div class="col-8">{{AwbGain}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">WB mode:</div>
+                            <div class="col-8">{{WbMode}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Exposure control:</div>
+                            <div class="col-8">{{ExposureCtrl}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">AEC2:</div>
+                            <div class="col-8">{{Aec2}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">AE level:</div>
+                            <div class="col-8">{{AeLevel}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">AEC value:</div>
+                            <div class="col-8">{{AecValue}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Gain control:</div>
+                            <div class="col-8">{{GainCtrl}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">AGC gain:</div>
+                            <div class="col-8">{{AgcGain}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Gain ceiling:</div>
+                            <div class="col-8">{{GainCeiling}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">BPC:</div>
+                            <div class="col-8">{{Bpc}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">WPC:</div>
+                            <div class="col-8">{{Wpc}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Raw gamma:</div>
+                            <div class="col-8">{{RawGma}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Lens correction:</div>
+                            <div class="col-8">{{Lenc}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Horizontal mirror:</div>
+                            <div class="col-8">{{HMirror}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Vertical flip:</div>
+                            <div class="col-8">{{VFlip}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">DCW:</div>
+                            <div class="col-8">{{Dcw}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Color bar:</div>
+                            <div class="col-8">{{ColorBar}}</div>
                         </div>
                         {{#CameraInitialized}}
                         <div class="mt-4 alert alert-success" role="alert">
@@ -181,8 +274,7 @@
                     <div class="row">
                         <span>
                             The camera RTSP stream can be found at:
-                            <a
-                                href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1</a>
+                            <a href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1</a>
                         </span>
                     </div>
                     <div class="row">

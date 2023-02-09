@@ -3,11 +3,9 @@
 #include <string.h>
 #include <sensor.h>
 
-typedef char frame_size_name_t[18];
-
 typedef struct frame_size_entry
 {
-    const frame_size_name_t name;
+    const char name[17];
     const framesize_t frame_size;
 } frame_size_entry_t;
 
@@ -30,7 +28,7 @@ const framesize_t lookup_frame_size(const char *pin)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : frame_sizes)
-        if (strncmp(entry.name, pin, sizeof(frame_size_name_t)) == 0)
+        if (strncmp(entry.name, pin, sizeof(entry.name)) == 0)
             return entry.frame_size;
 
     return FRAMESIZE_INVALID;

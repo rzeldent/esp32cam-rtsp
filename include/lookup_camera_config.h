@@ -3,11 +3,9 @@
 #include <string.h>
 #include <esp_camera.h>
 
-typedef char camera_config_name_t[18];
-
-typedef struct camera_config_entry
+typedef struct
 {
-    const camera_config_name_t name;
+    const char name[11];
     const camera_config_t config;
 } camera_config_entry_t;
 
@@ -137,18 +135,17 @@ constexpr camera_config_t esp32cam_wrover_kit_settings = {
     .fb_count = 2};
 
 constexpr const camera_config_entry_t camera_configs[] = {
-
     {"ESP32CAM", esp32cam_settings},
     {"AI THINKER", esp32cam_aithinker_settings},
     {"TTGO T-CAM", esp32cam_ttgo_t_settings},
     {"M5 STACK", esp32cam_m5stack_settings},
     {"WROVER KIT", esp32cam_wrover_kit_settings}};
 
-const camera_config_t lookup_camera_config(const char *pin)
+const camera_config_t lookup_camera_config(const char *name)
 {
     // Lookup table for the frame name to framesize_t
     for (const auto &entry : camera_configs)
-        if (strncmp(entry.name, pin, sizeof(camera_config_name_t)) == 0)
+        if (strncmp(entry.name, name, sizeof(entry.name)) == 0)
             return entry.config;
 
     return camera_config_t{};
