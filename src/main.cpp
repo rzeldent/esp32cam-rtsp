@@ -267,6 +267,12 @@ esp_err_t initialize_camera()
 void update_camera_settings()
 {
   auto camera = esp_camera_sensor_get();
+  if (camera == nullptr)
+  {
+    log_e("Unable to get camera sensor");
+    return;
+  }
+
   camera->set_brightness(camera, param_brightness.value());
   camera->set_contrast(camera, param_contrast.value());
   camera->set_saturation(camera, param_saturation.value());
