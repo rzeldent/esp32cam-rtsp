@@ -300,18 +300,6 @@ void update_camera_settings()
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  camera_init_result = initialize_camera();
-  if (camera_init_result != ESP_OK)
-  {
-    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
-    return;
-  }
-
-  log_i("Camera initialized");
-
-  update_camera_settings();
-  log_i("Camera settings updated");
-
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
   // Add service to mDNS - rtsp
   MDNS.addService("rtsp", "tcp", 554);
@@ -326,8 +314,9 @@ void on_connected()
   analogWrite(LED_FLASH, param_led_intensity.value());
   // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
-  // Start the RTSP Server
-  start_rtsp_server();
+  // Start the RTSP Server if initializef
+  if (camera_init_result == ESP_OK)
+    start_rtsp_server();
 }
 
 void on_config_saved()
@@ -399,6 +388,12 @@ void setup()
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
   iotWebConf.init();
+
+  camera_init_result = initialize_camera();
+  if (camera_init_result != ESP_OK)
+    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+  else
+    update_camera_settings();
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
