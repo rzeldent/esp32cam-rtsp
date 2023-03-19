@@ -169,7 +169,7 @@ void handle_restart()
 
   if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
   {
-    web_server.requestAuthentication();
+    web_server.requestAuthentication(BASIC_AUTH, APP_TITLE, "401 Unauthorized<br><br>The password is incorrect.");
     return;
   }
 
@@ -219,7 +219,7 @@ void handle_flash()
 
   if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
   {
-    web_server.requestAuthentication();
+    web_server.requestAuthentication(BASIC_AUTH, APP_TITLE, "401 Unauthorized<br><br>The password is incorrect.");
     return;
   }
 
@@ -401,7 +401,7 @@ void setup()
                 { iotWebConf.handleConfig(); });
   web_server.on("/restart", HTTP_GET, handle_restart);
   // Camera snapshot
-  web_server.on("/snapshot", handle_snapshot);
+  web_server.on("/snapshot", HTTP_GET, handle_snapshot);
   // Camera flash light
   web_server.on("/flash", HTTP_GET, handle_flash);
 
