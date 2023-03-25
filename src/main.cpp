@@ -213,6 +213,36 @@ void handle_snapshot()
   web_server.sendContent(fb, fb_len);
 }
 
+#define STREAM_CONTENT_BOUNDARY "123456789000000000000987654321"
+
+void handle_stream()
+{
+  log_v("handle_stream");
+  if (camera_init_result != ESP_OK)
+  {
+    web_server.send(404, "text/plain", "Camera is not initialized");
+    return;
+  }
+
+  log_v("starting streaming");
+  char size_buf[12];
+  auto client = web_server.client();
+  client.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" STREAM_CONTENT_BOUNDARY "\r\n");
+  while (client.connected())
+  {
+    client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
+    cam.run();
+    client.write("Content-Type: image/jpeg\r\nContent-Length: ");
+    sprintf(size_buf, "%d\r\n\r\n", cam.getSize());
+    client.write(size_buf);
+    client.write(cam.getfb(), cam.getSize());
+  }
+
+  log_v("client disconnected");
+  client.stop();
+  log_v("stopped streaming");
+}
+
 void handle_flash()
 {
   log_v("handle_flash");
@@ -402,6 +432,9 @@ void setup()
   web_server.on("/restart", HTTP_GET, handle_restart);
   // Camera snapshot
   web_server.on("/snapshot", HTTP_GET, handle_snapshot);
+  // Camera stream
+  web_server.on("/stream", HTTP_GET, handle_stream);
+
   // Camera flash light
   web_server.on("/flash", HTTP_GET, handle_flash);
 
