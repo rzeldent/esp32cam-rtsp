@@ -1,29 +1,27 @@
-# ESP32CAM-RTSP
+# ESP32CAM-RTSP :video_camera:
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
 
-Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP  JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and server.
+Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server
 Easy configuration through the web interface.
 
 Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer*** and a **HTTP image server**.
 
-**RTSP**
-The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
-It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
-This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+Supported protocols
 
-The URL is rtsp://&lt;ip address of the module&gt;:554/mjpeg/1
+- :white_check_mark: RTSP 
+  The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
+  It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
+  This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+  The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
 
-**HTTP Motion JPEG**
-The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
+- :white_check_mark: HTTP Motion JPEG
+  The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
+  The URL is http://&lt;ip address&gt;/stream
 
-The URL is http://&lt;ip address of the module&gt;/stream
-
-**HTTP image**
-The HTTP Image returns an HTTP JPEG image of the camera.
-
-The URL is http://&lt;ip address of the module&gt;/snapshot
-
+- :white_check_mark: HTTP image
+  The HTTP Image returns an HTTP JPEG image of the camera.
+  The URL is http://&lt;ip address&gt;/snapshot
 
 This software supports the following ESP32-CAM (and alike) modules:
 
@@ -35,7 +33,7 @@ This software supports the following ESP32-CAM (and alike) modules:
 
 ![ESP32CAM module](assets/ESP32-CAM.jpg)
 
-This software provides a **configuration web server**, that can be used to:
+The software provides a **configuration web server**, that can be used to:
 
 - Provide information about the state of the device, wifi connection and camera,
 - Set the WiFi parameters,
@@ -206,6 +204,14 @@ If this happens, for the user enter 'admin' and for the password the value that 
 
 RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
+
+## Connecting to the JPEG motion server
+
+The JPEG motion server server is available using a normal web browser at: [rtsp://esp32cam-rtsp.local:/stream](rtsp://esp32cam-rtsp.local/stream).
+
+## Connecting to the image server
+
+The image server server is available using a normal web browser at: [rtsp://esp32cam-rtsp.local:/snapshot](rtsp://esp32cam-rtsp.local/snapshot).
 
 :warning: **Please be aware that there is no password present on the stream!**
 
