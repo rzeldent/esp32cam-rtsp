@@ -212,7 +212,8 @@ The JPEG motion server server is available using a normal web browser at: [http:
 
 The image server server is available using a normal web browser at: [http://esp32cam-rtsp.local:/snapshot](http://esp32cam-rtsp.local/snapshot).
 
-:warning: **Please be aware that there is no password present on the stream!**
+:bangbang: **Please be aware that there is no password present!**.
+Everybody with access to the device can see the streams or images! Beware of :trollface:!
 
 ## API
 
