@@ -1,14 +1,26 @@
-# ESP32CAM-RTSP
+# ESP32CAM-RTSP :video_camera:
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
 
-Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol) server.
-Easy configuration through the web interface.
+Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
 
-Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server.
-The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
-It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
-This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
+
+Supported protocols
+
+- :white_check_mark: RTSP 
+  The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
+  It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
+  This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+  The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
+
+- :white_check_mark: HTTP Motion JPEG
+  The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
+  The URL is http://&lt;ip address&gt;/stream
+
+- :white_check_mark: HTTP image
+  The HTTP Image returns an HTTP JPEG image of the camera.
+  The URL is http://&lt;ip address&gt;/snapshot
 
 This software supports the following ESP32-CAM (and alike) modules:
 
@@ -20,7 +32,7 @@ This software supports the following ESP32-CAM (and alike) modules:
 
 ![ESP32CAM module](assets/ESP32-CAM.jpg)
 
-This software provides a **configuration web server**, that can be used to:
+The software provides a **configuration web server**, that can be used to:
 
 - Provide information about the state of the device, wifi connection and camera,
 - Set the WiFi parameters,
@@ -31,6 +43,7 @@ This software provides a **configuration web server**, that can be used to:
 - Select the frame rate,
 - Select the JPEG quality
 - Enable the use of the PSRAM
+- Set the number of frame buffers
 - Configure the camera options:
   - Brightness
   - Contrast
@@ -186,12 +199,21 @@ In case changes have been made to the configuration, this is shown and the possi
 Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
 If this happens, for the user enter 'admin' and for the password the value that has been configured as the Access Point password.
 
-## Connecting to the RTSP stream
+## Connecting to the RTSP stream :video_camera:
 
 RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
-:warning: **Please be aware that there is no password present on the stream!**
+## Connecting to the JPEG motion server :video_camera:
+
+The JPEG motion server server is available using a normal web browser at: [http://esp32cam-rtsp.local:/stream](http://esp32cam-rtsp.local/stream).
+
+## Connecting to the image server :camera:
+
+The image server server is available using a normal web browser at: [http://esp32cam-rtsp.local:/snapshot](http://esp32cam-rtsp.local/snapshot).
+
+:bangbang: **Please be aware that there is no password present!**.
+Everybody with access to the device can see the streams or images! Beware of :trollface:!
 
 ## API
 
@@ -238,19 +260,23 @@ If no v parameter is present, it will be set to the value of the flash LED inten
 - When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device.
   This should reset the device and connect to the access point.
   Resetting is also a good alternative...
+- There are modules that have no or faulty PSRAM (despite advertised as such).
+  This can be the case if the camera fails to initialize.
+  It might help to disable the use of the PSRAM and reduce the buffers and the screen size.
 
 ### Power
 
 Make sure the power is 5 volts and stable, although the ESP32 is a 3.3V module, this voltage is created on the board.
 If not stable, it has been reported that restarts occur when starting up (probably when power is required for WiFi).
 The software disables the brown out protection so there is some margin in the voltage.
+Some people suggest to add a capacitor over the 5V input to stabilize the voltage.
 
-### PSRAM / Buffers / JPeg quality
+### PSRAM / Buffers / JPEG quality
 
 Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer.
 The availability of PSRAM can be seen in the HTML status overview.
 
-Not all the boards areq equipped with PSRAM:
+Not all the boards are equipped with PSRAM:
 
 |  Board            | PSRAM |
 |---                |---    |
@@ -262,10 +288,10 @@ Not all the boards areq equipped with PSRAM:
 | WROVER KIT        | Yes   |
 
 Depending on the image resolution, framerate and quality, the PSRAM must be enabled and/or the number of frame buffers increased to keep up with the data generated by the sensor.
-There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason.
+There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason. See on [Reddit](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
 In this case disable the use of PSRAM in the configuration and do not use camera modes that require PSRAM,
 
-For the setting JPeg quality, a lower number means higher quality.
+For the setting JPEG quality, a lower number means higher quality.
 Be aware that a very high quality (low number) can cause the ESP32 cam to crash or return no image.
 
 The default settings are:
@@ -273,12 +299,12 @@ The default settings are:
 - No PSRAM
   - SVGA (800x600)
   - 1 frame buffer
-  - JPeg quality 12
+  - JPEG quality 12
 
 - With PSRAM
   - UXGA (1600x1200)
   - 2 frame buffers
-  - jpeg quality 10
+  - JPEG quality 10
 
 ### Camera module
 
@@ -287,10 +313,13 @@ Make sure it is connected the right way around (Camera pointing away from the bo
 
 ## Credits
 
-esp32cam-ready depends on PlatformIO, Bootstrap5 and Micro-RTSP by Kevin Hester.
+esp32cam-rtsp depends on PlatformIO, Bootstrap 5 and Micro-RTSP by Kevin Hester.
 
 ## Change history
 
+- March 2023
+  - Added options to set PSRAM / Frame buffers
+  - Added JPEG Motion streaming
 - Feb 2023
   - Added additional settings for camera configuration
 - Nov 2022

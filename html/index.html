@@ -277,28 +277,27 @@
                 <div class="card-body">
                     <div class="row">
                         <span>
-                            The camera RTSP stream can be found at:
-                            <a href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1</a>
+                            RTSP camera stream: <a href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1</a>
                         </span>
                     </div>
                     <div class="row">
                         <span>
-                            A snapshot of the camera can be found at:
-                            <a href="http://{{IpV4}}/snapshot">http://{{IpV4}}/snapshot</a>
+                            JPEG Motion stream: <a href="http://{{IpV4}}/stream" target="_blank">http://{{IpV4}}/stream</a>
                         </span>
                     </div>
                     <div class="row">
                         <span>
-                            The intensity of the flash led (0-255) can be controlled using:
-                            <a href="http://{{IpV4}}/flash?v=0">http://{{IpV4}}/flash?v=value</a>.
-                            Authentication is required.
+                            Snapshot of the camera: <a href="http://{{IpV4}}/snapshot " target="_blank">http://{{IpV4}}/snapshot</a>
                         </span>
                     </div>
                     <div class="row">
                         <span>
-                            Restarting the camera can be done using:
-                            <a href="http://{{IpV4}}/restart">http://{{IpV4}}/restart</a>.
-                            Authentication is required.
+                            Intensity of the flash led (0-255): <a href="http://{{IpV4}}/flash?v=0">http://{{IpV4}}/flash?v=0</a>. Authentication is required.
+                        </span>
+                    </div>
+                    <div class="row">
+                        <span>
+                            Restart the camera: <a href="http://{{IpV4}}/restart">http://{{IpV4}}/restart</a>. Authentication is required.
                         </span>
                     </div>
                 </div>
