@@ -2,10 +2,9 @@
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
 
-Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server
-Easy configuration through the web interface.
+Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
 
-Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer*** and a **HTTP image server**.
+Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
 
 Supported protocols
 
@@ -200,18 +199,18 @@ In case changes have been made to the configuration, this is shown and the possi
 Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
 If this happens, for the user enter 'admin' and for the password the value that has been configured as the Access Point password.
 
-## Connecting to the RTSP stream
+## Connecting to the RTSP stream :video_camera:
 
 RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
-## Connecting to the JPEG motion server
+## Connecting to the JPEG motion server :video_camera:
 
-The JPEG motion server server is available using a normal web browser at: [rtsp://esp32cam-rtsp.local:/stream](rtsp://esp32cam-rtsp.local/stream).
+The JPEG motion server server is available using a normal web browser at: [http://esp32cam-rtsp.local:/stream](http://esp32cam-rtsp.local/stream).
 
-## Connecting to the image server
+## Connecting to the image server :camera:
 
-The image server server is available using a normal web browser at: [rtsp://esp32cam-rtsp.local:/snapshot](rtsp://esp32cam-rtsp.local/snapshot).
+The image server server is available using a normal web browser at: [http://esp32cam-rtsp.local:/snapshot](http://esp32cam-rtsp.local/snapshot).
 
 :warning: **Please be aware that there is no password present on the stream!**
 
@@ -260,12 +259,16 @@ If no v parameter is present, it will be set to the value of the flash LED inten
 - When finished configuring for the first time and the access point is entered, disconnect from the wireless network provided by the device.
   This should reset the device and connect to the access point.
   Resetting is also a good alternative...
+- There are modules that have no or faulty PSRAM (despite advertised as such).
+  This can be the case if the camera fails to initialize.
+  It might help to disable the use of the PSRAM and reduce the buffers and the screen size.
 
 ### Power
 
 Make sure the power is 5 volts and stable, although the ESP32 is a 3.3V module, this voltage is created on the board.
 If not stable, it has been reported that restarts occur when starting up (probably when power is required for WiFi).
 The software disables the brown out protection so there is some margin in the voltage.
+Some people suggest to add a capacitor over the 5V input to stabilize the voltage.
 
 ### PSRAM / Buffers / JPEG quality
 
