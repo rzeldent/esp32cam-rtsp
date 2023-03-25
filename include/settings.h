@@ -5,15 +5,17 @@
 
 #define WIFI_SSID "ESP32CAM-RTSP"
 #define WIFI_PASSWORD nullptr
-#define CONFIG_VERSION "1.4"
+#define CONFIG_VERSION "1.5"
 
 #define OTA_PASSWORD "ESP32CAM-RTSP"
 
 #define RTSP_PORT 554
 
 #define DEFAULT_CAMERA_CONFIG "AI THINKER"
+#define DEFAULT_ENABLE_PSRAM psramFound()
+#define DEFAULT_BUFFERS (psramFound() ? 2 : 1)
 #define DEFAULT_FRAME_DURATION 100
-#define DEFAULT_FRAME_SIZE (psramFound() ? "UXGA (1600x1200)" : "VGA (640x480)")
+#define DEFAULT_FRAME_SIZE (psramFound() ? "UXGA (1600x1200)" : "SVGA (800x600)")
 #define DEFAULT_JPEG_QUALITY (psramFound() ? 10 : 12)
 
 #define DEFAULT_BRIGHTNESS  0
