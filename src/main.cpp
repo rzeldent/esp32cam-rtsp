@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
@@ -25,6 +26,8 @@ auto param_group_camera = iotwebconf::ParameterGroup("camera", "Camera settings"
 auto param_frame_duration = iotwebconf::Builder<iotwebconf::UIntTParameter<unsigned long>>("fd").label("Frame duration (ms)").defaultValue(DEFAULT_FRAME_DURATION).min(10).build();
 auto param_frame_size = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(frame_sizes[0])>>("fs").label("Frame size").optionValues((const char *)&frame_sizes).optionNames((const char *)&frame_sizes).optionCount(sizeof(frame_sizes) / sizeof(frame_sizes[0])).nameLength(sizeof(frame_sizes[0])).defaultValue(DEFAULT_FRAME_SIZE).build();
 auto param_jpg_quality = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("q").label("JPG quality").defaultValue(DEFAULT_JPEG_QUALITY).min(1).max(100).build();
+auto param_enable_psram = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("eps").label("Enable PSRAM if available").defaultValue(DEFAULT_ENABLE_PSRAM).build();
+auto param_frame_buffers = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("fb").label("Buffers").defaultValue(DEFAULT_BUFFERS).min(1).max(4).build();
 auto param_brightness = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("b").label("Brightness").defaultValue(DEFAULT_BRIGHTNESS).min(-2).max(2).build();
 auto param_contrast = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("c").label("Contrast").defaultValue(DEFAULT_CONTRAST).min(-2).max(2).build();
 auto param_saturation = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("s").label("Saturation").defaultValue(DEFAULT_SATURATION).min(-2).max(2).build();
@@ -98,6 +101,7 @@ void handle_root()
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()},
+      {"SDKVersion", ESP.getSdkVersion()},
       {"ChipModel", ESP.getChipModel()},
       {"ChipRevision", String(ESP.getChipRevision())},
       {"CpuFreqMHz", String(ESP.getCpuFreqMHz())},
@@ -109,7 +113,7 @@ void handle_root()
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_memory(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
-      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "N/A"},
+      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "RTSP server disabled"},
       // Network
       {"HostName", hostname},
       {"MacAddress", WiFi.macAddress()},
@@ -125,10 +129,11 @@ void handle_root()
       {"FrameSize", String(param_frame_size.value())},
       {"FrameDuration", String(param_frame_duration.value())},
       {"FrameFrequency", String(1000.0 / param_frame_duration.value(), 1)},
-      {"FrameBufferLocation", psramFound() ? "PSRAM" : "DRAM)"},
-      {"FrameBuffers", String(psramFound() ? 2 : 1)},
       {"JpegQuality", String(param_jpg_quality.value())},
+      {"EnablePSRAM", String(param_enable_psram.value())},
+      {"FrameBuffers", String(param_frame_buffers.value())},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
+      {"CameraInitResult", String(camera_init_result)},
       {"CameraInitResultText", esp_err_to_name(camera_init_result)},
       // Settings
       {"Brightness", String(param_brightness.value())},
@@ -194,7 +199,7 @@ void handle_snapshot()
     return;
   }
 
-  // Remove old images stored in the framebuffer
+  // Remove old images stored in the frame buffer
   auto frame_buffers = psramFound() ? 2 : 1;
   while (frame_buffers--)
     cam.run();
@@ -243,24 +248,33 @@ esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
   log_i("Camera config: %s", param_board.value());
-  auto camera_config = lookup_camera_config(param_board.value());
+  auto camera_config_template = lookup_camera_config(param_board.value());
+  // Copy the settings
+  camera_config_t camera_config;
+  memset(&camera_config, 0, sizeof(camera_config_t));
+  memcpy(&camera_config, &camera_config_template, sizeof(camera_config_t));
   log_i("Frame size: %s", param_frame_size.value());
   auto frame_size = lookup_frame_size(param_frame_size.value());
   log_i("JPEG quality: %d", param_jpg_quality.value());
   log_i("Frame duration: %d ms", param_frame_duration.value());
-
   camera_config.frame_size = frame_size;
   camera_config.jpeg_quality = param_jpg_quality.value();
-  if (psramFound())
+  camera_config.grab_mode = CAMERA_GRAB_LATEST;
+  log_i("Enable PSRAM: %d", param_enable_psram.value());
+  log_i("Buffers: %d", param_frame_buffers.value());
+  camera_config.fb_count = param_frame_buffers.value();
+  
+  if (param_enable_psram.value() && psramFound())
   {
-    camera_config.fb_count = 2;
     camera_config.fb_location = CAMERA_FB_IN_PSRAM;
+    log_i("PSRAM enabled!");
   }
   else
   {
-    camera_config.fb_count = 1;
     camera_config.fb_location = CAMERA_FB_IN_DRAM;
+    log_i("PSRAM disabled");
   }
+
   return cam.init(camera_config);
 }
 
@@ -314,9 +328,11 @@ void on_connected()
   analogWrite(LED_FLASH, param_led_intensity.value());
   // Start (OTA) Over The Air programming  when connected
   ArduinoOTA.begin();
-  // Start the RTSP Server if initializef
+  // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
     start_rtsp_server();
+  else
+    log_e("Not starting RTSP server: camera not initialized");
 }
 
 void on_config_saved()
@@ -349,7 +365,11 @@ void setup()
 
   log_i("CPU Freq: %d Mhz", getCpuFrequencyMhz());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
+  log_i("SDK version: %s", ESP.getSdkVersion());
   log_i("Starting " APP_TITLE "...");
+
+  if (psramFound())
+    psramInit();
 
   param_group_board.addItem(&param_board);
   iotWebConf.addParameterGroup(&param_group_board);
@@ -357,6 +377,8 @@ void setup()
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);
   param_group_camera.addItem(&param_jpg_quality);
+  param_group_camera.addItem(&param_enable_psram);
+  param_group_camera.addItem(&param_frame_buffers);
   param_group_camera.addItem(&param_brightness);
   param_group_camera.addItem(&param_contrast);
   param_group_camera.addItem(&param_saturation);

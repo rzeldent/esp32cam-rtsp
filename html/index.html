@@ -27,6 +27,10 @@
                     <h5 class="card-header">ESP32</h5>
                     <div class="card-body">
                         <div class="row">
+                            <div class="col-4">SDK Version:</div>
+                            <div class="col-8">{{SDKVersion}}</div>
+                        </div>
+                        <div class="row">
                             <div class="col-4">CPU model:</div>
                             <div class="col-8">{{ChipModel}} rev. {{ChipRevision}}</div>
                         </div>
@@ -125,12 +129,12 @@
                         </div>
                         {{#NetworkState.ApMode}}
                         <div class="mt-4 alert alert-warning" role="alert">
-                            <p>Not connected to an access point. Consider configuring the access point.</p>
+                            <h4 class="text-center">Not connected to an access point.<br>Consider configuring the access point.</h4>
                         </div>
                         {{/NetworkState.ApMode}}
                         {{#NetworkState.OnLine}}
                         <div class="mt-4 alert alert-success" role="alert">
-                            <p>Connected to the access point</p>
+                            <h4 class="text-center">Connected to the access point</h4>
                         </div>
                         {{/NetworkState.OnLine}}
                     </div>
@@ -149,16 +153,16 @@
                             <div class="col-8">{{FrameSize}}</div>
                         </div>
                         <div class="row">
-                            <div class="col-4">Frame buffer location:</div>
-                            <div class="col-8">{{FrameBufferLocation}}</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-4">Frame buffers:</div>
-                            <div class="col-8">{{FrameBuffers}}</div>
-                        </div>
-                        <div class="row">
                             <div class="col-4">JPEG quality:</div>
                             <div class="col-8">{{JpegQuality}} [1-100]</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Enable PSRAM:</div>
+                            <div class="col-8">{{#EnablePSRAM}}Enabled{{/EnablePSRAM}}{{^EnablePSRAM}}Disabled{{/EnablePSRAM}}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-4">Number of frame buffers:</div>
+                            <div class="col-8">{{FrameBuffers}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Brightness:</div>
@@ -178,11 +182,11 @@
                         </div>
                         <div class="row">
                             <div class="col-4">White balance:</div>
-                            <div class="col-8">{{WhiteBal}}</div>
+                            <div class="col-8">{{#WhiteBal}}Auto{{/WhiteBal}}{{^WhiteBal}}Manual{{/WhiteBal}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">AWB gain:</div>
-                            <div class="col-8">{{AwbGain}}</div>
+                            <div class="col-8">{{#AwbGain}}Auto{{/AwbGain}}{{^AwbGain}}Manual{{/AwbGain}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">WB mode:</div>
@@ -190,11 +194,12 @@
                         </div>
                         <div class="row">
                             <div class="col-4">Exposure control:</div>
-                            <div class="col-8">{{ExposureCtrl}}</div>
+                            <div class="col-8">
+                                {{#ExposureCtrl}}Auto{{/ExposureCtrl}}{{^ExposureCtrl}}Manual{{/ExposureCtrl}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Auto exposure control (dsp):</div>
-                            <div class="col-8">{{Aec2}}</div>
+                            <div class="col-8">{{#Aec2}}Enabled{{/Aec2}}{{^Aec2}}Disabled{{/Aec2}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Auto Exposure level:</div>
@@ -206,7 +211,7 @@
                         </div>
                         <div class="row">
                             <div class="col-4">Gain control:</div>
-                            <div class="col-8">{{GainCtrl}}</div>
+                            <div class="col-8">{{#GainCtrl}}Auto{{/GainCtrl}}{{^GainCtrl}}Manual{{/GainCtrl}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">AGC gain:</div>
@@ -218,48 +223,47 @@
                         </div>
                         <div class="row">
                             <div class="col-4">Black pixel correct:</div>
-                            <div class="col-8">{{Bpc}}</div>
+                            <div class="col-8">{{#Bpc}}Auto{{/Bpc}}{{^Bpc}}Manual{{/Bpc}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">White pixel correct:</div>
-                            <div class="col-8">{{Wpc}}</div>
+                            <div class="col-8">{{#Wpc}}Auto{{/Wpc}}{{^Wpc}}Manual{{/Wpc}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Gamma correct:</div>
-                            <div class="col-8">{{RawGma}}</div>
+                            <div class="col-8">{{#RawGma}}Enabled{{/RawGma}}{{^RawGma}}Disabled{{/RawGma}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Lens correction:</div>
-                            <div class="col-8">{{Lenc}}</div>
+                            <div class="col-8">{{#Lenc}}Enabled{{/Lenc}}{{^Lenc}}Disabled{{/Lenc}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Horizontal mirror:</div>
-                            <div class="col-8">{{HMirror}}</div>
+                            <div class="col-8">{{#HMirror}}Mirrored{{/HMirror}}{{^HMirror}}Normal{{/HMirror}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Vertical flip:</div>
-                            <div class="col-8">{{VFlip}}</div>
+                            <div class="col-8">{{#VFlip}}Flipped{{/VFlip}}{{^VFlip}}Normal{{/VFlip}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Downsize enable:</div>
-                            <div class="col-8">{{Dcw}}</div>
+                            <div class="col-8">{{#Dcw}}Enabled{{/Dcw}}{{^Dcw}}Disabled{{/Dcw}}</div>
                         </div>
                         <div class="row">
                             <div class="col-4">Color bar:</div>
-                            <div class="col-8">{{ColorBar}}</div>
+                            <div class="col-8">{{#ColorBar}}Enabled{{/ColorBar}}{{^ColorBar}}Camera{{/ColorBar}}</div>
                         </div>
                         {{#CameraInitialized}}
                         <div class="mt-4 alert alert-success" role="alert">
-                            <p>Camera was initialized successfully!</p>
+                            <h4 class="text-center">Camera was initialized successfully!</h4>
                         </div>
                         {{/CameraInitialized}}
                         {{^CameraInitialized}}
                         <div class="mt-4 alert alert-danger" role="alert">
-                            <p>Failed to initialize the camera!</p>
-                            <p>Result: {{CameraInitResultText}}</p>
+                            <h4 class="text-center">Failed to initialize the camera!</h4>
+                            <p>Result: {{CameraInitResult}} ({{CameraInitResultText}})</p>
                             <p>Please check hardware or correct the camera settings and restart.</p>
-                            <button type="button" class="btn btn-danger"
-                                onclick="location.href='restart'">Restart</button>
+                            <button type="button" class="btn btn-danger" onclick="location.href='restart'">Restart</button>
                         </div>
                         {{/CameraInitialized}}
                     </div>
@@ -287,7 +291,7 @@
                         <span>
                             The intensity of the flash led (0-255) can be controlled using:
                             <a href="http://{{IpV4}}/flash?v=0">http://{{IpV4}}/flash?v=value</a>.
-                            Authentication is required and if no value is present, the configuration value is used.
+                            Authentication is required.
                         </span>
                     </div>
                     <div class="row">
