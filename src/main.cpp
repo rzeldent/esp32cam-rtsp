@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
@@ -398,7 +399,10 @@ void setup()
   log_i("Starting " APP_TITLE "...");
 
   if (psramFound())
+  {
     psramInit();
+    log_v("PSRAM found and initialized");
+  }
 
   param_group_board.addItem(&param_board);
   iotWebConf.addParameterGroup(&param_group_board);
