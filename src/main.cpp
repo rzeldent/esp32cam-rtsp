@@ -92,6 +92,8 @@ void handle_root()
 
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
+  auto ipv4 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIP() : WiFi.localIP();
+  auto ipv6 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIPv6() : WiFi.localIPv6();
 
   moustache_variable_t substitutions[] = {
       // Config Changed?
@@ -118,9 +120,9 @@ void handle_root()
       {"MacAddress", WiFi.macAddress()},
       {"AccessPoint", WiFi.SSID()},
       {"SignalStrength", String(WiFi.RSSI())},
-      {"IpV4", WiFi.localIP().toString()},
-      {"IpV6", WiFi.localIPv6().toString()},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
+      {"IpV4", ipv4.toString()},
+      {"IpV6", ipv6.toString()},
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
@@ -229,6 +231,7 @@ void handle_stream()
   }
 
   log_v("starting streaming");
+  // Blocks further handling of HTTP server until stopped
   char size_buf[12];
   auto client = web_server.client();
   client.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" STREAM_CONTENT_BOUNDARY "\r\n");
@@ -292,7 +295,7 @@ esp_err_t initialize_camera()
   log_i("Enable PSRAM: %d", param_enable_psram.value());
   log_i("Frame buffers: %d", param_frame_buffers.value());
   camera_config.fb_count = param_frame_buffers.value();
-  
+
   if (param_enable_psram.value() && psramFound())
   {
     camera_config.fb_location = CAMERA_FB_IN_PSRAM;
@@ -344,18 +347,15 @@ void start_rtsp_server()
 {
   log_v("start_rtsp_server");
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
-  // Add service to mDNS - rtsp
+  // Add RTSP service to mDNS
+  // HTTP is already set by iotWebConf
   MDNS.addService("rtsp", "tcp", 554);
 }
 
 void on_connected()
 {
   log_v("on_connected");
-  // Turn LED off (has inverted logic GPIO33) => red LED off => connected
-  digitalWrite(LED_BUILTIN, true);
-  // Set flash led intensity
-  analogWrite(LED_FLASH, param_led_intensity.value());
-  // Start (OTA) Over The Air programming  when connected
+  // Start (OTA) Over The Air programming when connected
   ArduinoOTA.begin();
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
@@ -379,8 +379,8 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+  // LED_BUILTIN (GPIO33) has inverted logic false => LED on
   pinMode(LED_BUILTIN, OUTPUT);
-  // Turn LED on (has inverted logic GPIO33) => red LED on => not connected
   digitalWrite(LED_BUILTIN, false);
 
   pinMode(LED_FLASH, OUTPUT);
@@ -438,13 +438,14 @@ void setup()
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
+  iotWebConf.setStatusPin(LED_BUILTIN, LOW);
   iotWebConf.init();
 
   camera_init_result = initialize_camera();
-  if (camera_init_result != ESP_OK)
-    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
-  else
+  if (camera_init_result == ESP_OK)
     update_camera_settings();
+  else
+    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
@@ -455,7 +456,6 @@ void setup()
   web_server.on("/snapshot", HTTP_GET, handle_snapshot);
   // Camera stream
   web_server.on("/stream", HTTP_GET, handle_stream);
-
   // Camera flash light
   web_server.on("/flash", HTTP_GET, handle_flash);
 
@@ -467,6 +467,7 @@ void setup()
                         { iotWebConf.handleNotFound(); });
 
   ArduinoOTA
+      .setPassword(OTA_PASSWORD)
       .onStart([]()
                { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
       .onEnd([]()
@@ -484,7 +485,9 @@ void setup()
       case OTA_END_ERROR: log_e("OTA: End Failed"); break;
       default: log_e("OTA error: %u", error);
       } });
-  ArduinoOTA.setPassword(OTA_PASSWORD);
+
+  // Set flash led intensity
+  analogWrite(LED_FLASH, param_led_intensity.value());
 }
 
 void loop()
@@ -494,4 +497,6 @@ void loop()
 
   if (camera_server)
     camera_server->doLoop();
+
+  yield();
 }
