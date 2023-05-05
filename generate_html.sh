@@ -1,6 +1,7 @@
 #!/bin/sh
-python3 -m pip install --upgrade pip setuptools wheel
-python3 -m pip install htmlmin
 
-python3 ./html_to_cpp.py ./html ./include/html_data.h
-python3 ./html_to_cpp_gzip.py ./html_gzip ./include/html_data_gzip.h
+python3 -m pip install --upgrade pip setuptools wheel
+python3 -m pip install minify-html
+
+python3 ./minify.py ./html/index.html ./html/index.min.html
+python3 ./minify.py ./html/restart.html ./html/restart.min.html

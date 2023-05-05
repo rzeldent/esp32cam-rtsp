@@ -4,29 +4,42 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="bootstrap.min.css">
-    <meta http-equiv="refresh" content="1;url=/index.html">
+    <meta http-equiv="refresh" content="10;url=/index.html">
+    <style>
+        html,
+        body {
+            color: #222;
+            font-size: 16px;
+            font-family: Arial, Verdana, Helvetica, sans-serif;
+            min-height: 100%;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .alert-info {
+            color: #31708f;
+            background-color: #d9edf7;
+            border-color: #bce8f1;
+        }
+    </style>
+
     <title>{{AppTitle}} v{{AppVersion}}</title>
 </head>
 
 <body>
-    <div class="container">
-        <h1 class="text-center">{{ThingName}}</h1>
-        <hr>
+    <h1 class="text-center">{{ThingName}}</h1>
+    <hr>
 
-        <div class="jumbotron bg-light">
-            <h1 class="display-4 text-center">Restart</h1>
-            <p class="lead text-center">The device is restarting.</p>
-            <hr class="my-4 ">
-            <p class="text-center">In some cases, the device requires a hard reset (power cycle).</p>
-            <p class="text-center">If this page takes longer than a minute, consider performing a power cycle.</p>
-            <div class="d-flex justify-content-center">
-                <div class="spinner-border text-danger" role="status">
-                    <span class="visually-hidden">Restarting...</span>
-                </div>
-            </div>
-        </div>
+    <div class="alert-info">
+        <h3 class="text-center">Restarting</h3>
+        <h4 class="text-center">
+            The device is restarting...<br><br>
+            If this page takes longer than a minute, consider performing a power cycle.
+        </h4>
     </div>
+
 </body>
 
 </html>

@@ -15,9 +15,11 @@
 #include <format_duration.h>
 #include <format_number.h>
 #include <moustache.h>
-#include <html_data.h>
-#include <html_data_gzip.h>
 #include <settings.h>
+
+// HTML files
+extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
+extern const char restart_html_min_start[] asm("_binary_html_restart_min_html_start");
 
 auto param_group_board = iotwebconf::ParameterGroup("board", "Board settings");
 auto param_board = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_configs[0])>>("bt").label("Board").optionValues((const char *)&camera_configs).optionNames((const char *)&camera_configs).optionCount(sizeof(camera_configs) / sizeof(camera_configs[0])).nameLength(sizeof(camera_configs[0])).defaultValue(DEFAULT_CAMERA_CONFIG).build();
@@ -62,7 +64,9 @@ DNSServer dnsServer;
 std::unique_ptr<rtsp_server> camera_server;
 // Web server
 WebServer web_server(80);
-IotWebConf iotWebConf(WIFI_SSID, &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
+
+auto thingName = String(WIFI_SSID) + "-" + String(ESP.getEfuseMac(), 16);
+IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
 // Keep track of config changes. This will allow a reset of the device
 bool config_changed = false;
@@ -166,7 +170,7 @@ void handle_root()
       {"RtspPort", String(RTSP_PORT)}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  auto html = moustache_render(file_data_index_html, substitutions);
+  auto html = moustache_render(index_html_min_start, substitutions);
   web_server.send(200, "text/html", html);
 }
 
@@ -185,7 +189,7 @@ void handle_restart()
       {"AppVersion", APP_VERSION},
       {"ThingName", iotWebConf.getThingName()}};
 
-  auto html = moustache_render(file_data_restart_html, substitutions);
+  auto html = moustache_render(restart_html_min_start, substitutions);
   web_server.send(200, "text/html", html);
   log_v("Restarting... Press refresh to connect again");
   sleep(100);
@@ -202,7 +206,7 @@ void handle_snapshot()
   }
 
   // Remove old images stored in the frame buffer
-  auto frame_buffers = psramFound() ? 2 : 1;
+  auto frame_buffers = param_frame_buffers.value();
   while (frame_buffers--)
     cam.run();
 
@@ -462,10 +466,6 @@ void setup()
   web_server.on("/stream", HTTP_GET, handle_stream);
   // Camera flash light
   web_server.on("/flash", HTTP_GET, handle_flash);
-
-  // bootstrap
-  web_server.on("/bootstrap.min.css", HTTP_GET, []()
-                { stream_text_file_gzip(file_data_bootstrap_min_css, sizeof(file_data_bootstrap_min_css), "text/css"); });
 
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
