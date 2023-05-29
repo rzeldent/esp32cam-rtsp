@@ -397,7 +397,7 @@ void setup()
   Serial.setDebugOutput(true);
 #endif
 
-  log_i("CPU Freq: %d Mhz", getCpuFrequencyMhz());
+  log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("SDK version: %s", ESP.getSdkVersion());
   log_i("Starting " APP_TITLE "...");
