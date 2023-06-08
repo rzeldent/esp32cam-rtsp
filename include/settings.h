@@ -14,9 +14,9 @@
 #define DEFAULT_CAMERA_CONFIG "AI THINKER"
 #define DEFAULT_ENABLE_PSRAM psramFound()
 #define DEFAULT_BUFFERS (psramFound() ? 2 : 1)
-#define DEFAULT_FRAME_DURATION 100
-#define DEFAULT_FRAME_SIZE (psramFound() ? "UXGA (1600x1200)" : "SVGA (800x600)")
-#define DEFAULT_JPEG_QUALITY (psramFound() ? 10 : 12)
+#define DEFAULT_FRAME_DURATION 200
+#define DEFAULT_FRAME_SIZE "VGA (640x480)"
+#define DEFAULT_JPEG_QUALITY (psramFound() ? 12 : 14)
 
 #define DEFAULT_BRIGHTNESS  0
 #define DEFAULT_CONTRAST  0
