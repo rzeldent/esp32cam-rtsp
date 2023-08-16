@@ -17,9 +17,7 @@
 #include <moustache.h>
 #include <settings.h>
 
-#ifdef TEMPRATURE_SEND_READ
 extern "C" uint8_t temprature_sens_read();
-#endif
 
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
@@ -121,7 +119,7 @@ void handle_root()
       {"PsRamSize", format_memory(ESP.getPsramSize(), 0)},
       // Diagnostics
       {"Uptime", String(format_duration(millis() / 1000))},
-#ifdef TEMPRATURE_SEND_READ
+#ifdef TEMPRATURE_SENS_READ
       {"Temperature", String((temprature_sens_read() - 32) / 1.8)},
 #else
       {"Temperature", "N/A"},
