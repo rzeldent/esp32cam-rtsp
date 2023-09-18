@@ -29,7 +29,7 @@ private:
 		std::shared_ptr<CRtspSession> session;
 	};
 
-	 OV2640 cam_;
+	OV2640 cam_;
 	std::list<std::unique_ptr<rtsp_client>> clients_;
 	uintptr_t task_;
 	Timer<> timer_;
