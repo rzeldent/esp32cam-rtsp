@@ -19,7 +19,7 @@ constexpr const char *board_name = "AI-Thinker ESP32CAM";
 constexpr camera_config_t default_camera_config = aithinker_camera_settings;
 #elif defined(BOARD_ESP_EYE)
 constexpr const char *board_name = "ESP-EYE";
-constexpr camera_config_t default_camera_config = exp_eye_camera_settings;
+constexpr camera_config_t default_camera_config = esp_eye_camera_settings;
 #elif defined(BOARD_TTGO_T_CAMERA)
 constexpr const char *board_name = "TTGO-T-CAMERA";
 constexpr camera_config_t default_camera_config = ttgo_t_camera_settings;
