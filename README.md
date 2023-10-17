@@ -6,7 +6,7 @@ Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP
 
 > [!IMPORTANT]  
 > New branch available! Here [branch: feature/seeed_xiao_esp32s3](https://github.com/rzeldent/esp32cam-rtsp/tree/feature/seeed_xiao_esp32s3)
-> This branch supports the Seeed Studio Xiao esp32s3 and a new build system!
+> This branch supports all the current devices and the Seeed Studio Xiao esp32s3!
 > Please use this and let me know if this works for you!
 
 
