@@ -1,4 +1,4 @@
-# ESP32CAM-RTSP :video_camera:
+# ESP32CAM-RTSP
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
 
@@ -8,17 +8,17 @@ Flashing this software on a ESP32CAM module will make it a **RTSP streaming came
 
 Supported protocols
 
-- :white_check_mark: RTSP 
+- RTSP 
   The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
   It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
   This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
   The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
 
-- :white_check_mark: HTTP Motion JPEG
+- HTTP Motion JPEG
   The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
   The URL is http://&lt;ip address&gt;/stream
 
-- :white_check_mark: HTTP image
+- HTTP image
   The HTTP Image returns an HTTP JPEG image of the camera.
   The URL is http://&lt;ip address&gt;/snapshot
 
@@ -319,6 +319,10 @@ esp32cam-rtsp depends on PlatformIO, Bootstrap 5 and Micro-RTSP by Kevin Hester.
 
 ## Change history
 
+- Oktober 2023
+  - Added support for Seeed Xiao esp32s3
+  - New build system
+  - Updated documentation
 - March 2023
   - Added options to set PSRAM / Frame buffers
   - Added JPEG Motion streaming
