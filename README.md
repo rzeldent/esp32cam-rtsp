@@ -1,8 +1,14 @@
-# ESP32CAM-RTSP :video_camera:
+# ESP32CAM-RTSP
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
 
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
+
+> [!IMPORTANT]  
+> New branch available: look [here](https://github.com/rzeldent/esp32cam-rtsp/tree/feature/seeed_xiao_esp32s3)
+> This branch supports the Seeed Studio Xiao esp32s3 and a new build system!
+> Please use this and let me know if this works for you!
+
 
 Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
 
