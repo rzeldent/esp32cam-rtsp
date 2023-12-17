@@ -6,11 +6,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up python
-        uses: actions/setup-python@v3
         with:
-          python-version: '3.x'
-          architecture: 'x64'
+          submodules: 'true'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
       - name: Install PlatformIO
         run: python -m pip install platformio
       - name: Build firmware
@@ -18,5 +19,5 @@ jobs:
       - name: Archive
         uses: actions/upload-artifact@v3
         with:
-          name: firmware.bin
+          name: firmwares.zip
           path: .pio/build/*/firmware.bin

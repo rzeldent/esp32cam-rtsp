@@ -32,7 +32,7 @@ constexpr camera_config_t default_camera_config = wrover_kit_camera_settings;
 #elif defined(BOARD_SEEED_XIAO_ESP32S3_SENSE)
 constexpr const char *board_name = "Seed Xiao ESP32S3 Sense";
 constexpr camera_config_t default_camera_config = xiao_esp32s3_camera_settings;
-#elif
+#else
 #error No board defined
 #endif
 
