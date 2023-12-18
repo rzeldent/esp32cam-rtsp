@@ -9,12 +9,11 @@ Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP
 > This branch supports all the current devices and the Seeed Studio Xiao esp32s3!
 > Please use this and let me know if this works for you!
 
-
 Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
 
 Supported protocols
 
-- RTSP 
+- RTSP
   The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
   It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
   This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
@@ -51,7 +50,7 @@ The software provides a **configuration web server**, that can be used to:
   - Brightness
   - Contrast
   - Saturation
-  - Special effect (Normal, Negative, Grayscale, Red/Green/Blue tint, Sepia)
+  - Special effect (Normal, Negative, Gray-scale, Red/Green/Blue tint, Sepia)
   - White balance
   - Automatic White Balance gain
   - Wite Balance mode
@@ -86,17 +85,17 @@ There are a lot of boards available that are all called ESP32-CAM.
 However, there are differences in CPU (type/speed/cores), how the camera is connected, presence of PSRAM or not...
 To select the right board use the table below and use the configuration that is listed below for your board:
 
-| Board  | Configuration  | Image  | CPU   | RAM | Camera | Site |
-|---     |---     |---     |---    |---  |---    |---  |
-| Espressif ESP32-Wropver CAM | | <img src="assets/boards/esp32-wrover-cam.jpg" height="100" />  | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
-| AI-Thinker ESP32-CAM | ai_thinker_esp32cam   | <img src="assets/boards/ai-thinker-esp32-cam-ipex.jpg" height="100" /> <img src="assets/boards/ai-thinker-esp32-cam.jpg" height="100" /> | ESP32-S / 160Mhz | 520KB SRAM  4MB PSRAM | OV2640 | https://docs.ai-thinker.com/en/esp32-cam |
-| Espressif ESP-EYE | | <img src="assets/boards/espressif-esp-eye.jpg" height="100" />  | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
-| Espressif ESP-S3-EYE| | <img src="assets/boards/espressif-esps3-eye.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | https://www.espressif.com/en/products/devkits/esp-eye/overview |
-| LilyGo camera module| | <img src="assets/boards/lilygo-camera-module.jpg" height="100" />  | ESP32 Wrover | 520KB SRAM 4MB PSRAM   | OV2640 / OV5640
-| LilyGo Simcam| | <img src="assets/boards/lilygo-simcam.jpg" height="100" />  |  | | OV2640 | |
-| LilyGo TTGO-T Camera| | <img src="assets/boards/lilygo-ttgo-t-camera.jpg" height="100" /> || | OV2640 | |
-| M5 Stack Camera| | <img src="assets/boards/m5stack-esp32-camera.jpg" height="100" />  ||| OV2640 | |
-| Seeed studio Xiao ESPS3 Sense| seeed_xiao_esp32s3_sense | <img src="assets/boards/seeed-studio-xiao-esp32s3-sense.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | |
+| Board                         | Configuration             | Image                                                                         | CPU   | RAM | Camera | Site |
+|---                            |---                        |---                                                                            |---    |---  |---    |---  |
+| Espressif ESP32-Wropver CAM   |                           | <img src="assets/boards/esp32-wrover-cam.jpg" height="100" />                 | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
+| AI-Thinker ESP32-CAM          | ai_thinker_esp32cam       | <img src="assets/boards/ai-thinker-esp32-cam-ipex.jpg" height="100" /> <img src="assets/boards/ai-thinker-esp32-cam.jpg" height="100" /> | ESP32-S / 160Mhz | 520KB SRAM  4MB PSRAM | OV2640 | https://docs.ai-thinker.com/en/esp32-cam |
+| Espressif ESP-EYE             |                           | <img src="assets/boards/espressif-esp-eye.jpg" height="100" />  | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
+| Espressif ESP-S3-EYE          |                           | <img src="assets/boards/espressif-esps3-eye.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | https://www.espressif.com/en/products/devkits/esp-eye/overview |
+| LilyGo camera module          |                           | <img src="assets/boards/lilygo-camera-module.jpg" height="100" />  | ESP32 Wrover | 520KB SRAM 4MB PSRAM   | OV2640 / OV5640
+| LilyGo Simcam                 |                           | <img src="assets/boards/lilygo-simcam.jpg" height="100" />  |  | | OV2640 | |
+| LilyGo TTGO-T Camera          |                           | <img src="assets/boards/lilygo-ttgo-t-camera.jpg" height="100" /> || | OV2640 | |
+| M5 Stack Camera               |                           | <img src="assets/boards/m5stack-esp32-camera.jpg" height="100" />  ||| OV2640 | |
+| Seeed studio Xiao ESPS3 Sense | seeed_xiao_esp32s3_sense  | <img src="assets/boards/seeed-studio-xiao-esp32s3-sense.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | |
 
 ## Installing and running PlatformIO
 
@@ -137,7 +136,6 @@ cd esp32cam-rtsp
 
 Next, the firmware has to be build and deployed to the ESP32.
 There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code.
-I recommend to use VIsual Studio Code as it is free to use and offers more insight.
 
 ### Using the command line
 
@@ -242,15 +240,7 @@ Calling this URL will start the form for configuring the device in the browser. 
 ### GET: /snapshot
 
 Calling this URL will return a JPEG snapshot of the camera in the browser.
-
 This request can also be used (for example using cURL) to save the snapshot to a file.
-
-### GET: /flash?v={intensity}
-
-Calling this URL will set the intensity of the flash LED. Authentication is required.
-
-The parameter v for the intensity must be between 0 (off) and 255 (max).
-If no v parameter is present, it will be set to the value of the flash LED intensity from configuration.
 
 ## Issues / Nice to know
 
