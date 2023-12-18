@@ -1,15 +1,8 @@
 #pragma once
 
-#include <string.h>
 #include <esp_camera.h>
 
-typedef struct
-{
-    const char name[11];
-    const camera_config_t config;
-} camera_config_entry_t;
-
-constexpr camera_config_t esp32cam_settings = {
+constexpr camera_config_t esp32cam_camera_settings = {
     .pin_pwdn = -1,
     .pin_reset = 15,
     .pin_xclk = 27,
@@ -32,9 +25,38 @@ constexpr camera_config_t esp32cam_settings = {
     .pixel_format = PIXFORMAT_JPEG,
     .frame_size = FRAMESIZE_SVGA,
     .jpeg_quality = 12,
-    .fb_count = 2};
+    .fb_count = 1,
+    .fb_location = CAMERA_FB_IN_DRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
 
-constexpr camera_config_t esp32cam_aithinker_settings = {
+constexpr camera_config_t esp_eye_camera_settings = {
+    .pin_pwdn = -1,
+    .pin_reset = -1,
+    .pin_xclk = 4,
+    .pin_sscb_sda = 18,
+    .pin_sscb_scl = 23,
+    .pin_d7 = 36,
+    .pin_d6 = 37,
+    .pin_d5 = 38,
+    .pin_d4 = 39,
+    .pin_d3 = 35,
+    .pin_d2 = 14,
+    .pin_d1 = 13,
+    .pin_d0 = 34,
+    .pin_vsync = 5,
+    .pin_href = 27,
+    .pin_pclk = 25,
+    .xclk_freq_hz = 20000000,
+    .ledc_timer = LEDC_TIMER_0,
+    .ledc_channel = LEDC_CHANNEL_0,
+    .pixel_format = PIXFORMAT_JPEG,
+    .frame_size = FRAMESIZE_SVGA,
+    .jpeg_quality = 12,
+    .fb_count = 1,
+    .fb_location = CAMERA_FB_IN_DRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
+
+constexpr camera_config_t aithinker_camera_settings = {
     .pin_pwdn = 32,
     .pin_reset = -1,
     .pin_xclk = 0,
@@ -57,9 +79,11 @@ constexpr camera_config_t esp32cam_aithinker_settings = {
     .pixel_format = PIXFORMAT_JPEG,
     .frame_size = FRAMESIZE_SVGA,
     .jpeg_quality = 12,
-    .fb_count = 2};
+    .fb_count = 2,
+    .fb_location = CAMERA_FB_IN_PSRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
 
-constexpr camera_config_t esp32cam_ttgo_t_settings = {
+constexpr camera_config_t ttgo_t_camera_settings = {
     .pin_pwdn = 26,
     .pin_reset = -1,
     .pin_xclk = 32,
@@ -82,9 +106,11 @@ constexpr camera_config_t esp32cam_ttgo_t_settings = {
     .pixel_format = PIXFORMAT_JPEG,
     .frame_size = FRAMESIZE_SVGA,
     .jpeg_quality = 12,
-    .fb_count = 2};
+    .fb_count = 1,
+    .fb_location = CAMERA_FB_IN_DRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
 
-constexpr camera_config_t esp32cam_m5stack_settings = {
+constexpr camera_config_t m5stack_camera_settings = {
     .pin_pwdn = -1,
     .pin_reset = 15,
     .pin_xclk = 27,
@@ -107,9 +133,11 @@ constexpr camera_config_t esp32cam_m5stack_settings = {
     .pixel_format = PIXFORMAT_JPEG,
     .frame_size = FRAMESIZE_SVGA,
     .jpeg_quality = 12,
-    .fb_count = 2};
+    .fb_count = 1,
+    .fb_location = CAMERA_FB_IN_DRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
 
-constexpr camera_config_t esp32cam_wrover_kit_settings = {
+constexpr camera_config_t wrover_kit_camera_settings = {
     .pin_pwdn = -1,
     .pin_reset = -1,
     .pin_xclk = 21,
@@ -132,21 +160,33 @@ constexpr camera_config_t esp32cam_wrover_kit_settings = {
     .pixel_format = PIXFORMAT_JPEG,
     .frame_size = FRAMESIZE_SVGA,
     .jpeg_quality = 12,
-    .fb_count = 2};
+    .fb_count = 2,
+    .fb_location = CAMERA_FB_IN_PSRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
 
-constexpr const camera_config_entry_t camera_configs[] = {
-    {"ESP32CAM", esp32cam_settings},
-    {"AI THINKER", esp32cam_aithinker_settings},
-    {"TTGO T-CAM", esp32cam_ttgo_t_settings},
-    {"M5 STACK", esp32cam_m5stack_settings},
-    {"WROVER KIT", esp32cam_wrover_kit_settings}};
-
-const camera_config_t lookup_camera_config(const char *name)
-{
-    // Lookup table for the frame name to framesize_t
-    for (const auto &entry : camera_configs)
-        if (strncmp(entry.name, name, sizeof(entry.name)) == 0)
-            return entry.config;
-
-    return camera_config_t{};
-}
+constexpr camera_config_t xiao_esp32s3_camera_settings = {
+    .pin_pwdn = -1,
+    .pin_reset = -1,
+    .pin_xclk = 10,
+    .pin_sscb_sda = 40,
+    .pin_sscb_scl = 39,
+    .pin_d7 = 48,
+    .pin_d6 = 11,
+    .pin_d5 = 12,
+    .pin_d4 = 14,
+    .pin_d3 = 16,
+    .pin_d2 = 18,
+    .pin_d1 = 17,
+    .pin_d0 = 15,
+    .pin_vsync = 38,
+    .pin_href = 47,
+    .pin_pclk = 13,
+    .xclk_freq_hz = 20000000,
+    .ledc_timer = LEDC_TIMER_0,
+    .ledc_channel = LEDC_CHANNEL_0,
+    .pixel_format = PIXFORMAT_JPEG, // for streaming
+    .frame_size = FRAMESIZE_UXGA,
+    .jpeg_quality = 12,
+    .fb_count = 2,
+    .fb_location = CAMERA_FB_IN_PSRAM,
+    .grab_mode = CAMERA_GRAB_LATEST};
