@@ -85,24 +85,24 @@ There are a lot of boards available that are all called ESP32-CAM.
 However, there are differences in CPU (type/speed/cores), how the camera is connected, presence of PSRAM or not...
 To select the right board use the table below and use the configuration that is listed below for your board:
 
-| Board                         | Configuration             | Image                                                                         | CPU   | RAM | Camera | Site |
-|---                            |---                        |---                                                                            |---    |---  |---    |---  |
-| Espressif ESP32-Wropver CAM   |                           | <img src="assets/boards/esp32-wrover-cam.jpg" height="100" />                 | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
-| AI-Thinker ESP32-CAM          | ai_thinker_esp32cam       | <img src="assets/boards/ai-thinker-esp32-cam-ipex.jpg" height="100" /> <img src="assets/boards/ai-thinker-esp32-cam.jpg" height="100" /> | ESP32-S / 160Mhz | 520KB SRAM  4MB PSRAM | OV2640 | https://docs.ai-thinker.com/en/esp32-cam |
-| Espressif ESP-EYE             |                           | <img src="assets/boards/espressif-esp-eye.jpg" height="100" />  | ESP32 | 520KB SRAM 4MB PSRAM   | OV2640 | |
-| Espressif ESP-S3-EYE          |                           | <img src="assets/boards/espressif-esps3-eye.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | https://www.espressif.com/en/products/devkits/esp-eye/overview |
-| LilyGo camera module          |                           | <img src="assets/boards/lilygo-camera-module.jpg" height="100" />  | ESP32 Wrover | 520KB SRAM 4MB PSRAM   | OV2640 / OV5640
-| LilyGo Simcam                 |                           | <img src="assets/boards/lilygo-simcam.jpg" height="100" />  |  | | OV2640 | |
-| LilyGo TTGO-T Camera          |                           | <img src="assets/boards/lilygo-ttgo-t-camera.jpg" height="100" /> || | OV2640 | |
-| M5 Stack Camera               |                           | <img src="assets/boards/m5stack-esp32-camera.jpg" height="100" />  ||| OV2640 | |
-| Seeed studio Xiao ESPS3 Sense | seeed_xiao_esp32s3_sense  | <img src="assets/boards/seeed-studio-xiao-esp32s3-sense.jpg" height="100" />  | ESP32-S3 | 520KB SRAM 4MB PSRAM   | OV2640 | |
+| Board                         | Configuration             | Image                                                                                               | CPU           | RAM                   | Camera          | Site                                                            |
+|---                            |---                        |---                                                                                                  |---            |---                    |---              |---                                                              |
+| Espressif ESP32-Wropver CAM   |                           | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32         | 520KB SRAM 4MB PSRAM  | OV2640          |                                                                 |
+| AI-Thinker ESP32-CAM          | ai_thinker_esp32cam       | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32-S       | 520KB SRAM 4MB PSRAM  | OV2640          | https://docs.ai-thinker.com/en/esp32-cam                        |
+| Espressif ESP-EYE             |                           | ![img](assets/boards/espressif-esp-eye.jpg")                                                        | ESP32         | 520KB SRAM 4MB PSRAM  | OV2640          |                                                                 |
+| Espressif ESP-S3-EYE          |                           | ![img](assets/boards/espressif-esps3-eye.jpg")                                                      | ESP32-S3      | 520KB SRAM 4MB PSRAM  | OV2640          | https://www.espressif.com/en/products/devkits/esp-eye/overview  |
+| LilyGo camera module          |                           | ![img](assets/boards/lilygo-camera-module.jpg")                                                     | ESP32 Wrover  | 520KB SRAM 4MB PSRAM  | OV2640 / OV5640 |                                                                 |
+| LilyGo Simcam                 |                           | ![img](assets/boards/lilygo-simcam.jpg")                                                            |               |                       | OV2640          |                                                                 |
+| LilyGo TTGO-T Camera          |                           | ![img](assets/boards/lilygo-ttgo-t-camera.jpg")                                                     |               |                       | OV2640          |                                                                 |
+| M5 Stack Camera               |                           | ![img](assets/boards/m5stack-esp32-camera.jpg")                                                     |               |                       | OV2640          |                                                                 |
+| Seeed studio Xiao ESPS3 Sense | seeed_xiao_esp32s3_sense  | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg")                                          | ESP32-S3      | 520KB SRAM 4MB PSRAM  | OV2640          |                                                                 |
 
 ## Installing and running PlatformIO
 
 PlatformIO is available for all major operating systems: Windows, Linux and MacOS. It is also provided as a plugin to [Visual Studio Code](https://visualstudio.microsoft.com).
 More information can be found at: [https://docs.platformio.org/en/latest/installation.html](https://docs.platformio.org/en/latest/installation.html) below the basics.
 
-Install [**Visual Studio Code**](https://code.visualstudio.com) and install the PlatformIO plugin.
+Install [Visual Studio Code](https://code.visualstudio.com) and install the PlatformIO plugin.
 
 ## Putting the ESP32-CAM in download mode
 

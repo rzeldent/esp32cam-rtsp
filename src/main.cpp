@@ -89,6 +89,10 @@ void handle_root()
   auto ipv4 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIP() : WiFi.localIP();
   auto ipv6 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIPv6() : WiFi.localIPv6();
 
+  auto initResult = esp_err_to_name(camera_init_result);
+  if (initResult == nullptr)
+    initResult = "Unknown reason";
+
   moustache_variable_t substitutions[] = {
       // Version / CPU
       {"AppTitle", APP_TITLE},
@@ -125,7 +129,7 @@ void handle_root()
       {"JpegQuality", String(param_jpg_quality.value())},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", String(camera_init_result)},
-      {"CameraInitResultText", esp_err_to_name(camera_init_result)},
+      {"CameraInitResultText", initResult},
       // Settings
       {"Brightness", String(param_brightness.value())},
       {"Contrast", String(param_contrast.value())},
@@ -299,17 +303,14 @@ void setup()
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, false);
 
-#ifdef CORE_DEBUG_LEVEL
   Serial.begin(115200);
   Serial.setDebugOutput(true);
-#endif
 
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("SDK version: %s", ESP.getSdkVersion());
   log_i("Board: %s", board_name);
   log_i("Starting " APP_TITLE "...");
-
 
   if (default_camera_config.fb_location == CAMERA_FB_IN_PSRAM)
   {
@@ -397,5 +398,5 @@ void loop()
   if (camera_server)
     camera_server->doLoop();
 
-  yield();
+  sleep(0);
 }
