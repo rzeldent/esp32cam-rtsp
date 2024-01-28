@@ -300,8 +300,10 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
   // LED_BUILTIN (GPIO33) has inverted logic false => LED on
+#ifdef LED_BUILTIN
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, false);
+#endif
 
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -348,7 +350,9 @@ void setup()
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
+  #ifdef LED_BUILTIN
   iotWebConf.setStatusPin(LED_BUILTIN, LOW);
+  #endif
   iotWebConf.init();
 
   camera_init_result = initialize_camera();
