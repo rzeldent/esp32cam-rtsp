@@ -11,6 +11,7 @@
 
 #define RTSP_PORT 554
 
+#if 0
 #if defined(BOARD_ESP32CAM)
 constexpr const char *board_name = "ESP32CAM";
 constexpr camera_config_t default_camera_config = esp32cam_camera_settings;
@@ -37,6 +38,7 @@ constexpr const char *board_name = "M5Stack UnitCamS3";
 constexpr camera_config_t default_camera_config = m5stack_unitcams3_camera_settings;
 #else
 #error No board defined
+#endif
 #endif
 
 #define DEFAULT_FRAME_DURATION 200

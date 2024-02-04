@@ -2,6 +2,7 @@
 #include <ArduinoOTA.h>
 #include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
+#include <driver/i2c.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
 #include <OV2640.h>
@@ -97,7 +98,7 @@ void handle_root()
       // Version / CPU
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
-      {"BoardType", board_name},
+      {"BoardType", BOARD_NAME},
       {"ThingName", iotWebConf.getThingName()},
       {"SDKVersion", ESP.getSdkVersion()},
       {"ChipModel", ESP.getChipModel()},
@@ -118,8 +119,8 @@ void handle_root()
       {"AccessPoint", WiFi.SSID()},
       {"SignalStrength", String(WiFi.RSSI())},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
-      {"IpV4", ipv4.toString()},
-      {"IpV6", ipv6.toString()},
+      {"IPv4", ipv4.toString()},
+      {"IPv6", ipv6.toString()},
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
@@ -171,7 +172,7 @@ void handle_snapshot()
   }
 
   // Remove old images stored in the frame buffer
-  auto frame_buffers = default_camera_config.fb_count;
+  auto frame_buffers = CAMERA_CONFIG_FB_COUNT;
   while (frame_buffers--)
     cam.run();
 
@@ -222,16 +223,47 @@ void handle_stream()
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
-  // Copy the settings
-  camera_config_t camera_config;
-  memset(&camera_config, 0, sizeof(camera_config_t));
-  memcpy(&camera_config, &default_camera_config, sizeof(camera_config_t));
+
+  constexpr auto pixformat = PIXFORMAT_JPEG;
   log_i("Frame size: %s", param_frame_size.value());
   auto frame_size = lookup_frame_size(param_frame_size.value());
   log_i("JPEG quality: %d", param_jpg_quality.value());
+  auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  camera_config.frame_size = frame_size;
-  camera_config.jpeg_quality = param_jpg_quality.value();
+  constexpr auto i2c_port = I2C_NUM_0;
+
+  camera_config_t camera_config = {
+    .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
+    .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
+    .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
+    .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
+    .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
+    .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
+    .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
+    .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
+    .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
+    .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
+    .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
+    .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
+    .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
+    .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
+    .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
+    .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
+    .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+    .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
+    .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
+    .pixel_format = pixformat,                  // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
+    .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+    .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
+    .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
+    .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
+    .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
+#if CONFIG_CAMERA_CONVERTER_ENABLED
+    conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
+#endif
+    .sccb_i2c_port = i2c_port // If pin_sccb_sda is -1, use the already configured I2C bus by number
+  };
+
   return cam.init(camera_config);
 }
 
@@ -311,10 +343,10 @@ void setup()
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("SDK version: %s", ESP.getSdkVersion());
-  log_i("Board: %s", board_name);
+  log_i("Board: %s", BOARD_NAME);
   log_i("Starting " APP_TITLE "...");
 
-  if (default_camera_config.fb_location == CAMERA_FB_IN_PSRAM)
+  if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM)
   {
     if (!psramInit())
       log_e("Failed to initialize PSRAM");
@@ -350,9 +382,9 @@ void setup()
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
-  #ifdef LED_BUILTIN
+#ifdef LED_BUILTIN
   iotWebConf.setStatusPin(LED_BUILTIN, LOW);
-  #endif
+#endif
   iotWebConf.init();
 
   camera_init_result = initialize_camera();
