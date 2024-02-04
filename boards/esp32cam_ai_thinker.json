@@ -6,7 +6,7 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ESP32CAM_AITHINKER'",
+      "'-D ESP32CAM_AI_THINKER'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
       "'-D LED_BUILTIN=33'",
@@ -51,7 +51,7 @@
     "arduino",
     "espidf"
   ],
-  "name": "ESP32-CAM AI Thinker",
+  "name": "ESP32CAM AI Thinker",
   "upload": {
     "flash_size": "4MB",
     "maximum_ram_size": 327680,
@@ -59,6 +59,6 @@
     "require_upload_port": true,
     "speed": 460800
   },
-  "url": "https://wiki.ai-thinker.com/esp32-cam",
-  "vendor": "AI Thinker"
+  "url": "https://docs.ai-thinker.com/esp32-cam",
+  "vendor": "Anxinke"
 }

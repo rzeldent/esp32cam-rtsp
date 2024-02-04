@@ -9,7 +9,6 @@
       "'-D ESP32CAM_M5STACK_WIDE'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
-      "'-D LED_BUILTIN=2'",
       "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_RESET=15'",
       "'-D CAMERA_CONFIG_PIN_XCLK=27'",
@@ -51,7 +50,7 @@
     "arduino",
     "espidf"
   ],
-  "name": "ESP32-CAM M5 STACK",
+  "name": "ESP32-CAM M5 STACK WIDE",
   "upload": {
     "flash_size": "4MB",
     "maximum_ram_size": 327680,

@@ -63,16 +63,6 @@ IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD,
 // Camera initialization result
 esp_err_t camera_init_result;
 
-void stream_text_file_gzip(const unsigned char *content, size_t length, const char *mime_type)
-{
-  // Cache for 86400 seconds (one day)
-  web_server.sendHeader("Cache-Control", "max-age=86400");
-  web_server.sendHeader("Content-encoding", "gzip");
-  web_server.setContentLength(length);
-  web_server.send(200, mime_type, "");
-  web_server.sendContent(reinterpret_cast<const char *>(content), length);
-}
-
 void handle_root()
 {
   log_v("Handle root");
