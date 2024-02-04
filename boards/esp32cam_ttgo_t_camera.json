@@ -6,7 +6,7 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ARDUINO_ESP32_DEV'",
+      "'-D ESP32CAM_TTGO_T_CAMERA'",
       "'-D CAMERA_CONFIG_PIN_PWDN=26'",
       "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_XCLK=32'",

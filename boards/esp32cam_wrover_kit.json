@@ -6,7 +6,7 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ARDUINO_ESP32_DEV'",
+      "'-D ESP32CAM_WROVER_KIT'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
       "'-D LED_BUILTIN=2'",

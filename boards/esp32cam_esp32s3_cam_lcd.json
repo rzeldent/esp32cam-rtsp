@@ -7,7 +7,7 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ARDUINO_XIAO_ESP32S3'",
+      "'-D ESP32CAM_ESP32S3_CAM_LCD'",
       "'-D BOARD_HAS_PSRAM'",
       "'-D ARDUINO_USB_MODE=1'",
       "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
