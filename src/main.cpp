@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <ArduinoOTA.h>
 #include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
 #include <driver/i2c.h>
@@ -8,7 +7,6 @@
 #include <OV2640.h>
 #include <ESPmDNS.h>
 #include <rtsp_server.h>
-#include <camera_config.h>
 #include <lookup_camera_effect.h>
 #include <lookup_camera_frame_size.h>
 #include <lookup_camera_gainceiling.h>
@@ -210,6 +208,7 @@ void handle_stream()
   client.stop();
   log_v("stopped streaming");
 }
+
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
@@ -302,8 +301,6 @@ void start_rtsp_server()
 void on_connected()
 {
   log_v("on_connected");
-  // Start (OTA) Over The Air programming when connected
-  ArduinoOTA.begin();
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
     start_rtsp_server();
@@ -327,8 +324,11 @@ void setup()
   digitalWrite(LED_BUILTIN, false);
 #endif
 
+// ESP32S2 has no serial port
+#ifndef ARDUINO_USB_CDC_ON_BOOT
   Serial.begin(115200);
   Serial.setDebugOutput(true);
+#endif
 
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
@@ -394,32 +394,11 @@ void setup()
 
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
-
-  ArduinoOTA
-      .setPassword(OTA_PASSWORD)
-      .onStart([]()
-               { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
-      .onEnd([]()
-             { log_w("OTA update done!"); })
-      .onProgress([](unsigned int progress, unsigned int total)
-                  { log_i("OTA Progress: %u%%\r", (progress / (total / 100))); })
-      .onError([](ota_error_t error)
-               {
-      switch (error)
-      {
-      case OTA_AUTH_ERROR: log_e("OTA: Auth Failed"); break;
-      case OTA_BEGIN_ERROR: log_e("OTA: Begin Failed"); break;
-      case OTA_CONNECT_ERROR: log_e("OTA: Connect Failed"); break;
-      case OTA_RECEIVE_ERROR: log_e("OTA: Receive Failed"); break;
-      case OTA_END_ERROR: log_e("OTA: End Failed"); break;
-      default: log_e("OTA error: %u", error);
-      } });
 }
 
 void loop()
 {
   iotWebConf.doLoop();
-  ArduinoOTA.handle();
 
   if (camera_server)
     camera_server->doLoop();

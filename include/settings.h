@@ -11,36 +11,6 @@
 
 #define RTSP_PORT 554
 
-#if 0
-#if defined(BOARD_ESP32CAM)
-constexpr const char *board_name = "ESP32CAM";
-constexpr camera_config_t default_camera_config = esp32cam_camera_settings;
-#elif defined(BOARD_AITHINKER_ESP32CAM)
-constexpr const char *board_name = "AI-Thinker ESP32CAM";
-constexpr camera_config_t default_camera_config = aithinker_camera_settings;
-#elif defined(BOARD_ESP_EYE)
-constexpr const char *board_name = "ESP-EYE";
-constexpr camera_config_t default_camera_config = esp_eye_camera_settings;
-#elif defined(BOARD_TTGO_T_CAMERA)
-constexpr const char *board_name = "TTGO-T-CAMERA";
-constexpr camera_config_t default_camera_config = ttgo_t_camera_settings;
-#elif defined(BOARD_M5STACK_ESP32CAM)
-constexpr const char *board_name = "M5STACK-CAMERA";
-constexpr camera_config_t default_camera_config = m5stack_camera_settings;
-#elif defined(BOARD_ESP32_WROVER_CAM)
-constexpr const char *board_name = "WROVER-KIT";
-constexpr camera_config_t default_camera_config = wrover_kit_camera_settings;
-#elif defined(BOARD_SEEED_XIAO_ESP32S3_SENSE)
-constexpr const char *board_name = "Seed Xiao ESP32S3 Sense";
-constexpr camera_config_t default_camera_config = xiao_esp32s3_camera_settings;
-#elif defined(BOARD_M5STACK_UNITCAMS3)
-constexpr const char *board_name = "M5Stack UnitCamS3";
-constexpr camera_config_t default_camera_config = m5stack_unitcams3_camera_settings;
-#else
-#error No board defined
-#endif
-#endif
-
 #define DEFAULT_FRAME_DURATION 200
 #define DEFAULT_FRAME_SIZE "VGA (640x480)"
 #define DEFAULT_JPEG_QUALITY (psramFound() ? 12 : 14)

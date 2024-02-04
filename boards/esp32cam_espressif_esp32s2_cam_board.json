@@ -1,0 +1,61 @@
+{
+  "build": {
+    "arduino":{
+      "ldscript": "esp32s2_out.ld"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ESP32CAM_ESPRESSIF_ESP32S2_CAM_BOARD'",
+      "'-D BOARD_HAS_PSRAM'",
+      "'-D ARDUINO_USB_MODE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
+      "'-D ARDUINO_RUNNING_CORE=1'",
+      "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D CAMERA_CONFIG_PIN_PWDN=1'",
+      "'-D CAMERA_CONFIG_PIN_RESET=2'",
+      "'-D CAMERA_CONFIG_PIN_XCLK=42'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=41'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SCL=18'",
+      "'-D CAMERA_CONFIG_PIN_Y9=16'",
+      "'-D CAMERA_CONFIG_PIN_Y8=39'",
+      "'-D CAMERA_CONFIG_PIN_Y7=40'",
+      "'-D CAMERA_CONFIG_PIN_Y6=15'",
+      "'-D CAMERA_CONFIG_PIN_Y5=12'",
+      "'-D CAMERA_CONFIG_PIN_Y4=5'",
+      "'-D CAMERA_CONFIG_PIN_Y3=13'",
+      "'-D CAMERA_CONFIG_PIN_Y2=14'",
+      "'-D CAMERA_CONFIG_PIN_VSYNC=38'",
+      "'-D CAMERA_CONFIG_PIN_HREF=4'",
+      "'-D CAMERA_CONFIG_PIN_PCLK=3'",
+      "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
+      "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
+      "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
+      "'-D CAMERA_CONFIG_FB_COUNT=2'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "mcu": "esp32s2",
+    "variant": "esp32s2"
+  },
+  "connectivity": [
+    "wifi"
+  ],
+  "debug": {
+    "openocd_target": "esp32s2.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "Espressif ESP32-S2-Saola-1",
+  "upload": {
+    "flash_size": "4MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-esp-lyrap-cam-v1.1.html",
+  "vendor": "Espressif"
+}
