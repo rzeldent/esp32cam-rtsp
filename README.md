@@ -38,6 +38,7 @@ This software supports the following ESP32-CAM (and alike) modules:
 - M5STACK ESP32CAM
 - M5STACK_PSRAM
 - M5STACK_UNITCAM
+- M5STACK_UNITCAMS3
 - M5STACK_V2_PSRAM
 - M5STACK_PSRAM
 - M5STACK_WIDE
@@ -289,15 +290,16 @@ Not all the boards are equipped with PSRAM:
 
 |  Board            | PSRAM           |
 |---                |---              |
-| WROVER_KIT        | Yes             |
-| ESP_EYE           | Yes             |
-| ESP32S3_EYE       | Yes             |
-| M5STACK_PSRAM     | Yes             |
+| WROVER_KIT        | 8Mb             |
+| ESP_EYE           | 8Mb             |
+| ESP32S3_EYE       | 8Mb             |
+| M5STACK_PSRAM     | 8Mb             |
 | M5STACK_V2_PSRAM  | Version B only  |
-| M5STACK_WIDE      | Yes             |
+| M5STACK_WIDE      | 8Mb             |
 | M5STACK_ESP32CAM  | No              |
 | M5STACK_UNITCAM   | No              |
-| AI_THINKER        | Yes             |
+| M5STACK_UNITCAMS3 | 8Mb             |
+| AI_THINKER        | 8Mb             |
 | TTGO_T_JOURNAL    | No              |
 | ESP32_CAM_BOARD   | ?               |
 | ESP32S2_CAM_BOARD | ?               |

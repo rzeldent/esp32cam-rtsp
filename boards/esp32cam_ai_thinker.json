@@ -9,7 +9,7 @@
       "'-D ESP32CAM_AI_THINKER'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
-      "'-D LED_BUILTIN=33'",
+      "'-D LED_GPIO=33'",
       "'-D CAMERA_CONFIG_PIN_PWDN=32'",
       "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_XCLK=0'",

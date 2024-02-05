@@ -318,10 +318,10 @@ void setup()
 {
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-  // LED_BUILTIN (GPIO33) has inverted logic false => LED on
-#ifdef LED_BUILTIN
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, false);
+  // LED_GPIO (GPIO33) has inverted logic false => LED on
+#ifdef LED_GPIO
+  pinMode(LED_GPIO, OUTPUT);
+  digitalWrite(LED_GPIO, false);
 #endif
 
 // ESP32S2 has no serial port
@@ -372,8 +372,8 @@ void setup()
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
-#ifdef LED_BUILTIN
-  iotWebConf.setStatusPin(LED_BUILTIN, LOW);
+#ifdef LED_GPIO
+  iotWebConf.setStatusPin(LED_GPIO, LOW);
 #endif
   iotWebConf.init();
 

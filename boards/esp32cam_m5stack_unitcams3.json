@@ -1,15 +1,19 @@
 {
   "build": {
-    "arduino":{
-      "ldscript": "esp32_out.ld",
-      "partitions": "huge_app.csv"
+    "arduino": {
+      "ldscript": "esp32s3_out.ld",
+      "partitions": "default_8MB.csv",
+      "memory_type": "qio_opi"
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ESP32CAM_WROVER_KIT'",
+      "'-D ESP32CAM_M5STACK_UNITCAMS3'",
       "'-D BOARD_HAS_PSRAM'",
-      "'-mfix-esp32-psram-cache-issue'",
-      "'-D LED_GPIO=2'",
+      "'-D ARDUINO_USB_MODE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
+      "'-D ARDUINO_RUNNING_CORE=1'",
+      "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D LED_GPIO=14'",
       "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_XCLK=21'",
@@ -30,35 +34,45 @@
       "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
       "'-D CAMERA_CONFIG_FB_COUNT=2'",
-      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_DRAM'",
+      "'-D I2C_MEMS_SDA=48'",
+      "'-D I2C_MEMS_SCL=47'"
     ],
     "f_cpu": "240000000L",
-    "f_flash": "40000000L",
-    "flash_mode": "dio",
-    "mcu": "esp32",
-    "variant": "esp32"
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "hwids": [
+      [
+        "0x2886",
+        "0x0056"
+      ],
+      [
+        "0x2886",
+        "0x8056"
+      ]
+    ],
+    "mcu": "esp32s3",
+    "variant": "esp32s3"
   },
   "connectivity": [
-    "wifi",
     "bluetooth",
-    "ethernet",
-    "can"
+    "wifi"
   ],
   "debug": {
-    "openocd_board": "esp-wroom-32.cfg"
+    "openocd_target": "esp32s3.cfg"
   },
   "frameworks": [
     "arduino",
     "espidf"
   ],
-  "name": "ESP32-CAM WROVER kit",
+  "name": "M5STACK UNITCAMS3",
   "upload": {
-    "flash_size": "4MB",
+    "flash_size": "8MB",
     "maximum_ram_size": 327680,
-    "maximum_size": 4194304,
+    "maximum_size": 8388608,
     "require_upload_port": true,
     "speed": 460800
   },
-  "url": "https://www.aliexpress.com/item/1005004960637276.html",
-  "vendor": "Freenove"
+  "url": "https://docs.m5stack.com/en/unit/Unit-CamS3",
+  "vendor": "M5STACK"
 }
