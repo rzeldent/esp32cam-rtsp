@@ -10,7 +10,7 @@
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
       "'-D USER_LED_GPIO=33'",
-      "'-D USER_LED_ON_LEVEL=HIGH'",
+      "'-D USER_LED_ON_LEVEL=LOW'",
       "'-D CAMERA_CONFIG_PIN_PWDN=32'",
       "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_XCLK=0'",
