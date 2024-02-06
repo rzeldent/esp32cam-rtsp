@@ -107,7 +107,7 @@ To select the right board use the table below and use the configuration that is 
 | LilyGo Simcam                 |                           | ![img](assets/boards/lilygo-simcam.jpg")                                                            |               |                       | OV2640          |                                                                 |
 | LilyGo TTGO-T Camera          |                           | ![img](assets/boards/lilygo-ttgo-t-camera.jpg")                                                     |               |                       | OV2640          |                                                                 |
 | M5 Stack Camera               |                           | ![img](assets/boards/m5stack-esp32-camera.jpg")                                                     |               |                       | OV2640          |                                                                 |
-| Seeed studio Xiao ESPS3 Sense | seeed_xiao_esp32s3_sense  | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg")                                          | ESP32-S3      | 520KB SRAM 4MB PSRAM  | OV2640          |                                                                 |
+| Seeed studio Xiao ESPS3 Sense | seeed_xiao_esp32s3_sense  | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg")                                          | ESP32-S3      | 520KB SRAM 4MB PSRAM  | OV5640          |                                                                 |
 
 ## Installing and running PlatformIO
 

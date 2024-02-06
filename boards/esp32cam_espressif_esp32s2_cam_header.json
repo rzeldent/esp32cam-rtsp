@@ -7,7 +7,7 @@
     "extra_flags": [
       "'-D ESP32CAM_ESPRESSIF_ESP32S2_CAM_BOARD'",
       "'-D BOARD_HAS_PSRAM'",
-      "'-D ARDUINO_USB_MODE=1'",
+      "'-D ARDUINO_USB_MODE=0'",
       "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
       "'-D ARDUINO_RUNNING_CORE=1'",
       "'-D ARDUINO_EVENT_RUNNING_CORE=1'",

@@ -295,7 +295,7 @@ void start_rtsp_server()
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
-  MDNS.addService("rtsp", "tcp", 554);
+  MDNS.addService("rtsp", "tcp", RTSP_PORT);
 }
 
 void on_connected()
@@ -318,18 +318,16 @@ void setup()
 {
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-  // LED_GPIO (GPIO33) has inverted logic false => LED on
-#ifdef LED_GPIO
-  pinMode(LED_GPIO, OUTPUT);
-  digitalWrite(LED_GPIO, false);
+
+#ifdef USER_LED_GPIO
+  pinMode(USER_LED_GPIO, OUTPUT);
+  digitalWrite(USER_LED_GPIO, !USER_LED_ON_LEVEL);
 #endif
 
-// ESP32S2 has no serial port
-#ifndef ARDUINO_USB_CDC_ON_BOOT
   Serial.begin(115200);
   Serial.setDebugOutput(true);
-#endif
 
+  log_i("Core debug level: %d", CORE_DEBUG_LEVEL);
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("SDK version: %s", ESP.getSdkVersion());
@@ -372,8 +370,8 @@ void setup()
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
-#ifdef LED_GPIO
-  iotWebConf.setStatusPin(LED_GPIO, LOW);
+#ifdef USER_LED_GPIO
+  iotWebConf.setStatusPin(USER_LED_GPIO, USER_LED_ON_LEVEL);
 #endif
   iotWebConf.init();
 
