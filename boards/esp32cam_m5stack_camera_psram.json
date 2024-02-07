@@ -30,8 +30,8 @@
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
       "'-D CAMERA_CONFIG_FB_COUNT=2'",
       "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
-      "'-D GROVE_SDA=13",
-      "'-D GROVE_SCL=4"
+      "'-D GROVE_SDA=13'",
+      "'-D GROVE_SCL=4'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "40000000L",
