@@ -37,7 +37,11 @@
       "'-D CAMERA_CONFIG_FB_COUNT=2'",
       "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_DRAM'",
       "'-D I2C_MEMS_SDA=48'",
-      "'-D I2C_MEMS_SCL=47'"
+      "'-D I2C_MEMS_SCL=47'",
+      "'-D TF_CS=9'",
+      "'-D TF_MOSI=38'",
+      "'-D TF_CLK=39'",
+      "'-D TF_MISO=40'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "80000000L",
@@ -66,11 +70,11 @@
     "arduino",
     "espidf"
   ],
-  "name": "M5STACK UNITCAMS3",
+  "name": "ESP32-CAM M5STACK UNITCAMS3",
   "upload": {
-    "flash_size": "8MB",
+    "flash_size": "16MB",
     "maximum_ram_size": 327680,
-    "maximum_size": 8388608,
+    "maximum_size": 16777216,
     "require_upload_port": true,
     "speed": 460800
   },

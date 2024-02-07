@@ -9,6 +9,8 @@
       "'-D ESP32CAM_M5STACK_ESP32CAM'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
+      "'-D USER_LED_GPIO=16'",
+      "'-D USER_LED_ON_LEVEL=LOW'",
       "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_RESET=15'",
       "'-D CAMERA_CONFIG_PIN_XCLK=27'",
@@ -29,7 +31,10 @@
       "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
       "'-D CAMERA_CONFIG_FB_COUNT=2'",
-      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
+      "'-D MICROPHONE_GPIO=32'",
+      "'-D GROVE_SDA=13'",
+      "'-D GROVE_SCL=4'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "40000000L",
@@ -50,7 +55,7 @@
     "arduino",
     "espidf"
   ],
-  "name": "ESP32-CAM M5 STACK",
+  "name": "ESP32-CAM M5STACK ESP32CAM",
   "upload": {
     "flash_size": "4MB",
     "maximum_ram_size": 327680,
@@ -58,6 +63,6 @@
     "require_upload_port": true,
     "speed": 460800
   },
-  "url": "https://shop.m5stack.com/collections/m5-cameras",
+  "url": "https://docs.m5stack.com/en/unit/esp32cam",
   "vendor": "M5STACK"
 }

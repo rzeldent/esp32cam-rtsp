@@ -327,6 +327,11 @@ void setup()
   Serial.begin(115200);
   Serial.setDebugOutput(true);
 
+#ifdef ARDUINO_USB_CDC_ON_BOOT
+  // Delay for USB to connect/settle
+  delay(5000);
+#endif
+
   log_i("Core debug level: %d", CORE_DEBUG_LEVEL);
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());

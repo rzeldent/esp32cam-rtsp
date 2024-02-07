@@ -34,8 +34,14 @@
       "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
       "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
-      "'-D CAMERA_CONFIG_FB_COUNT=1'",
-      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
+      "'-D CAMERA_CONFIG_FB_COUNT=2'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
+      "'-D I2C_MEMS_SDA=41'",
+      "'-D I2C_MEMS_SCL=42'",
+      "'-D TF_CS=21'",
+      "'-D TF_MOSI=10'",
+      "'-D TF_CLK=8'",
+      "'-D TF_MISO=9'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "80000000L",
@@ -64,7 +70,7 @@
     "arduino",
     "espidf"
   ],
-  "name": "Seeed Studio XIAO ESP32S3",
+  "name": "Seeed Studio XIAO ESP32S3 Sense",
   "upload": {
     "flash_size": "8MB",
     "maximum_ram_size": 327680,

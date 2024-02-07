@@ -6,13 +6,11 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ESP32CAM_M5STACK_V2_PSRAM'",
-      "'-D BOARD_HAS_PSRAM'",
-      "'-mfix-esp32-psram-cache-issue'",
+      "'-D ESP32CAM_M5STACK'",
       "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_RESET=15'",
       "'-D CAMERA_CONFIG_PIN_XCLK=27'",
-      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=22'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=25'",
       "'-D CAMERA_CONFIG_PIN_SCCB_SCL=23'",
       "'-D CAMERA_CONFIG_PIN_Y9=19'",
       "'-D CAMERA_CONFIG_PIN_Y8=36'",
@@ -28,8 +26,10 @@
       "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
       "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
-      "'-D CAMERA_CONFIG_FB_COUNT=2'",
-      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
+      "'-D CAMERA_CONFIG_FB_COUNT=1'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_DRAM'",
+      "'-D GROVE_SDA=13'",
+      "'-D GROVE_SCL=4'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "40000000L",
@@ -58,6 +58,6 @@
     "require_upload_port": true,
     "speed": 460800
   },
-  "url": "https://shop.m5stack.com/collections/m5-cameras",
+  "url": "https://docs.m5stack.com/en/unit/m5camera",
   "vendor": "M5STACK"
 }
