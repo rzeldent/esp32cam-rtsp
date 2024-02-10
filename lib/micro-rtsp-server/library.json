@@ -1,0 +1,19 @@
+{
+    "name": "micro-rtsp-streamer",
+    "version": "1.0.0",
+    "description": "RTSP Server",
+    "keywords": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/rzeldent/micro-rtsp-streamer"
+    },
+
+    "build": {
+        "srcDir": "src/",
+        "includeDir": "include/"
+    },
+
+    "dependencies": {
+        "espressif/esp32-camera": "^2.0.4"
+    }    
+}

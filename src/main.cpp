@@ -16,6 +16,9 @@
 #include <moustache.h>
 #include <settings.h>
 
+#include <micro_rtsp_server.h>
+#include <micro_rtsp_source_camera.h>
+
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
 
@@ -48,10 +51,13 @@ auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").
 
 // Camera
 OV2640 cam;
+micro_rtsp_source_camera source_camera;
 // DNS Server
 DNSServer dnsServer;
 // RTSP Server
 std::unique_ptr<rtsp_server> camera_server;
+
+micro_rtsp_server micro_rtsp_server(&source_camera, RTSP_PORT);
 // Web server
 WebServer web_server(80);
 
@@ -219,7 +225,9 @@ esp_err_t initialize_camera()
   log_i("JPEG quality: %d", param_jpg_quality.value());
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  constexpr auto i2c_port = I2C_NUM_0;
+
+  // Set frame duration
+  micro_rtsp_server.set_frame_interval(param_frame_duration.value());
 
   camera_config_t camera_config = {
     .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
@@ -250,10 +258,12 @@ esp_err_t initialize_camera()
 #if CONFIG_CAMERA_CONVERTER_ENABLED
     conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-    .sccb_i2c_port = i2c_port // If pin_sccb_sda is -1, use the already configured I2C bus by number
+    .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
-  return cam.init(camera_config);
+  return source_camera.initialize(&camera_config);
+
+  // return cam.init(camera_config);
 }
 
 void update_camera_settings()
