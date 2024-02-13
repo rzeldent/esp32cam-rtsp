@@ -1,18 +1,18 @@
-#include <Arduino.h>
+#include <esp32-hal-log.h>
 
-#include "micro_rtsp_source_camera.h"
+#include "micro_rtsp_camera.h"
 
-micro_rtsp_source_camera::micro_rtsp_source_camera()
+micro_rtsp_camera::micro_rtsp_camera()
 {
     init_result == ESP_FAIL;
 }
 
-micro_rtsp_source_camera::~micro_rtsp_source_camera()
+micro_rtsp_camera::~micro_rtsp_camera()
 {
     deinitialize();
 }
 
-esp_err_t micro_rtsp_source_camera::initialize(camera_config_t *camera_config)
+esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
 {
 
     init_result = esp_camera_init(camera_config);
@@ -22,12 +22,12 @@ esp_err_t micro_rtsp_source_camera::initialize(camera_config_t *camera_config)
         log_e("Camera initialization failed: 0x%x", init_result);
 }
 
-esp_err_t micro_rtsp_source_camera::deinitialize()
+esp_err_t micro_rtsp_camera::deinitialize()
 {
     return init_result == ESP_OK ? esp_camera_deinit() : ESP_OK;
 }
 
-void micro_rtsp_source_camera::update_frame()
+void micro_rtsp_camera::update_frame()
 {
     if (fb)
         esp_camera_fb_return(fb);
