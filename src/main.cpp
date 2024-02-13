@@ -1,13 +1,12 @@
 #include <Arduino.h>
-#include <ArduinoOTA.h>
 #include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
+#include <driver/i2c.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
 #include <OV2640.h>
 #include <ESPmDNS.h>
 #include <rtsp_server.h>
-#include <lookup_camera_config.h>
 #include <lookup_camera_effect.h>
 #include <lookup_camera_frame_size.h>
 #include <lookup_camera_gainceiling.h>
@@ -17,21 +16,13 @@
 #include <moustache.h>
 #include <settings.h>
 
-extern "C" uint8_t temprature_sens_read();
-
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
-extern const char restart_html_min_start[] asm("_binary_html_restart_min_html_start");
-
-auto param_group_board = iotwebconf::ParameterGroup("board", "Board settings");
-auto param_board = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(camera_configs[0])>>("bt").label("Board").optionValues((const char *)&camera_configs).optionNames((const char *)&camera_configs).optionCount(sizeof(camera_configs) / sizeof(camera_configs[0])).nameLength(sizeof(camera_configs[0])).defaultValue(DEFAULT_CAMERA_CONFIG).build();
 
 auto param_group_camera = iotwebconf::ParameterGroup("camera", "Camera settings");
 auto param_frame_duration = iotwebconf::Builder<iotwebconf::UIntTParameter<unsigned long>>("fd").label("Frame duration (ms)").defaultValue(DEFAULT_FRAME_DURATION).min(10).build();
 auto param_frame_size = iotwebconf::Builder<iotwebconf::SelectTParameter<sizeof(frame_sizes[0])>>("fs").label("Frame size").optionValues((const char *)&frame_sizes).optionNames((const char *)&frame_sizes).optionCount(sizeof(frame_sizes) / sizeof(frame_sizes[0])).nameLength(sizeof(frame_sizes[0])).defaultValue(DEFAULT_FRAME_SIZE).build();
 auto param_jpg_quality = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("q").label("JPG quality").defaultValue(DEFAULT_JPEG_QUALITY).min(1).max(100).build();
-auto param_enable_psram = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("eps").label("Enable PSRAM if available").defaultValue(DEFAULT_ENABLE_PSRAM).build();
-auto param_frame_buffers = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("fb").label("Buffers").defaultValue(DEFAULT_BUFFERS).min(1).max(4).build();
 auto param_brightness = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("b").label("Brightness").defaultValue(DEFAULT_BRIGHTNESS).min(-2).max(2).build();
 auto param_contrast = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("c").label("Contrast").defaultValue(DEFAULT_CONTRAST).min(-2).max(2).build();
 auto param_saturation = iotwebconf::Builder<iotwebconf::IntTParameter<int>>("s").label("Saturation").defaultValue(DEFAULT_SATURATION).min(-2).max(2).build();
@@ -55,9 +46,6 @@ auto param_vflip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").lab
 auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").label("Downsize enable").defaultValue(DEFAULT_DCW).build();
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
-auto param_group_peripheral = iotwebconf::ParameterGroup("io", "peripheral settings");
-auto param_led_intensity = iotwebconf::Builder<iotwebconf::UIntTParameter<byte>>("li").label("LED intensity").defaultValue(DEFAULT_LED_INTENSITY).min(0).max(100).build();
-
 // Camera
 OV2640 cam;
 // DNS Server
@@ -70,20 +58,8 @@ WebServer web_server(80);
 auto thingName = String(WIFI_SSID) + "-" + String(ESP.getEfuseMac(), 16);
 IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
-// Keep track of config changes. This will allow a reset of the device
-bool config_changed = false;
 // Camera initialization result
 esp_err_t camera_init_result;
-
-void stream_text_file_gzip(const unsigned char *content, size_t length, const char *mime_type)
-{
-  // Cache for 86400 seconds (one day)
-  web_server.sendHeader("Cache-Control", "max-age=86400");
-  web_server.sendHeader("Content-encoding", "gzip");
-  web_server.setContentLength(length);
-  web_server.send(200, mime_type, "");
-  web_server.sendContent(reinterpret_cast<const char *>(content), length);
-}
 
 void handle_root()
 {
@@ -102,12 +78,15 @@ void handle_root()
   auto ipv4 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIP() : WiFi.localIP();
   auto ipv6 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIPv6() : WiFi.localIPv6();
 
+  auto initResult = esp_err_to_name(camera_init_result);
+  if (initResult == nullptr)
+    initResult = "Unknown reason";
+
   moustache_variable_t substitutions[] = {
-      // Config Changed?
-      {"ConfigChanged", String(config_changed)},
       // Version / CPU
       {"AppTitle", APP_TITLE},
       {"AppVersion", APP_VERSION},
+      {"BoardType", BOARD_NAME},
       {"ThingName", iotWebConf.getThingName()},
       {"SDKVersion", ESP.getSdkVersion()},
       {"ChipModel", ESP.getChipModel()},
@@ -119,7 +98,6 @@ void handle_root()
       {"PsRamSize", format_memory(ESP.getPsramSize(), 0)},
       // Diagnostics
       {"Uptime", String(format_duration(millis() / 1000))},
-      {"Temperature", String((temprature_sens_read() - 32) / 1.8)},
       {"FreeHeap", format_memory(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
       {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "RTSP server disabled"},
@@ -129,21 +107,18 @@ void handle_root()
       {"AccessPoint", WiFi.SSID()},
       {"SignalStrength", String(WiFi.RSSI())},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
-      {"IpV4", ipv4.toString()},
-      {"IpV6", ipv6.toString()},
+      {"IPv4", ipv4.toString()},
+      {"IPv6", ipv6.toString()},
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
-      {"BoardType", String(param_board.value())},
       {"FrameSize", String(param_frame_size.value())},
       {"FrameDuration", String(param_frame_duration.value())},
       {"FrameFrequency", String(1000.0 / param_frame_duration.value(), 1)},
       {"JpegQuality", String(param_jpg_quality.value())},
-      {"EnablePSRAM", String(param_enable_psram.value())},
-      {"FrameBuffers", String(param_frame_buffers.value())},
       {"CameraInitialized", String(camera_init_result == ESP_OK)},
       {"CameraInitResult", String(camera_init_result)},
-      {"CameraInitResultText", esp_err_to_name(camera_init_result)},
+      {"CameraInitResultText", initResult},
       // Settings
       {"Brightness", String(param_brightness.value())},
       {"Contrast", String(param_contrast.value())},
@@ -167,36 +142,12 @@ void handle_root()
       {"VFlip", String(param_vflip.value())},
       {"Dcw", String(param_dcw.value())},
       {"ColorBar", String(param_colorbar.value())},
-      // LED
-      {"LedIntensity", String(param_led_intensity.value())},
       // RTSP
       {"RtspPort", String(RTSP_PORT)}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = moustache_render(index_html_min_start, substitutions);
   web_server.send(200, "text/html", html);
-}
-
-void handle_restart()
-{
-  log_v("Handle restart");
-
-  if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
-  {
-    web_server.requestAuthentication(BASIC_AUTH, APP_TITLE, "401 Unauthorized<br><br>The password is incorrect.");
-    return;
-  }
-
-  moustache_variable_t substitutions[] = {
-      {"AppTitle", APP_TITLE},
-      {"AppVersion", APP_VERSION},
-      {"ThingName", iotWebConf.getThingName()}};
-
-  auto html = moustache_render(restart_html_min_start, substitutions);
-  web_server.send(200, "text/html", html);
-  log_v("Restarting... Press refresh to connect again");
-  sleep(100);
-  ESP.restart();
 }
 
 void handle_snapshot()
@@ -209,7 +160,7 @@ void handle_snapshot()
   }
 
   // Remove old images stored in the frame buffer
-  auto frame_buffers = param_frame_buffers.value();
+  auto frame_buffers = CAMERA_CONFIG_FB_COUNT;
   while (frame_buffers--)
     cam.run();
 
@@ -258,62 +209,49 @@ void handle_stream()
   log_v("stopped streaming");
 }
 
-void handle_flash()
-{
-  log_v("handle_flash");
-
-  if (!web_server.authenticate("admin", iotWebConf.getApPasswordParameter()->valueBuffer))
-  {
-    web_server.requestAuthentication(BASIC_AUTH, APP_TITLE, "401 Unauthorized<br><br>The password is incorrect.");
-    return;
-  }
-
-  // If no value present, use value from config
-  if (web_server.hasArg("v"))
-  {
-    auto v = (uint8_t)min(web_server.arg("v").toInt(), 255L);
-    // If conversion fails, v = 0
-    analogWrite(LED_FLASH, v);
-  }
-  else
-  {
-    analogWrite(LED_FLASH, param_led_intensity.value());
-  }
-
-  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  web_server.send(200);
-}
-
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
-  log_i("Camera config: %s", param_board.value());
-  auto camera_config_template = lookup_camera_config(param_board.value());
-  // Copy the settings
-  camera_config_t camera_config;
-  memset(&camera_config, 0, sizeof(camera_config_t));
-  memcpy(&camera_config, &camera_config_template, sizeof(camera_config_t));
+
+  constexpr auto pixformat = PIXFORMAT_JPEG;
   log_i("Frame size: %s", param_frame_size.value());
   auto frame_size = lookup_frame_size(param_frame_size.value());
   log_i("JPEG quality: %d", param_jpg_quality.value());
+  auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  camera_config.frame_size = frame_size;
-  camera_config.jpeg_quality = param_jpg_quality.value();
-  camera_config.grab_mode = CAMERA_GRAB_LATEST;
-  log_i("Enable PSRAM: %d", param_enable_psram.value());
-  log_i("Frame buffers: %d", param_frame_buffers.value());
-  camera_config.fb_count = param_frame_buffers.value();
+  constexpr auto i2c_port = I2C_NUM_0;
 
-  if (param_enable_psram.value() && psramFound())
-  {
-    camera_config.fb_location = CAMERA_FB_IN_PSRAM;
-    log_i("PSRAM enabled!");
-  }
-  else
-  {
-    camera_config.fb_location = CAMERA_FB_IN_DRAM;
-    log_i("PSRAM disabled");
-  }
+  camera_config_t camera_config = {
+    .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
+    .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
+    .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
+    .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
+    .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
+    .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
+    .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
+    .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
+    .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
+    .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
+    .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
+    .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
+    .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
+    .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
+    .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
+    .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
+    .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+    .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
+    .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
+    .pixel_format = pixformat,                  // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
+    .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+    .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
+    .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
+    .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
+    .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
+#if CONFIG_CAMERA_CONVERTER_ENABLED
+    conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
+#endif
+    .sccb_i2c_port = i2c_port // If pin_sccb_sda is -1, use the already configured I2C bus by number
+  };
 
   return cam.init(camera_config);
 }
@@ -357,14 +295,12 @@ void start_rtsp_server()
   camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
-  MDNS.addService("rtsp", "tcp", 554);
+  MDNS.addService("rtsp", "tcp", RTSP_PORT);
 }
 
 void on_connected()
 {
   log_v("on_connected");
-  // Start (OTA) Over The Air programming when connected
-  ArduinoOTA.begin();
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
     start_rtsp_server();
@@ -375,11 +311,7 @@ void on_connected()
 void on_config_saved()
 {
   log_v("on_config_saved");
-  // Set flash led intensity
-  analogWrite(LED_FLASH, param_led_intensity.value());
-  // Update camera setting
   update_camera_settings();
-  config_changed = true;
 }
 
 void setup()
@@ -387,38 +319,35 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-  // LED_BUILTIN (GPIO33) has inverted logic false => LED on
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, false);
-
-  pinMode(LED_FLASH, OUTPUT);
-  // Turn flash led off
-  analogWrite(LED_FLASH, 0);
-
-#ifdef CORE_DEBUG_LEVEL
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
+#ifdef USER_LED_GPIO
+  pinMode(USER_LED_GPIO, OUTPUT);
+  digitalWrite(USER_LED_GPIO, !USER_LED_ON_LEVEL);
 #endif
 
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+
+#ifdef ARDUINO_USB_CDC_ON_BOOT
+  // Delay for USB to connect/settle
+  delay(5000);
+#endif
+
+  log_i("Core debug level: %d", CORE_DEBUG_LEVEL);
   log_i("CPU Freq: %d Mhz, %d core(s)", getCpuFrequencyMhz(), ESP.getChipCores());
   log_i("Free heap: %d bytes", ESP.getFreeHeap());
   log_i("SDK version: %s", ESP.getSdkVersion());
+  log_i("Board: %s", BOARD_NAME);
   log_i("Starting " APP_TITLE "...");
 
-  if (psramFound())
+  if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM)
   {
-    psramInit();
-    log_v("PSRAM found and initialized");
+    if (!psramInit())
+      log_e("Failed to initialize PSRAM");
   }
-
-  param_group_board.addItem(&param_board);
-  iotWebConf.addParameterGroup(&param_group_board);
 
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);
   param_group_camera.addItem(&param_jpg_quality);
-  param_group_camera.addItem(&param_enable_psram);
-  param_group_camera.addItem(&param_frame_buffers);
   param_group_camera.addItem(&param_brightness);
   param_group_camera.addItem(&param_contrast);
   param_group_camera.addItem(&param_saturation);
@@ -443,67 +372,39 @@ void setup()
   param_group_camera.addItem(&param_colorbar);
   iotWebConf.addParameterGroup(&param_group_camera);
 
-  param_group_peripheral.addItem(&param_led_intensity);
-  iotWebConf.addParameterGroup(&param_group_peripheral);
-
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
-  iotWebConf.setStatusPin(LED_BUILTIN, LOW);
+#ifdef USER_LED_GPIO
+  iotWebConf.setStatusPin(USER_LED_GPIO, USER_LED_ON_LEVEL);
+#endif
   iotWebConf.init();
 
   camera_init_result = initialize_camera();
   if (camera_init_result == ESP_OK)
     update_camera_settings();
   else
-    log_e("Failed to initialize camera: 0x%0x. Type: %s, frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_board.value(), param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    log_e("Failed to initialize camera: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
   web_server.on("/config", []
                 { iotWebConf.handleConfig(); });
-  web_server.on("/restart", HTTP_GET, handle_restart);
   // Camera snapshot
   web_server.on("/snapshot", HTTP_GET, handle_snapshot);
   // Camera stream
   web_server.on("/stream", HTTP_GET, handle_stream);
-  // Camera flash light
-  web_server.on("/flash", HTTP_GET, handle_flash);
 
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
-
-  ArduinoOTA
-      .setPassword(OTA_PASSWORD)
-      .onStart([]()
-               { log_w("Starting OTA update: %s", ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem"); })
-      .onEnd([]()
-             { log_w("OTA update done!"); })
-      .onProgress([](unsigned int progress, unsigned int total)
-                  { log_i("OTA Progress: %u%%\r", (progress / (total / 100))); })
-      .onError([](ota_error_t error)
-               {
-      switch (error)
-      {
-      case OTA_AUTH_ERROR: log_e("OTA: Auth Failed"); break;
-      case OTA_BEGIN_ERROR: log_e("OTA: Begin Failed"); break;
-      case OTA_CONNECT_ERROR: log_e("OTA: Connect Failed"); break;
-      case OTA_RECEIVE_ERROR: log_e("OTA: Receive Failed"); break;
-      case OTA_END_ERROR: log_e("OTA: End Failed"); break;
-      default: log_e("OTA error: %u", error);
-      } });
-
-  // Set flash led intensity
-  analogWrite(LED_FLASH, param_led_intensity.value());
 }
 
 void loop()
 {
   iotWebConf.doLoop();
-  ArduinoOTA.handle();
 
   if (camera_server)
     camera_server->doLoop();
 
-  yield();
+  sleep(0);
 }

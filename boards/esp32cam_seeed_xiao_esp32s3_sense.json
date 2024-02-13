@@ -1,0 +1,83 @@
+{
+  "build": {
+    "arduino": {
+      "ldscript": "esp32s3_out.ld",
+      "partitions": "default_8MB.csv",
+      "memory_type": "qio_opi"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ESP32CAM_SEEED_XIAO_ESP32S3_SENSE'",
+      "'-D BOARD_HAS_PSRAM'",
+      "'-D ARDUINO_USB_MODE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
+      "'-D ARDUINO_RUNNING_CORE=1'",
+      "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D USER_LED_GPIO=21'",
+      "'-D USER_LED_ON_LEVEL=LOW'",
+      "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
+      "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
+      "'-D CAMERA_CONFIG_PIN_XCLK=10'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=40'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SCL=39'",
+      "'-D CAMERA_CONFIG_PIN_Y9=48'",
+      "'-D CAMERA_CONFIG_PIN_Y8=11'",
+      "'-D CAMERA_CONFIG_PIN_Y7=12'",
+      "'-D CAMERA_CONFIG_PIN_Y6=14'",
+      "'-D CAMERA_CONFIG_PIN_Y5=16'",
+      "'-D CAMERA_CONFIG_PIN_Y4=18'",
+      "'-D CAMERA_CONFIG_PIN_Y3=17'",
+      "'-D CAMERA_CONFIG_PIN_Y2=15'",
+      "'-D CAMERA_CONFIG_PIN_VSYNC=38'",
+      "'-D CAMERA_CONFIG_PIN_HREF=47'",
+      "'-D CAMERA_CONFIG_PIN_PCLK=13'",
+      "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
+      "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
+      "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
+      "'-D CAMERA_CONFIG_FB_COUNT=2'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
+      "'-D I2C_MEMS_SDA=41'",
+      "'-D I2C_MEMS_SCL=42'",
+      "'-D TF_CS=21'",
+      "'-D TF_MOSI=10'",
+      "'-D TF_CLK=8'",
+      "'-D TF_MISO=9'"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "hwids": [
+      [
+        "0x2886",
+        "0x0056"
+      ],
+      [
+        "0x2886",
+        "0x8056"
+      ]
+    ],
+    "mcu": "esp32s3",
+    "variant": "esp32s3"
+  },
+  "connectivity": [
+    "bluetooth",
+    "wifi"
+  ],
+  "debug": {
+    "openocd_target": "esp32s3.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "Seeed Studio XIAO ESP32S3 Sense",
+  "upload": {
+    "flash_size": "8MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 8388608,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html",
+  "vendor": "Seeed Studio"
+}

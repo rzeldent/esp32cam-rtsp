@@ -9,34 +9,43 @@ Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP
 > This branch supports all the current devices and the Seeed Studio Xiao esp32s3!
 > Please use this and let me know if this works for you!
 
-
 Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
 
 Supported protocols
 
-- :white_check_mark: RTSP 
+- RTSP
   The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
   It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
   This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
   The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
 
-- :white_check_mark: HTTP Motion JPEG
+- HTTP Motion JPEG
   The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
   The URL is http://&lt;ip address&gt;/stream
 
-- :white_check_mark: HTTP image
+- HTTP image
   The HTTP Image returns an HTTP JPEG image of the camera.
   The URL is http://&lt;ip address&gt;/snapshot
 
 This software supports the following ESP32-CAM (and alike) modules:
 
-- ESP32CAM
 - AI THINKER
-- TTGO T-CAM
-- WROVER-KIT
+- EspressIf ESP-EYE
+- EspressIf ESP32S2-CAM
+- EspressIf ESP32S3-CAM-LCD
+- EspressIf ESP32S3-EYE
+- Freenove WROVER KIT
+- M5STACK ESP32CAM
+- M5STACK_PSRAM
+- M5STACK_UNITCAM
+- M5STACK_UNITCAMS3
+- M5STACK_V2_PSRAM
+- M5STACK_PSRAM
+- M5STACK_WIDE
 - M5STACK
-
-![ESP32CAM module](assets/ESP32-CAM.jpg)
+- Seeed Studio XIAO ESP32S3 SENSE
+- TTGO T-CAMERA
+- TTGO T-JOURNAL
 
 The software provides a **configuration web server**, that can be used to:
 
@@ -44,7 +53,6 @@ The software provides a **configuration web server**, that can be used to:
 - Set the WiFi parameters,
 - Set the timeout for connecting to the access point,
 - Set an access password,
-- Select the board type,
 - Select the image size,
 - Select the frame rate,
 - Select the JPEG quality
@@ -54,7 +62,7 @@ The software provides a **configuration web server**, that can be used to:
   - Brightness
   - Contrast
   - Saturation
-  - Special effect (Normal, Negative, Grayscale, Red/Green/Blue tint, Sepia)
+  - Special effect (Normal, Negative, Gray-scale, Red/Green/Blue tint, Sepia)
   - White balance
   - Automatic White Balance gain
   - Wite Balance mode
@@ -83,25 +91,34 @@ It advertises HTTP (port 80) and RTSP (port 554)
 - USB to Serial (TTL level) converter, piggyback board ESP32-CAM-MB or other way to connect to the device,
 - [**PlatformIO**](https://platformio.org/) software (free download)
 
+## Boards
+
+There are a lot of boards available that are all called ESP32-CAM.
+However, there are differences in CPU (type/speed/cores), how the camera is connected, presence of PSRAM or not...
+To select the right board use the table below and use the configuration that is listed below for your board:
+
+| Board                           | Image                                                                                               | CPU                     | SRAM   | Flash  | PSRAM | Camera          |             | Site                                                            |
+|---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---          |---                                                              |
+| Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                 |
+| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32-S                 | 520KB  | 4Mb    | 4MB   | OV2640          |             | https://docs.ai-thinker.com/esp32-cam                           |
+| Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                 |
+| Espressif ESP-S3-EYE            | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4Mb    | 4MB   | OV2640          |             | https://www.espressif.com/en/products/devkits/esp-eye/overview  |
+| LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4Mb    | 4MB   | OV2640 / OV5640 |             |                                                                 |
+| LilyGo Simcam                   | ![img](assets/boards/lilygo-simcam.jpg)                                                             |                         |        |        |       | OV2640          |             |                                                                 |
+| LilyGo TTGO-T Camera            | ![img](assets/boards/lilygo-ttgo-t-camera.jpg)                                                      |                         |        |        |       | OV2640          |             |                                                                 |
+| M5Stack ESP32CAM                | ![img](assets/boards/m5stack_esp32cam_02.webp)                                                      | ESP32                   | 520Kb  | 4Mb    | -     | OV2640          | Microphone  | https://docs.m5stack.com/en/unit/esp32cam                       |
+| M5Stack UnitCam                 | ![img](assets/boards/m5stack_unit_cam_02.webp) ![img](assets/boards/m5stack_unit_cam_03.webp)       | ESP32-WROOM-32E         | 520KB  | 4Mb    | -     | OV2640          |             | https://docs.m5stack.com/en/unit/unit_cam                       |
+| M5Stack Camera                  | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520Kb  | 4Mb    | -     | OV2640          |             | https://docs.m5stack.com/en/unit/m5camera                       |
+| M5Stack Camera PSRAM            | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520Kb  | 4Mb    | 4Mb   | OV2640          |             | https://docs.m5stack.com/en/unit/m5camera                       |
+| M5Stack UnitCamS3               | ![img](assets/boards//m5stack_Unitcams3.webp) ![img](assets/boards/m5stack_Unitcams32.webp)         | ESP32-S3-WROOM-1-N16R8  | 520Kb  | 16Mb   | 8Mb   | OV2640          |             | https://docs.m5stack.com/en/unit/Unit-CamS3                     |
+| Seeed studio Xiao ESP32S3 Sense | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg)                                           | ESP32-S3R8              | 520KB  | 8Mb    | 8MB   | OV2640          | Microphone  | https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html      |
+
 ## Installing and running PlatformIO
 
 PlatformIO is available for all major operating systems: Windows, Linux and MacOS. It is also provided as a plugin to [Visual Studio Code](https://visualstudio.microsoft.com).
 More information can be found at: [https://docs.platformio.org/en/latest/installation.html](https://docs.platformio.org/en/latest/installation.html) below the basics.
 
-### Debian based systems command-line install
-
-Install platformIO
-
-```sh
- sudo apt-get install python-pip
- sudo pip install platformio
- pio upgrade
-```
-
-### Windows, Linux and MacOS
-
-Install [**Visual Studio code**](https://code.visualstudio.com) and install the PlatformIO plugin.
-For command line usage Python and PlatformIO-Core is sufficient.
+Install [Visual Studio Code](https://code.visualstudio.com) and install the PlatformIO plugin.
 
 ## Putting the ESP32-CAM in download mode
 
@@ -135,7 +152,6 @@ cd esp32cam-rtsp
 
 Next, the firmware has to be build and deployed to the ESP32.
 There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code.
-I recommend to use VIsual Studio Code as it is free to use and offers more insight.
 
 ### Using the command line
 
@@ -240,15 +256,7 @@ Calling this URL will start the form for configuring the device in the browser. 
 ### GET: /snapshot
 
 Calling this URL will return a JPEG snapshot of the camera in the browser.
-
 This request can also be used (for example using cURL) to save the snapshot to a file.
-
-### GET: /flash?v={intensity}
-
-Calling this URL will set the intensity of the flash LED. Authentication is required.
-
-The parameter v for the intensity must be between 0 (off) and 255 (max).
-If no v parameter is present, it will be set to the value of the flash LED intensity from configuration.
 
 ## Issues / Nice to know
 
@@ -284,14 +292,22 @@ The availability of PSRAM can be seen in the HTML status overview.
 
 Not all the boards are equipped with PSRAM:
 
-|  Board            | PSRAM |
-|---                |---    |
-| ESP32CAM          | Yes   |
-| ESP32CAM  (USB-C) | No    |
-| AI THINKER        | Yes   |
-| TTGO T-CAM        | No    |
-| M5 STACK|         | No    |
-| WROVER KIT        | Yes   |
+|  Board            | PSRAM           |
+|---                |---              |
+| WROVER_KIT        | 8Mb             |
+| ESP_EYE           | 8Mb             |
+| ESP32S3_EYE       | 8Mb             |
+| M5STACK_PSRAM     | 8Mb             |
+| M5STACK_V2_PSRAM  | Version B only  |
+| M5STACK_WIDE      | 8Mb             |
+| M5STACK_ESP32CAM  | No              |
+| M5STACK_UNITCAM   | No              |
+| M5STACK_UNITCAMS3 | 8Mb             |
+| AI_THINKER        | 8Mb             |
+| TTGO_T_JOURNAL    | No              |
+| ESP32_CAM_BOARD   | ?               |
+| ESP32S2_CAM_BOARD | ?               |
+| ESP32S3_CAM_LCD   | ?               |
 
 Depending on the image resolution, framerate and quality, the PSRAM must be enabled and/or the number of frame buffers increased to keep up with the data generated by the sensor.
 There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason. See on [Reddit](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
@@ -323,6 +339,14 @@ esp32cam-rtsp depends on PlatformIO, Bootstrap 5 and Micro-RTSP by Kevin Hester.
 
 ## Change history
 
+- January 2024
+  - Moved settings to board definitions
+  - Added new boards
+  - Removed OTA to increase performance
+- Oktober 2023
+  - Added support for Seeed Xiao esp32s3
+  - New build system
+  - Updated documentation
 - March 2023
   - Added options to set PSRAM / Frame buffers
   - Added JPEG Motion streaming

@@ -104,17 +104,11 @@
         </h3>
     </div>
 
-    {{#ConfigChanged}}
-    <div class="alert alert-danger">
-        <h3 class="text-center">
-            The configuration has been changed.<br>
-            It is recommended to restart the device.<br><br>
-            <button type="button" class="btn btn-danger" onclick="location.href='restart'">Restart</button>
-        </h3>
-    </div>
-    {{/ConfigChanged}}
+
     <h2 class="text-center">ESP32</h2>
     <div class="flex-table">
+        <div class="row">Board type:</div>
+        <div>{{BoardType}}</div>
         <div class="row">SDK Version:</div>
         <div>{{SDKVersion}}</div>
         <div class="row">CPU model:</div>
@@ -135,22 +129,12 @@
     <div class="flex-table">
         <div class="row">Uptime:</div>
         <div>{{Uptime}}</div>
-        <div class="row">Chip temperature:</div>
-        <div>{{Temperature}} &deg;C</div>
         <div class="row">RTSP sessions:</div>
         <div>{{NumRTSPSessions}}</div>
         <div class="row">Free heap:</div>
         <div>{{FreeHeap}}</div>
         <div class="row">Max free block:</div>
         <div>{{MaxAllocHeap}}</div>
-    </div>
-
-    <h2 class="text-center">Peripheral</h2>
-    <div class="flex-table">
-        <div class="row">Board type:</div>
-        <div>{{BoardType}}</div>
-        <div class="row">LED intensity:</div>
-        <div>{{LedIntensity}} [0-100]</div>
     </div>
 
     <h2 class="text-center">Network</h2>
@@ -166,9 +150,9 @@
         <div class="row">Signal strength:</div>
         <div>{{SignalStrength}} dbm</div>
         <div class="row">IPv4 address:</div>
-        <div>{{IpV4}}</div>
+        <div>{{IPv4}}</div>
         <div class="row">IPv6 address:</div>
-        <div>{{IpV6}}</div>
+        <div>{{IPv6}}</div>
     </div>
 
     {{#NetworkState.ApMode}}
@@ -191,10 +175,6 @@
         <div>{{FrameSize}}</div>
         <div class="row">JPEG quality:</div>
         <div>{{JpegQuality}} [1-100]</div>
-        <div class="row">Enable PSRAM:</div>
-        <div>{{#EnablePSRAM}}Enabled{{/EnablePSRAM}}{{^EnablePSRAM}}Disabled{{/EnablePSRAM}}</div>
-        <div class="row">Number of frame buffers:</div>
-        <div>{{FrameBuffers}}</div>
         <div class="row">Brightness:</div>
         <div>{{Brightness}} [-2,2]</div>
         <div class="row">Contrast:</div>
@@ -260,15 +240,11 @@
     <h2 class="text-center">Special URLs / API</h2>
     <div class="flex-table">
         <div class="row">RTSP camera stream:</div>
-        <div><a href="rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IpV4}}:{{RtspPort}}/mjpeg/1</a></div>
+        <div><a href="rtsp://{{IPv4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IPv4}}:{{RtspPort}}/mjpeg/1</a></div>
         <div class="row">JPEG Motion stream:</div>
-        <div><a href="http://{{IpV4}}/stream" target="_blank">http://{{IpV4}}/stream</a></div>
+        <div><a href="http://{{IPv4}}/stream" target="_blank" rel="noopener">http://{{IPv4}}/stream</a></div>
         <div class="row">Snapshot of the camera:</div>
-        <div><a href="http://{{IpV4}}/snapshot " target="_blank">http://{{IpV4}}/snapshot</a> </div>
-        <div class="row">Intensity of the flash led (0-255):</div>
-        <div><a href="http://{{IpV4}}/flash?v=0">http://{{IpV4}}/flash?v=0</a> (Authentication required)</div>
-        <div class="row">Restart the camera:</div>
-        <div><a href="http://{{IpV4}}/restart">http://{{IpV4}}/restart</a> (Authentication required)</div>
+        <div><a href="http://{{IPv4}}/snapshot " target="_blank" rel="noopener">http://{{IPv4}}/snapshot</a> </div>
     </div>
 
 </body>

@@ -1,0 +1,61 @@
+{
+  "build": {
+    "arduino": {
+      "ldscript": "esp32_out.ld",
+      "partitions": "huge_app.csv"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ESP32CAM_TTGO_T_JOURNAL'",
+      "'-D CAMERA_CONFIG_PIN_PWDN=0'",
+      "'-D CAMERA_CONFIG_PIN_RESET=15'",
+      "'-D CAMERA_CONFIG_PIN_XCLK=27'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=25'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SCL=23'",
+      "'-D CAMERA_CONFIG_PIN_Y9=19'",
+      "'-D CAMERA_CONFIG_PIN_Y8=36'",
+      "'-D CAMERA_CONFIG_PIN_Y7=18'",
+      "'-D CAMERA_CONFIG_PIN_Y6=39'",
+      "'-D CAMERA_CONFIG_PIN_Y5=5'",
+      "'-D CAMERA_CONFIG_PIN_Y4=34'",
+      "'-D CAMERA_CONFIG_PIN_Y3=35'",
+      "'-D CAMERA_CONFIG_PIN_Y2=17'",
+      "'-D CAMERA_CONFIG_PIN_VSYNC=22'",
+      "'-D CAMERA_CONFIG_PIN_HREF=26'",
+      "'-D CAMERA_CONFIG_PIN_PCLK=21'",
+      "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
+      "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
+      "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
+      "'-D CAMERA_CONFIG_FB_COUNT=1'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_DRAM'"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "40000000L",
+    "flash_mode": "dio",
+    "mcu": "esp32",
+    "variant": "esp32"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth",
+    "ethernet",
+    "can"
+  ],
+  "debug": {
+    "openocd_board": "esp-wroom-32.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "ESP32-CAM TTGO-T-JOURNAL",
+  "upload": {
+    "flash_size": "4MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://www.lilygo.cc/products/",
+  "vendor": "LILYGO"
+}
