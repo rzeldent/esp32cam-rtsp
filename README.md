@@ -5,7 +5,7 @@
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
 
 > [!IMPORTANT]  
-> New branch available! Here [branch: feature/seeed_xiao_esp32s3](https://github.com/rzeldent/esp32cam-rtsp/tree/feature/seeed_xiao_esp32s3)
+> New branch available! Here [branch: develop](https://github.com/rzeldent/esp32cam-rtsp/tree/develop)
 > This branch supports all the current devices and the Seeed Studio Xiao esp32s3!
 > Please use this and let me know if this works for you!
 
