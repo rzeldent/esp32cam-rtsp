@@ -390,11 +390,19 @@ void setup()
 #endif
   iotWebConf.init();
 
-  camera_init_result = initialize_camera();
-  if (camera_init_result == ESP_OK)
-    update_camera_settings();
-  else
-    log_e("Failed to initialize camera: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+  // Try to initialize 3 times
+  for (auto i = 0; i < 3; i++)
+  {
+    camera_init_result = initialize_camera();
+    if (camera_init_result == ESP_OK)
+    {
+      update_camera_settings();
+      break;
+    }
+
+    log_e("Failed to initialize camera. Error: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    delay(500);
+  }
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
