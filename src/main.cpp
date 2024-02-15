@@ -219,8 +219,7 @@ esp_err_t initialize_camera()
   log_i("JPEG quality: %d", param_jpg_quality.value());
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  constexpr auto i2c_port = I2C_NUM_0;
-
+  
   camera_config_t camera_config = {
     .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
     .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
@@ -250,7 +249,7 @@ esp_err_t initialize_camera()
 #if CONFIG_CAMERA_CONVERTER_ENABLED
     conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-    .sccb_i2c_port = i2c_port // If pin_sccb_sda is -1, use the already configured I2C bus by number
+    .sccb_i2c_port = SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
   return cam.init(camera_config);
@@ -380,11 +379,19 @@ void setup()
 #endif
   iotWebConf.init();
 
-  camera_init_result = initialize_camera();
-  if (camera_init_result == ESP_OK)
-    update_camera_settings();
-  else
-    log_e("Failed to initialize camera: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+  // Try to initialize 3 times
+  for (auto i = 0; i < 3; i++)
+  {
+    camera_init_result = initialize_camera();
+    if (camera_init_result == ESP_OK)
+    {
+      update_camera_settings();
+      break;
+    }
+
+    log_e("Failed to initialize camera. Error: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    delay(500);
+  }
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
