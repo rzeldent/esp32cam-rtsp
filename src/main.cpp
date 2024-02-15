@@ -303,6 +303,8 @@ void update_camera_settings()
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
+
+  server.begin(RTSP_PORT);
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
   MDNS.addService("rtsp", "tcp", RTSP_PORT);
@@ -393,16 +395,16 @@ void setup()
   // Try to initialize 3 times
   for (auto i = 0; i < 3; i++)
   {
+    log_i("Initializing camera...");
     camera_init_result = initialize_camera();
     if (camera_init_result == ESP_OK)
-    {
-      update_camera_settings();
       break;
-    }
 
-    log_e("Failed to initialize camera. Error: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
     delay(500);
   }
+
+  update_camera_settings();
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
@@ -421,7 +423,7 @@ void loop()
 {
   iotWebConf.doLoop();
 
-    server.loop();
+  server.loop();
 
   sleep(0);
 }

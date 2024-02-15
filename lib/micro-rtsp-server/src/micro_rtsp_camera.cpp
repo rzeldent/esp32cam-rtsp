@@ -14,12 +14,13 @@ micro_rtsp_camera::~micro_rtsp_camera()
 
 esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
 {
-
     init_result = esp_camera_init(camera_config);
     if (init_result == ESP_OK)
         update_frame();
     else
-        log_e("Camera initialization failed: 0x%x", init_result);
+        log_e("Camera initialization failed: 0x%02x", init_result);
+
+    return init_result;
 }
 
 esp_err_t micro_rtsp_camera::deinitialize()

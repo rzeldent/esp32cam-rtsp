@@ -12,8 +12,11 @@
 class micro_rtsp_server : WiFiServer
 {
 public:
-	micro_rtsp_server(const micro_rtsp_camera& source, unsigned frame_interval = 100, unsigned short port = 554);
+	micro_rtsp_server(const micro_rtsp_camera& source, unsigned frame_interval = 100);
 	~micro_rtsp_server();
+
+	void begin(unsigned short port = 554);
+	void end();
 
     unsigned get_frame_interval() { return frame_interval_; }
     unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }

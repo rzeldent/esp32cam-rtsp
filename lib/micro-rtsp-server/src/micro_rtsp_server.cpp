@@ -3,20 +3,28 @@
 #include <memory>
 
 // Check client connections every 100 milliseconds
-#define CHECK_CLIENT_INTERVAL 100
-#define STREAM_NAME "mjpeg/1"
+#define CHECK_CLIENT_INTERVAL 10
 
-micro_rtsp_server::micro_rtsp_server(const micro_rtsp_camera &source, unsigned frame_interval /*= 100*/, unsigned short port /*= 554*/)
+micro_rtsp_server::micro_rtsp_server(const micro_rtsp_camera &source, unsigned frame_interval /*= 100*/)
     : source_(source)
 {
     log_i("starting RTSP server");
     frame_interval_ = frame_interval;
-    begin(port);
 }
 
 micro_rtsp_server::~micro_rtsp_server()
 {
     end();
+}
+
+void micro_rtsp_server::begin(unsigned short port /*= 554*/)
+{
+    WiFiServer::begin(port);
+}
+
+void micro_rtsp_server::end()
+{
+    WiFiServer::end();
 }
 
 void micro_rtsp_server::loop()
