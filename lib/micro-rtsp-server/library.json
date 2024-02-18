@@ -14,6 +14,7 @@
     },
 
     "dependencies": {
+        "micro-jpg": "^1.0.0",
         "espressif/esp32-camera": "^2.0.4"
     }    
 }
