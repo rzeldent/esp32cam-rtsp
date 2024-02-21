@@ -1,0 +1,70 @@
+{
+  "build": {
+    "arduino": {
+      "ldscript": "esp32s3_out.ld",
+      "partitions": "default_8MB.csv",
+      "memory_type": "qio_opi"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ARDUINO_ESP32S3_DEV'",
+      "'-D ARDUINO_USB_MODE=1'",
+      "'-D BOARD_HAS_PSRAM'",
+      "'-D ARDUINO_RUNNING_CORE=1'",
+      "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
+      "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
+      "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
+      "'-D CAMERA_CONFIG_PIN_XCLK=15'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=4'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SCL=5'",
+      "'-D CAMERA_CONFIG_PIN_Y9=16'",
+      "'-D CAMERA_CONFIG_PIN_Y8=17'",
+      "'-D CAMERA_CONFIG_PIN_Y7=18'",
+      "'-D CAMERA_CONFIG_PIN_Y6=12'",
+      "'-D CAMERA_CONFIG_PIN_Y5=10'",
+      "'-D CAMERA_CONFIG_PIN_Y4=8'",
+      "'-D CAMERA_CONFIG_PIN_Y3=9'",
+      "'-D CAMERA_CONFIG_PIN_Y2=11'",
+      "'-D CAMERA_CONFIG_PIN_VSYNC=6'",
+      "'-D CAMERA_CONFIG_PIN_HREF=7'",
+      "'-D CAMERA_CONFIG_PIN_PCLK=13'",
+      "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
+      "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
+      "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
+      "'-D CAMERA_CONFIG_FB_COUNT=2'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "dio",
+    "hwids": [
+      [
+        "0x303A",
+        "0x1001"
+      ]
+    ],
+    "mcu": "esp32s3",
+    "variant": "esp32s3"
+  },
+  "connectivity": [
+    "wifi"
+  ],
+  "debug": {
+    "openocd_target": "esp32s3.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "ESP32 FREENOVE S3 WROOM",
+  "upload": {
+    "flash_size": "4MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 460800
+  },
+  "url": "https://github.com/Freenove/Freenove_ESP32_S3_WROOM_Board",
+  "vendor": "Freenove"
+}
