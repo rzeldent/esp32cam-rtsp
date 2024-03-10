@@ -219,7 +219,6 @@ esp_err_t initialize_camera()
   log_i("JPEG quality: %d", param_jpg_quality.value());
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  
   camera_config_t camera_config = {
     .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
     .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
