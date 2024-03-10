@@ -7,12 +7,12 @@
     },
     "core": "esp32",
     "extra_flags": [
-      "'-D ESP32CAM_ESPRESSIF_ESP32S3_EYE'",
-      "'-D BOARD_HAS_PSRAM'",
+      "'-D ARDUINO_ESP32S3_DEV'",
       "'-D ARDUINO_USB_MODE=1'",
-      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
+      "'-D BOARD_HAS_PSRAM'",
       "'-D ARDUINO_RUNNING_CORE=1'",
       "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=1'",
       "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_RESET=GPIO_NUM_NC'",
       "'-D CAMERA_CONFIG_PIN_XCLK=15'",
@@ -33,27 +33,21 @@
       "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
       "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
       "'-D CAMERA_CONFIG_FB_COUNT=2'",
-      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
-      "'-D SCCB_I2C_PORT=I2C_NUM_0'"
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'"
     ],
     "f_cpu": "240000000L",
     "f_flash": "80000000L",
-    "flash_mode": "qio",
+    "flash_mode": "dio",
     "hwids": [
       [
-        "0x2886",
-        "0x0056"
-      ],
-      [
-        "0x2886",
-        "0x8056"
+        "0x303A",
+        "0x1001"
       ]
     ],
     "mcu": "esp32s3",
     "variant": "esp32s3"
   },
   "connectivity": [
-    "bluetooth",
     "wifi"
   ],
   "debug": {
@@ -63,14 +57,14 @@
     "arduino",
     "espidf"
   ],
-  "name": "ESP32S3_EYE",
+  "name": "ESP32 FREENOVE S3 WROOM",
   "upload": {
-    "flash_size": "8MB",
+    "flash_size": "4MB",
     "maximum_ram_size": 327680,
-    "maximum_size": 8388608,
+    "maximum_size": 4194304,
     "require_upload_port": true,
     "speed": 460800
   },
-  "url": "https://www.espressif.com/en/products/devkits/esp-eye/overview",
-  "vendor": "Espressif"
+  "url": "https://github.com/Freenove/Freenove_ESP32_S3_WROOM_Board",
+  "vendor": "Freenove"
 }
