@@ -423,6 +423,5 @@ void loop()
 {
   iotWebConf.doLoop();
 
-  if (camera_server)
-    camera_server->doLoop();
+  server.loop();
 }
