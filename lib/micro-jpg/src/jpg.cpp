@@ -83,7 +83,6 @@ bool jpg::decode(const uint8_t *data, size_t size)
         return false;
     }
 
-    jpeg_data_size = ptr;
     log_d("Total jpeg data = %d bytes", jpeg_data_end - jpeg_data_start);
 
     return true;

@@ -1,6 +1,6 @@
 #include "micro_rtsp_streamer.h"
 
-#include "rtp_payloads.h"
+//#include "rtp_payloads.h"
 
 #include <stddef.h>
 
@@ -11,13 +11,13 @@
 // RTP data header (http://www.ietf.org/rfc/rfc3550.txt)
 struct rtp_hdr
 {
-    uint version : 2; // protocol version
-    uint p : 1;       // padding flag
-    uint x : 1;       // header extension flag
-    uint cc : 4;      // CSRC count
-    uint m : 1;       // marker bit
-    uint pt : 7;      // payload type
-    uint seq : 16;    // sequence number
+    uint16_t version : 2; // protocol version
+    uint16_t p : 1;       // padding flag
+    uint16_t x : 1;       // header extension flag
+    uint16_t cc : 4;      // CSRC count
+    uint16_t m : 1;       // marker bit
+    uint16_t pt : 7;      // payload type
+    uint16_t seq : 16;    // sequence number
     uint32_t ts;      // timestamp
     uint32_t ssrc;    // synchronization source
     uint32_t csrc[];  // optional CSRC list
@@ -30,8 +30,8 @@ struct rtp_hdr
 
 struct jpeghdr
 {
-    uint322_t tspec : 8; // type-specific field
-    uint322_t off : 24;  // fragment byte offset
+    uint32_t tspec : 8; // type-specific field
+    uint32_t off : 24;  // fragment byte offset
     uint8_t type;        // id of jpeg decoder params
     uint8_t q;           // quantization factor (or table id)
     uint8_t width;       // frame width in 8 pixel blocks

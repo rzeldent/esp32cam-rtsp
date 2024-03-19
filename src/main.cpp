@@ -392,6 +392,9 @@ void setup()
 #endif
   iotWebConf.init();
 
+  // Set the time servers
+  configTime(0, 0, NTP_SERVERS);
+
   // Try to initialize 3 times
   for (auto i = 0; i < 3; i++)
   {

@@ -7,7 +7,7 @@ class micro_rtsp_streamer
 {
 public:
     micro_rtsp_streamer();
-    void create_jpg_packet(const jpg jpg, uint32_t timestamp);
+    size_t create_jpg_packet(const uint8_t *jpg, const uint8_t *jpg_end, uint32_t timestamp);
     private :
 
     uint32_t ssrc_;
