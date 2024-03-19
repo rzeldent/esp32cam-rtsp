@@ -220,7 +220,6 @@ esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
 
-  constexpr auto pixformat = PIXFORMAT_JPEG;
   log_i("Frame size: %s", param_frame_size.value());
   auto frame_size = lookup_frame_size(param_frame_size.value());
   log_i("JPEG quality: %d", param_jpg_quality.value());
@@ -250,7 +249,7 @@ esp_err_t initialize_camera()
     .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
     .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
     .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
-    .pixel_format = pixformat,                  // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
+    .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
     .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
     .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
     .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
@@ -351,11 +350,8 @@ void setup()
   log_i("Board: %s", BOARD_NAME);
   log_i("Starting " APP_TITLE "...");
 
-  if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM)
-  {
-    if (!psramInit())
-      log_e("Failed to initialize PSRAM");
-  }
+  if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM && !psramInit())
+    log_e("Failed to initialize PSRAM");
 
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);
@@ -403,6 +399,7 @@ void setup()
     if (camera_init_result == ESP_OK)
       break;
 
+    esp_camera_deinit();
     log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
     delay(500);
   }
@@ -426,7 +423,6 @@ void loop()
 {
   iotWebConf.doLoop();
 
-  server.loop();
-
-  sleep(0);
+  if (camera_server)
+    camera_server->doLoop();
 }
