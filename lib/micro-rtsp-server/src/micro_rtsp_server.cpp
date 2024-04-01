@@ -1,12 +1,13 @@
 #include <micro_rtsp_server.h>
+#include <jpg.h>
 #include <vector>
 #include <memory>
 
 // Check client connections every 100 milliseconds
 #define CHECK_CLIENT_INTERVAL 10
 
-micro_rtsp_server::micro_rtsp_server(const micro_rtsp_camera &source, unsigned frame_interval /*= 100*/)
-    : source_(source)
+micro_rtsp_server::micro_rtsp_server(micro_rtsp_camera &source, unsigned frame_interval /*= 100*/)
+    : source_(source), streamer_(source.width(), source.height())
 {
     log_i("starting RTSP server");
     frame_interval_ = frame_interval;
@@ -51,10 +52,26 @@ void micro_rtsp_server::loop()
     if (next_frame_update_ < now)
     {
         next_frame_update_ = now + frame_interval_;
-        for (auto client : clients_)
+
+        auto ts = time(nullptr);
+        // Get next jpg frame
+        source_.update_frame();
+        // Decode to get quantitation- and scan data
+        jpg jpg;
+        auto jpg_data = source_.data();
+        auto jpg_size = source_.size();
+        assert(jpg.decode(jpg_data, jpg_size));
+
+        auto  jpg_scan_current = (uint8_t*)jpg.jpeg_data_start;
+        while (jpg_scan_current < jpg.jpeg_data_end)
         {
-            ;
+            auto packet = streamer_.create_jpg_packet(jpg.jpeg_data_start, jpg.jpeg_data_end, &jpg_scan_current, ts, jpg.quantization_table_luminance_->data, jpg.quantization_table_chrominance_->data);
+            for (auto client : clients_)
+            {
+                ;
             // client->session->broadcastCurrentFrame(now);
+            }
+            free(packet);
         }
     }
 }

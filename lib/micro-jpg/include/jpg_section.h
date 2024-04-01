@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-struct __attribute__((packed)) jpg_section
+typedef struct __attribute__((packed))
 {
     enum jpg_section_flag : uint8_t
     {
@@ -82,9 +82,9 @@ struct __attribute__((packed)) jpg_section
     static const char *flag_name(const jpg_section_flag flag);
     uint16_t data_length() const;
     uint16_t section_length() const;
-};
+} jpg_section_t;
 
-struct __attribute__((packed)) jpg_section_app0 // 0xffe0
+typedef struct __attribute__((packed)) // 0xffe0
 {
     char identifier[5] = {'J', 'F', 'I', 'F', 0}; // JFIF identifier, zero-terminated
     uint8_t version_major = 1;
@@ -94,10 +94,10 @@ struct __attribute__((packed)) jpg_section_app0 // 0xffe0
     uint16_t density_ver = 1; // density: 1 pixel "per pixel" horizontally and vertically
     uint8_t thumbnail_hor = 0;
     uint8_t thumbnail_ver = 0; // no thumbnail (size 0 x 0)
-};
+} jpg_section_app0_t;
 
-struct __attribute__((packed)) jpg_section_dqt // 0xffdb
+typedef struct __attribute__((packed)) // 0xffdb
 {
     uint8_t id; // 0= quantLuminance, 1= quantChrominance
     uint8_t data[64];
-};
+} jpg_section_dqt_t;

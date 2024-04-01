@@ -71,12 +71,12 @@ void test_jpg_decode()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_data, mr_jpeg.jpeg_data_start, sizeof(jpeg_data));
 
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt::id) + sizeof(jpeg_qtable0), mr_jpeg.quantization_table_0_->data_length());
-    auto jpg_section_dqt_luminance = reinterpret_cast<const struct jpg_section_dqt *>(mr_jpeg.quantization_table_0_->data);
+    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable0), mr_jpeg.quantization_table_luminance_->data_length());
+    auto jpg_section_dqt_luminance = reinterpret_cast<const jpg_section_dqt_t *>(mr_jpeg.quantization_table_luminance_->data);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable0, jpg_section_dqt_luminance->data, sizeof(jpeg_qtable0));
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt::id) + sizeof(jpeg_qtable1), mr_jpeg.quantization_table_1_->data_length());
-    auto jpg_section_dqt_chrominance = reinterpret_cast<const struct jpg_section_dqt *>(mr_jpeg.quantization_table_1_->data);
+    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable1), mr_jpeg.quantization_table_chrominance_->data_length());
+    auto jpg_section_dqt_chrominance = reinterpret_cast<const jpg_section_dqt_t *>(mr_jpeg.quantization_table_chrominance_->data);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable1, jpg_section_dqt_chrominance->data, sizeof(jpeg_qtable1));
 }
 

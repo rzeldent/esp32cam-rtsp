@@ -1,22 +1,22 @@
 #include "jpg_section.h"
 
-uint16_t jpg_section::data_length() const
+uint16_t jpg_section_t::data_length() const
 {
-    return (length_msb << 8) + length_lsb - sizeof(jpg_section::length_msb)- sizeof(jpg_section::length_lsb);
+    return (length_msb << 8) + length_lsb - sizeof(jpg_section_t::length_msb)- sizeof(jpg_section_t::length_lsb);
 }
 
-uint16_t jpg_section::section_length() const
+uint16_t jpg_section_t::section_length() const
 {
-    return flag == SOI || flag == EOI ? sizeof(jpg_section::framing) + sizeof(jpg_section::flag) : sizeof(jpg_section::framing) + sizeof(jpg_section::flag) + (length_msb << 8) + length_lsb;
+    return flag == SOI || flag == EOI ? sizeof(jpg_section_t::framing) + sizeof(jpg_section_t::flag) : sizeof(jpg_section_t::framing) + sizeof(jpg_section_t::flag) + (length_msb << 8) + length_lsb;
 }
 
-bool jpg_section::is_valid_flag(const jpg_section_flag flag)
+bool jpg_section_t::is_valid_flag(const jpg_section_flag flag)
 {
     return flag >= SOF0 && flag <= COM;
 }
 
 // from: https://www.disktuna.com/list-of-jpeg-markers/
-const char *jpg_section::flag_name(const jpg_section_flag flag)
+const char *jpg_section_t::flag_name(const jpg_section_flag flag)
 {
     switch (flag)
     {

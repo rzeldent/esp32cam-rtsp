@@ -8,18 +8,19 @@
 
 #include "micro_rtsp_camera.h"
 #include "micro_rtsp_requests.h"
+#include "micro_rtsp_streamer.h"
 
 class micro_rtsp_server : WiFiServer
 {
 public:
-	micro_rtsp_server(const micro_rtsp_camera& source, unsigned frame_interval = 100);
+	micro_rtsp_server(micro_rtsp_camera &source, unsigned frame_interval = 100);
 	~micro_rtsp_server();
 
 	void begin(unsigned short port = 554);
 	void end();
 
-    unsigned get_frame_interval() { return frame_interval_; }
-    unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }
+	unsigned get_frame_interval() { return frame_interval_; }
+	unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }
 
 	void loop();
 
@@ -35,12 +36,10 @@ public:
 	};
 
 private:
-	const micro_rtsp_camera &source_;
-
-    unsigned frame_interval_;
-
+	micro_rtsp_camera &source_;
+	unsigned frame_interval_;
 	unsigned long next_frame_update_;
-
 	unsigned long next_check_client_;
+	micro_rtsp_streamer streamer_;
 	std::list<rtsp_client> clients_;
 };
