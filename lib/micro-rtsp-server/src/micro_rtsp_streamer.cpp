@@ -15,7 +15,7 @@ micro_rtsp_streamer::micro_rtsp_streamer(const uint16_t width, const uint16_t he
     sequence_number_ = 0;
 }
 
-micro_rtsp_streamer::rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quantization_table_luminance, const uint8_t *quantization_table_chrominance)
+rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quantization_table_luminance, const uint8_t *quantization_table_chrominance)
 {
     log_v("jpg_scan:0x%08x, jpg_scan_end:0x%08x, jpg_offset:0x%08x, timestamp:%d, quantization_table_luminance:0x%08x, quantization_table_chrominance:0x%08x", jpg_scan, jpg_scan_end, jpg_offset, timestamp, quantization_table_luminance, quantization_table_chrominance);
 

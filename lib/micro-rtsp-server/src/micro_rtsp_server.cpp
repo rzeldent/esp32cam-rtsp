@@ -72,7 +72,7 @@ void micro_rtsp_server::loop()
             {
                 log_v("Stream frame to client: 0x%08x", client);
                 // RTP over TCP encapsulates in a $
-                client.write((const uint8_t *)packet, packet->length + sizeof(micro_rtsp_streamer::rtp_over_tcp_hdr_t));
+                client.write((const uint8_t *)packet, packet->length + sizeof(rtp_over_tcp_hdr_t));
                 // TODO: UDP
             }
             free(packet);

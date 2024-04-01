@@ -84,11 +84,11 @@ void test_jpg_decode()
 
 void test_struct_sizes()
 {
-    TEST_ASSERT_EQUAL(4, sizeof(micro_rtsp_streamer::rtp_over_tcp_hdr_t));
-//    TEST_ASSERT_EQUAL(12, sizeof(micro_rtsp_streamer::rtp_hdr_t));
-//    TEST_ASSERT_EQUAL(8, sizeof(micro_rtsp_streamer::jpeg_hdr_t));
-//    TEST_ASSERT_EQUAL(4, sizeof(micro_rtsp_streamer::jpeg_hdr_qtable_t));
-//    TEST_ASSERT_EQUAL(24, sizeof(micro_rtsp_streamer::jpeg_packet_t));
+    TEST_ASSERT_EQUAL(4, sizeof(rtp_over_tcp_hdr_t));
+    TEST_ASSERT_EQUAL(12, sizeof(rtp_hdr_t));
+    TEST_ASSERT_EQUAL(8, sizeof(jpeg_hdr_t));
+    TEST_ASSERT_EQUAL(4, sizeof(jpeg_hdr_qtable_t));
+    TEST_ASSERT_EQUAL(24, sizeof(jpeg_packet_t));
 }
 
 void setup()
