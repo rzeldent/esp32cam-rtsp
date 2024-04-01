@@ -8,19 +8,19 @@ constexpr uint8_t RTP_PAYLOAD_JPG = 26;
 constexpr size_t jpeg_luminance_table_length = 64;
 constexpr size_t jpeg_chrominance_table_length = 64;
 
-// https://www.ietf.org/rfc/rfc2326#section-10.12
-typedef struct __attribute__((packed))
-{
-    char magic;      // Magic encapsulation ASCII dollar sign (24 hexadecimal)
-    uint8_t channel; // Channel identifier
-    uint16_t length; // Network order
-} rtp_over_tcp_hdr_t;
-
 class micro_rtsp_streamer
 {
 public:
+    // https://www.ietf.org/rfc/rfc2326#section-10.12
+    typedef struct __attribute__((packed))
+    {
+        char magic;      // Magic encapsulation ASCII dollar sign (24 hexadecimal)
+        uint8_t channel; // Channel identifier
+        uint16_t length; // Network order
+    } rtp_over_tcp_hdr_t;
+
     micro_rtsp_streamer(const uint16_t width, const uint16_t height);
-    rtp_over_tcp_hdr_t *create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t* quantization_table_luminance, const uint8_t* quantization_table_chrominance);
+    rtp_over_tcp_hdr_t *create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quantization_table_luminance, const uint8_t *quantization_table_chrominance);
 
 private:
     uint16_t width_, height_;

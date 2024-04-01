@@ -18,7 +18,7 @@ private:
         rtsp_command_teardown  // TEARDOWN
     };
 
-    const std::string available_stream_name_ = "mjpeg/1";
+    const char* available_stream_name_ = "mjpeg/1";
 
     rtsp_command parse_command(const std::string &request);
     bool parse_client_port(const std::string &request);

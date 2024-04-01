@@ -53,13 +53,13 @@ bool jpg::decode(const uint8_t *data, size_t size)
     // First quantization table (Luminance - black & white images)
     if (!(quantization_table_luminance_ = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
     {
-        log_e("No quantization table 0 section found");
+        log_e("No quantization_table_luminance section found");
         return false;
     }
 
     // Second quantization table (Chrominance - color images)
     if (!(quantization_table_chrominance_ = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
-        log_w("No quantization table 1 section found");
+        log_w("No quantization_table_chrominance section found");
 
     // Start of scan
     if (!find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::SOS))
@@ -83,7 +83,9 @@ bool jpg::decode(const uint8_t *data, size_t size)
         return false;
     }
 
-    log_d("Total jpeg data = %d bytes", jpeg_data_end - jpeg_data_start);
+    jpeg_data_end = ptr;
+
+    log_d("Total jpeg data= %d bytes", jpeg_data_end - jpeg_data_start);
 
     return true;
 }

@@ -9,7 +9,7 @@
 micro_rtsp_server::micro_rtsp_server(micro_rtsp_camera &source, unsigned frame_interval /*= 100*/)
     : source_(source), streamer_(source.width(), source.height())
 {
-    log_i("starting RTSP server");
+    log_v("frame_interval:%d", frame_interval);
     frame_interval_ = frame_interval;
 }
 
@@ -34,6 +34,7 @@ void micro_rtsp_server::loop()
 
     if (next_check_client_ < now)
     {
+        log_v("Check for new client");
         next_check_client_ = now + CHECK_CLIENT_INTERVAL;
 
         // Check if a client wants to connect
@@ -51,6 +52,7 @@ void micro_rtsp_server::loop()
 
     if (next_frame_update_ < now)
     {
+        log_v("Stream frame");
         next_frame_update_ = now + frame_interval_;
 
         auto ts = time(nullptr);
@@ -62,14 +64,16 @@ void micro_rtsp_server::loop()
         auto jpg_size = source_.size();
         assert(jpg.decode(jpg_data, jpg_size));
 
-        auto  jpg_scan_current = (uint8_t*)jpg.jpeg_data_start;
+        auto jpg_scan_current = (uint8_t *)jpg.jpeg_data_start;
         while (jpg_scan_current < jpg.jpeg_data_end)
         {
             auto packet = streamer_.create_jpg_packet(jpg.jpeg_data_start, jpg.jpeg_data_end, &jpg_scan_current, ts, jpg.quantization_table_luminance_->data, jpg.quantization_table_chrominance_->data);
             for (auto client : clients_)
             {
-                ;
-            // client->session->broadcastCurrentFrame(now);
+                log_v("Stream frame to client: 0x%08x", client);
+                // RTP over TCP encapsulates in a $
+                client.write((const uint8_t *)packet, packet->length + sizeof(micro_rtsp_streamer::rtp_over_tcp_hdr_t));
+                // TODO: UDP
             }
             free(packet);
         }
@@ -79,18 +83,15 @@ void micro_rtsp_server::loop()
 micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client)
     : WiFiClient(wifi_client)
 {
-    log_i("rtsp_client");
 }
 
 micro_rtsp_server::rtsp_client::~rtsp_client()
 {
-    log_i("~rtsp_client");
     stop();
 }
 
 void micro_rtsp_server::rtsp_client::handle_request()
 {
-    log_i("handle_request");
     // Read if data available
     auto bytes_available = available();
     if (bytes_available > 0)

@@ -10,16 +10,15 @@ public:
 
     esp_err_t initialize(camera_config_t *camera_config);
     esp_err_t deinitialize();
-    // sensor_t* esp_camera_sensor_get();
 
     void update_frame();
 
-    uint8_t *data() const { return fb->buf; }
-    size_t width() const { return fb->width; }
-    size_t height() const { return fb->height; }
-    size_t size() const { return fb->len; }
+    uint8_t *data() const { return fb_->buf; }
+    size_t width() const { return fb_->width; }
+    size_t height() const { return fb_->height; }
+    size_t size() const { return fb_->len; }
 
 private:
-    esp_err_t init_result;
-    camera_fb_t *fb;
+    esp_err_t init_result_;
+    camera_fb_t *fb_;
 };

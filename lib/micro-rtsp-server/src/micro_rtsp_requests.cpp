@@ -7,7 +7,7 @@
 
 micro_rtsp_requests::rtsp_command micro_rtsp_requests::parse_command(const std::string &request)
 {
-    log_i("parse_command");
+    log_v("request: %s", request.c_str());
     // Check for RTSP commands: Option, Describe, Setup, Play, Teardown
 
     if (std::regex_match(request, std::regex("^OPTION ", std::regex_constants::icase)))
@@ -31,7 +31,8 @@ micro_rtsp_requests::rtsp_command micro_rtsp_requests::parse_command(const std::
 
 bool micro_rtsp_requests::parse_client_port(const std::string &request)
 {
-    log_i("parse_client_port");
+    log_v("request: %s", request.c_str());
+
     std::regex regex("client_port=([0-9]+)", std::regex_constants::icase);
     std::smatch match;
     if (!std::regex_match(request, match, regex))
@@ -46,7 +47,8 @@ bool micro_rtsp_requests::parse_client_port(const std::string &request)
 
 bool micro_rtsp_requests::parse_cseq(const std::string &request)
 {
-    log_i("parse_cseq");
+    log_v("request: %s", request.c_str());
+
     // CSeq: 2
     std::regex regex("CSeq: (\\d+)", std::regex_constants::icase);
     std::smatch match;
@@ -62,7 +64,8 @@ bool micro_rtsp_requests::parse_cseq(const std::string &request)
 
 bool micro_rtsp_requests::parse_stream_url(const std::string &request)
 {
-    log_i("parse_host_url");
+    log_v("request: %s", request.c_str());
+
     // SETUP rtsp://192.168.10.93:1234/mjpeg/1 RTSP/1.0
     std::regex regex("rtsp:\\/\\/([\\w.]+):(\\d+)\\/([\\/\\w]+)\\s+RTSP/1.0", std::regex_constants::icase);
     std::smatch match;
@@ -88,6 +91,8 @@ std::string micro_rtsp_requests::date_header()
 
 std::string micro_rtsp_requests::rtsp_error(unsigned short code, const std::string &message)
 {
+    log_v("code: %d, message: %s", code, message.c_str());
+
     std::ostringstream oss;
     oss << "RTSP/1.0 " << code << " " << message << "\r\n"
         << "CSeq: " << cseq_ << "\r\n"
@@ -98,7 +103,8 @@ std::string micro_rtsp_requests::rtsp_error(unsigned short code, const std::stri
 
 std::string micro_rtsp_requests::handle_option(const std::string &request)
 {
-    log_i("handle_option");
+    log_v("request: %s", request.c_str());
+
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
         << "CSeq: " << cseq_ << "\r\n"
@@ -111,7 +117,8 @@ std::string micro_rtsp_requests::handle_option(const std::string &request)
 
 std::string micro_rtsp_requests::handle_describe(const std::string &request)
 {
-    log_i("handle_describe");
+    log_v("request: %s", request.c_str());
+
     if (!parse_stream_url(request))
         return rtsp_error(400, "Invalid Stream Name");
 
@@ -141,6 +148,8 @@ std::string micro_rtsp_requests::handle_describe(const std::string &request)
 
 std::string micro_rtsp_requests::handle_setup(const std::string &request)
 {
+    log_v("request: %s", request.c_str());
+
     tcp_transport_ = request.find("rtp/avp/tcp") != std::string::npos;
 
     if (!parse_client_port(request))
@@ -164,6 +173,8 @@ std::string micro_rtsp_requests::handle_setup(const std::string &request)
 
 std::string micro_rtsp_requests::handle_play(const std::string &request)
 {
+    log_v("request: %s", request.c_str());
+
     stream_active_ = true;
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
@@ -178,6 +189,8 @@ std::string micro_rtsp_requests::handle_play(const std::string &request)
 
 std::string micro_rtsp_requests::handle_teardown(const std::string &request)
 {
+    log_v("request: %s", request.c_str());
+
     stream_stopped_ = true;
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
@@ -189,7 +202,8 @@ std::string micro_rtsp_requests::handle_teardown(const std::string &request)
 
 std::string micro_rtsp_requests::process_request(const std::string &request)
 {
-    log_i("handle_request");
+    log_v("request: %s", request.c_str());
+    
     auto command = parse_command(request);
     if (command != rtsp_command_unknown)
     {

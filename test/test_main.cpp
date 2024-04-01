@@ -3,7 +3,9 @@
 #include <IotWebConf.h>
 
 #include <unity.h>
+
 #include <jpg.h>
+#include <micro_rtsp_streamer.h>
 
 static unsigned char jpeg[8468] = {
     // SOI
@@ -65,19 +67,28 @@ void tearDown(void)
 
 void test_jpg_decode()
 {
-    jpg mr_jpeg;
-    TEST_ASSERT_TRUE(mr_jpeg.decode(reinterpret_cast<const uint8_t *>(jpeg), sizeof(jpeg)));
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpeg_data), mr_jpeg.jpeg_data_end - mr_jpeg.jpeg_data_start);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_data, mr_jpeg.jpeg_data_start, sizeof(jpeg_data));
+    jpg jpg;
+    TEST_ASSERT_TRUE(jpg.decode(reinterpret_cast<const uint8_t *>(jpeg), sizeof(jpeg)));
+    TEST_ASSERT_EQUAL_INT32(sizeof(jpeg_data), jpg.jpeg_data_end - jpg.jpeg_data_start);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_data, jpg.jpeg_data_start, sizeof(jpeg_data));
 
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable0), mr_jpeg.quantization_table_luminance_->data_length());
-    auto jpg_section_dqt_luminance = reinterpret_cast<const jpg_section_dqt_t *>(mr_jpeg.quantization_table_luminance_->data);
+    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable0), jpg.quantization_table_luminance_->data_length());
+    auto jpg_section_dqt_luminance = reinterpret_cast<const jpg_section_dqt_t *>(jpg.quantization_table_luminance_->data);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable0, jpg_section_dqt_luminance->data, sizeof(jpeg_qtable0));
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable1), mr_jpeg.quantization_table_chrominance_->data_length());
-    auto jpg_section_dqt_chrominance = reinterpret_cast<const jpg_section_dqt_t *>(mr_jpeg.quantization_table_chrominance_->data);
+    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable1), jpg.quantization_table_chrominance_->data_length());
+    auto jpg_section_dqt_chrominance = reinterpret_cast<const jpg_section_dqt_t *>(jpg.quantization_table_chrominance_->data);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable1, jpg_section_dqt_chrominance->data, sizeof(jpeg_qtable1));
+}
+
+void test_struct_sizes()
+{
+    TEST_ASSERT_EQUAL(4, sizeof(micro_rtsp_streamer::rtp_over_tcp_hdr_t));
+//    TEST_ASSERT_EQUAL(12, sizeof(micro_rtsp_streamer::rtp_hdr_t));
+//    TEST_ASSERT_EQUAL(8, sizeof(micro_rtsp_streamer::jpeg_hdr_t));
+//    TEST_ASSERT_EQUAL(4, sizeof(micro_rtsp_streamer::jpeg_hdr_qtable_t));
+//    TEST_ASSERT_EQUAL(24, sizeof(micro_rtsp_streamer::jpeg_packet_t));
 }
 
 void setup()
@@ -90,6 +101,7 @@ void setup()
 
     UNITY_BEGIN();
     RUN_TEST(test_jpg_decode);
+    RUN_TEST(test_struct_sizes);
     UNITY_END();
 }
 
