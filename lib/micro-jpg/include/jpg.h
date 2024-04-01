@@ -7,8 +7,8 @@ class jpg
 public:
     bool decode(const uint8_t *jpg, size_t size);
 
-    const jpg_section_t *quantization_table_luminance_;
-    const jpg_section_t *quantization_table_chrominance_;
+    const jpg_section_dqt_t *quantization_table_luminance_;
+    const jpg_section_dqt_t *quantization_table_chrominance_;
 
     const uint8_t *jpeg_data_start;
     const uint8_t *jpeg_data_end;

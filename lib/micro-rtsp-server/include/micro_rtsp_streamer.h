@@ -1,14 +1,12 @@
 #pragma once
 
+#include <jpg_section.h>
 #include <micro_rtp_structs.h>
 
 // https://en.wikipedia.org/wiki/Maximum_transmission_unit
 constexpr size_t max_wifi_mtu = 2304;
 // Payload JPG - https://www.ietf.org/rfc/rfc1890.txt
 constexpr uint8_t RTP_PAYLOAD_JPG = 26;
-//  http://www.ietf.org/rfc/rfc2345.txt Each table is an array of 64 values given in zig-zag order, identical to the format used in a JFIF DQT marker segment.
-constexpr size_t jpeg_luminance_table_length = 64;
-constexpr size_t jpeg_chrominance_table_length = 64;
 
 // One of the types below will be returned, the jpeg_packet_with_quantization_t for the first packet, then the jpeg_packet_t
 
@@ -18,8 +16,8 @@ typedef struct __attribute__((packed))
     rtp_hdr_t rtp_hdr;
     jpeg_hdr_t jpeg_hdr;
     jpeg_hdr_qtable_t jpeg_hdr_qtable;
-    uint8_t quantization_table_luminance[jpeg_luminance_table_length];
-    uint8_t quantization_table_chrominance[jpeg_chrominance_table_length];
+    uint8_t quantization_table_luminance[jpeg_quantization_table_length];
+    uint8_t quantization_table_chrominance[jpeg_quantization_table_length];
     uint8_t jpeg_data[];
 } jpeg_packet_with_quantization_t;
 

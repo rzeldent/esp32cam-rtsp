@@ -51,15 +51,35 @@ bool jpg::decode(const uint8_t *data, size_t size)
     }
 
     // First quantization table (Luminance - black & white images)
-    if (!(quantization_table_luminance_ = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
+    const jpg_section_t *quantization_table_section;
+    if (!(quantization_table_section = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
     {
         log_e("No quantization_table_luminance section found");
         return false;
     }
 
+    if (quantization_table_section->data_length() != sizeof(jpg_section_dqt_t))
+    {
+        log_w("Invalid length of quantization_table_luminance section. Expected %d but read %d", sizeof(jpg_section_dqt_t), quantization_table_section->data_length());
+        return false;
+    }
+
+    quantization_table_luminance_ = reinterpret_cast<const jpg_section_dqt_t *>(quantization_table_section->data);
+
     // Second quantization table (Chrominance - color images)
-    if (!(quantization_table_chrominance_ = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
+    if (!(quantization_table_section = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
+    {
         log_w("No quantization_table_chrominance section found");
+        return false;
+    }
+
+    if (quantization_table_section->data_length() != sizeof(jpg_section_dqt_t))
+    {
+        log_w("Invalid length of quantization_table_chrominance section. Expected %d but read %d", sizeof(jpg_section_dqt_t), quantization_table_section->data_length());
+        return false;
+    }
+
+    quantization_table_chrominance_ = reinterpret_cast<const jpg_section_dqt_t *>(quantization_table_section->data);
 
     // Start of scan
     if (!find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::SOS))
@@ -85,7 +105,7 @@ bool jpg::decode(const uint8_t *data, size_t size)
 
     jpeg_data_end = ptr;
 
-    log_d("Total jpeg data= %d bytes", jpeg_data_end - jpeg_data_start);
+    log_d("Total jpeg data: %d bytes", jpeg_data_end - jpeg_data_start);
 
     return true;
 }

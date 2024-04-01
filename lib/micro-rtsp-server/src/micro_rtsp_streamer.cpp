@@ -31,11 +31,10 @@ rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_sc
     const auto jpg_bytes = isLastFragment ? jpg_bytes_left : payload_size;
     const uint16_t packet_size = headers_size + jpg_bytes;
 
-    const auto packet = (jpeg_packet_t *)calloc(1, packet_size);
+    const auto packet = static_cast<jpeg_packet_t *>(calloc(1, packet_size));
 
     // 4 bytes RTP over TCP header
-    packet->rtp_over_tcp_hdr.magic = '$'; // encapsulation
-    packet->rtp_over_tcp_hdr.channel = 0; // number of multiplexed sub-channel on RTPS connection - here the RTP channel
+    packet->rtp_over_tcp_hdr.channel = 0;
     packet->rtp_over_tcp_hdr.length = packet_size;
     log_v("rtp_over_tcp_hdr_t={.magic=%c,.channel=%u,.length=%u}", packet->rtp_over_tcp_hdr.magic, packet->rtp_over_tcp_hdr.channel, packet->rtp_over_tcp_hdr.length);
 
@@ -57,16 +56,16 @@ rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_sc
     packet->jpeg_hdr.height = (uint8_t)(height_ >> 3);                         // frame height in 8 pixel blocks
     log_v("jpeg_hdr={.tspec:%u,.off:0x%6x,.type:0x2%x,.q:%u,.width:%u.height:%u}", packet->jpeg_hdr.tspec, packet->jpeg_hdr.off, packet->jpeg_hdr.type, packet->jpeg_hdr.q, packet->jpeg_hdr.width, packet->jpeg_hdr.height);
 
+    // Only in first packet of the frame
     if (include_quantization_tables)
     {
-        const auto packet_with_quantization = (jpeg_packet_with_quantization_t *)packet;
-        // Only in first packet of the frame
+        auto packet_with_quantization = reinterpret_cast<jpeg_packet_with_quantization_t *>(packet);
         packet_with_quantization->jpeg_hdr_qtable.mbz = 0;
         packet_with_quantization->jpeg_hdr_qtable.precision = 0; // 8 bit precision
-        packet_with_quantization->jpeg_hdr_qtable.length = jpeg_luminance_table_length + jpeg_chrominance_table_length;
+        packet_with_quantization->jpeg_hdr_qtable.length = jpeg_quantization_table_length + jpeg_quantization_table_length;
         log_v("jpeg_hdr_qtable={.mbz:%u,.precision:%u,.length:%u}", packet_with_quantization->jpeg_hdr_qtable.mbz, packet_with_quantization->jpeg_hdr_qtable.precision, packet_with_quantization->jpeg_hdr_qtable.length);
-        memcpy(packet_with_quantization->quantization_table_luminance, quantization_table_luminance, jpeg_luminance_table_length);
-        memcpy(packet_with_quantization->quantization_table_chrominance, quantization_table_chrominance, jpeg_chrominance_table_length);
+        memcpy(packet_with_quantization->quantization_table_luminance, quantization_table_luminance, jpeg_quantization_table_length);
+        memcpy(packet_with_quantization->quantization_table_chrominance, quantization_table_chrominance, jpeg_quantization_table_length);
         // Copy JPG data
         memcpy(packet_with_quantization->jpeg_data, *jpg_offset, jpg_bytes);
     }

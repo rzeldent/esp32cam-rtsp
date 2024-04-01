@@ -73,13 +73,9 @@ void test_jpg_decode()
     TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_data, jpg.jpeg_data_start, sizeof(jpeg_data));
 
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable0), jpg.quantization_table_luminance_->data_length());
-    auto jpg_section_dqt_luminance = reinterpret_cast<const jpg_section_dqt_t *>(jpg.quantization_table_luminance_->data);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable0, jpg_section_dqt_luminance->data, sizeof(jpeg_qtable0));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable0, jpg.quantization_table_luminance_->data, sizeof(jpeg_qtable0));
     // Id is not stored
-    TEST_ASSERT_EQUAL_INT32(sizeof(jpg_section_dqt_t::id) + sizeof(jpeg_qtable1), jpg.quantization_table_chrominance_->data_length());
-    auto jpg_section_dqt_chrominance = reinterpret_cast<const jpg_section_dqt_t *>(jpg.quantization_table_chrominance_->data);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable1, jpg_section_dqt_chrominance->data, sizeof(jpeg_qtable1));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(jpeg_qtable1, jpg.quantization_table_chrominance_->data, sizeof(jpeg_qtable1));
 }
 
 void test_struct_sizes()
@@ -89,6 +85,25 @@ void test_struct_sizes()
     TEST_ASSERT_EQUAL(8, sizeof(jpeg_hdr_t));
     TEST_ASSERT_EQUAL(4, sizeof(jpeg_hdr_qtable_t));
     TEST_ASSERT_EQUAL(24, sizeof(jpeg_packet_t));
+}
+
+void test_bitfield()
+{
+    jpeg_hdr_t jpeg_hdr;
+    jpeg_hdr.tspec = 0x55;
+    jpeg_hdr.off = 0xAAAAAA;
+    TEST_ASSERT_EQUAL(0x55, jpeg_hdr.tspec);
+    TEST_ASSERT_EQUAL(0xAAAAAA, jpeg_hdr.off);
+    jpeg_hdr.tspec = 0xAA;
+    jpeg_hdr.off = 0x555555;
+    TEST_ASSERT_EQUAL(0xAA, jpeg_hdr.tspec);
+    TEST_ASSERT_EQUAL(0x555555, jpeg_hdr.off);
+}
+
+void test_default()
+{
+    rtp_over_tcp_hdr_t rtp_over_tcp_hdr;
+    TEST_ASSERT_EQUAL('$', rtp_over_tcp_hdr.magic);
 }
 
 void setup()
@@ -102,6 +117,8 @@ void setup()
     UNITY_BEGIN();
     RUN_TEST(test_jpg_decode);
     RUN_TEST(test_struct_sizes);
+    RUN_TEST(test_bitfield);
+    RUN_TEST(test_default);
     UNITY_END();
 }
 

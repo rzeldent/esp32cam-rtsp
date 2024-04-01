@@ -1,6 +1,10 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
+
+//  http://www.ietf.org/rfc/rfc2345.txt Each table is an array of 64 values given in zig-zag order, identical to the format used in a JFIF DQT marker segment.
+constexpr size_t jpeg_quantization_table_length = 64;
 
 typedef struct __attribute__((packed))
 {
@@ -99,5 +103,5 @@ typedef struct __attribute__((packed)) // 0xffe0
 typedef struct __attribute__((packed)) // 0xffdb
 {
     uint8_t id; // 0= quantLuminance, 1= quantChrominance
-    uint8_t data[64];
+    uint8_t data[jpeg_quantization_table_length];
 } jpg_section_dqt_t;
