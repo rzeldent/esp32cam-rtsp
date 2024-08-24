@@ -42,6 +42,7 @@ This software supports the following ESP32-CAM (and alike) modules:
 - M5STACK_V2_PSRAM
 - M5STACK_PSRAM
 - M5STACK_WIDE
+- M5STACK M5PoECAM-W
 - M5STACK
 - Seeed Studio XIAO ESP32S3 SENSE
 - TTGO T-CAMERA
@@ -97,21 +98,22 @@ There are a lot of boards available that are all called ESP32-CAM.
 However, there are differences in CPU (type/speed/cores), how the camera is connected, presence of PSRAM or not...
 To select the right board use the table below and use the configuration that is listed below for your board:
 
-| Board                           | Image                                                                                               | CPU                     | SRAM   | Flash  | PSRAM | Camera          |             | Site                                                                                                                              |
-|---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---          |---                                                                                                                                |
-| Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                                                                                   |
-| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32-S                 | 520KB  | 4Mb    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
-| Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                                                                                   |
-| Espressif ESP-S3-EYE            | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4Mb    | 4MB   | OV2640          |             | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview)  |
-| LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4Mb    | 4MB   | OV2640 / OV5640 |             |                                                                                                                                   |
-| LilyGo Simcam                   | ![img](assets/boards/lilygo-simcam.jpg)                                                             |                         |        |        |       | OV2640          |             |                                                                                                                                   |
-| LilyGo TTGO-T Camera            | ![img](assets/boards/lilygo-ttgo-t-camera.jpg)                                                      |                         |        |        |       | OV2640          |             |                                                                                                                                   |
-| M5Stack ESP32CAM                | ![img](assets/boards/m5stack_esp32cam_02.webp)                                                      | ESP32                   | 520Kb  | 4Mb    | -     | OV2640          | Microphone  | [https://docs.m5stack.com/en/unit/esp32cam](https://docs.m5stack.com/en/unit/esp32cam)                                            |
-| M5Stack UnitCam                 | ![img](assets/boards/m5stack_unit_cam_02.webp) ![img](assets/boards/m5stack_unit_cam_03.webp)       | ESP32-WROOM-32E         | 520KB  | 4Mb    | -     | OV2640          |             | [https://docs.m5stack.com/en/unit/unit_cam](https://docs.m5stack.com/en/unit/unit_cam)                                            |
-| M5Stack Camera                  | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520Kb  | 4Mb    | -     | OV2640          |             | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                            |
-| M5Stack Camera PSRAM            | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520Kb  | 4Mb    | 4Mb   | OV2640          |             | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                            |
-| M5Stack UnitCamS3               | ![img](assets/boards//m5stack_Unitcams3.webp) ![img](assets/boards/m5stack_Unitcams32.webp)         | ESP32-S3-WROOM-1-N16R8  | 520Kb  | 16Mb   | 8Mb   | OV2640          |             | [https://docs.m5stack.com/en/unit/Unit-CamS3](https://docs.m5stack.com/en/unit/Unit-CamS3)                                        |
-| Seeed studio Xiao ESP32S3 Sense | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg)                                           | ESP32-S3R8              | 520KB  | 8Mb    | 8MB   | OV2640          | Microphone  | [https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html](https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html)          |
+| Board                           | Image                                                                                                  | CPU                    | SRAM   | Flash | PSRAM | Camera          |            | Site                                                                                                                             |
+|---------------------------------|--------------------------------------------------------------------------------------------------------|------------------------|--------|-------|-------|-----------------|------------|----------------------------------------------------------------------------------------------------------------------------------|
+| Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                             | ESP32                  | 520KB  | 4Mb   | 4MB   | OV2640          |            |                                                                                                                                  |
+| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)     | ESP32-S                | 520KB  | 4Mb   | 4MB   | OV2640          |            | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                   |
+| Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                            | ESP32                  | 520KB  | 4Mb   | 4MB   | OV2640          |            |                                                                                                                                  |
+| Espressif ESP-S3-EYE            | ![img](assets/boards/espressif-esps3-eye.jpg)                                                          | ESP32-S3               | 520KB  | 4Mb   | 4MB   | OV2640          |            | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview) |
+| LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                         | ESP32 Wrover           | 520KB  | 4Mb   | 4MB   | OV2640 / OV5640 |            |                                                                                                                                  |
+| LilyGo Simcam                   | ![img](assets/boards/lilygo-simcam.jpg)                                                                |                        |        |       |       | OV2640          |            |                                                                                                                                  |
+| LilyGo TTGO-T Camera            | ![img](assets/boards/lilygo-ttgo-t-camera.jpg)                                                         |                        |        |       |       | OV2640          |            |                                                                                                                                  |
+| M5Stack ESP32CAM                | ![img](assets/boards/m5stack_esp32cam_02.webp)                                                         | ESP32                  | 520Kb  | 4Mb   | -     | OV2640          | Microphone | [https://docs.m5stack.com/en/unit/esp32cam](https://docs.m5stack.com/en/unit/esp32cam)                                           |
+| M5Stack UnitCam                 | ![img](assets/boards/m5stack_unit_cam_02.webp) ![img](assets/boards/m5stack_unit_cam_03.webp)          | ESP32-WROOM-32E        | 520KB  | 4Mb   | -     | OV2640          |            | [https://docs.m5stack.com/en/unit/unit_cam](https://docs.m5stack.com/en/unit/unit_cam)                                           |
+| M5Stack Camera                  | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                         | ESP32                  | 520Kb  | 4Mb   | -     | OV2640          |            | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                           |
+| M5Stack Camera PSRAM            | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                         | ESP32                  | 520Kb  | 4Mb   | 4Mb   | OV2640          |            | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                           |
+| M5Stack UnitCamS3               | ![img](assets/boards/m5stack_Unitcams3.webp) ![img](assets/boards/m5stack_Unitcams32.webp)             | ESP32-S3-WROOM-1-N16R8 | 520Kb  | 16Mb  | 8Mb   | OV2640          |            | [https://docs.m5stack.com/en/unit/Unit-CamS3](https://docs.m5stack.com/en/unit/Unit-CamS3)                                       |
+| M5Stack M5PoECAM-W              | ![img](assets/boards/m5stack_m5poecam-w_front.webp) ![img](assets/boards/m5stack_m5poecam-w_back.webp) | ESP32-D0WDQ6-V3        | 520 kB | 16MB  | 8MB   | OV2640          |            | [https://docs.m5stack.com/en/unit/poecam-w](https://docs.m5stack.com/en/unit/poecam-w)                                           |
+| Seeed studio Xiao ESP32S3 Sense | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg)                                              | ESP32-S3R8             | 520KB  | 8Mb   | 8MB   | OV2640          | Microphone | [https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html](https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html)         |
 
 ## Installing and running PlatformIO
 
@@ -310,22 +312,23 @@ The availability of PSRAM can be seen in the HTML status overview.
 
 Not all the boards are equipped with PSRAM:
 
-|  Board            | PSRAM           |
-|---                |---              |
-| WROVER_KIT        | 8Mb             |
-| ESP_EYE           | 8Mb             |
-| ESP32S3_EYE       | 8Mb             |
-| M5STACK_PSRAM     | 8Mb             |
-| M5STACK_V2_PSRAM  | Version B only  |
-| M5STACK_WIDE      | 8Mb             |
-| M5STACK_ESP32CAM  | No              |
-| M5STACK_UNITCAM   | No              |
-| M5STACK_UNITCAMS3 | 8Mb             |
-| AI_THINKER        | 8Mb             |
-| TTGO_T_JOURNAL    | No              |
-| ESP32_CAM_BOARD   | ?               |
-| ESP32S2_CAM_BOARD | ?               |
-| ESP32S3_CAM_LCD   | ?               |
+| Board              | PSRAM          |
+|--------------------|----------------|
+| WROVER_KIT         | 8Mb            |
+| ESP_EYE            | 8Mb            |
+| ESP32S3_EYE        | 8Mb            |
+| M5STACK_PSRAM      | 8Mb            |
+| M5STACK_V2_PSRAM   | Version B only |
+| M5STACK_WIDE       | 8Mb            |
+| M5STACK_ESP32CAM   | No             |
+| M5STACK_UNITCAM    | No             |
+| M5STACK_UNITCAMS3  | 8Mb            |
+| M5STACK_M5PoECAM-W | 8MB            |
+| AI_THINKER         | 8Mb            |
+| TTGO_T_JOURNAL     | No             |
+| ESP32_CAM_BOARD    | ?              |
+| ESP32S2_CAM_BOARD  | ?              |
+| ESP32S3_CAM_LCD    | ?              |
 
 Depending on the image resolution, framerate and quality, the PSRAM must be enabled and/or the number of frame buffers increased to keep up with the data generated by the sensor.
 There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason. See on [Reddit](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
@@ -357,6 +360,8 @@ esp32cam-rtsp depends on PlatformIO, Bootstrap 5 and Micro-RTSP by Kevin Hester.
 
 ## Change history
 
+- August 2024
+  - Added support for M5Stack M5PoECAM-W
 - January 2024
   - Moved settings to board definitions
   - Added new boards
