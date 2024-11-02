@@ -1,7 +1,8 @@
 #pragma once
 
 #include <jpg_section.h>
-#include <micro_rtp_structs.h>
+#include <micro_rtsp_camera.h> // Add this line to include the definition of micro_rtsp_camera
+#include <micro_rtsp_structs.h>
 
 // https://en.wikipedia.org/wiki/Maximum_transmission_unit
 constexpr size_t max_wifi_mtu = 2304;
@@ -32,11 +33,11 @@ typedef struct __attribute__((packed))
 class micro_rtsp_streamer
 {
 public:
-    micro_rtsp_streamer(const uint16_t width, const uint16_t height);
+    micro_rtsp_streamer(const micro_rtsp_source& source);
     rtp_over_tcp_hdr_t *create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quantization_table_luminance, const uint8_t *quantization_table_chrominance);
 
 private:
-    uint16_t width_, height_;
+    const micro_rtsp_source& source_;
     uint32_t ssrc_;
     uint16_t sequence_number_;
 };

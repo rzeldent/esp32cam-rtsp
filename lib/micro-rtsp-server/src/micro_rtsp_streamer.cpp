@@ -5,11 +5,9 @@
 #include "micro_rtsp_streamer.h"
 #include "esp_random.h"
 
-micro_rtsp_streamer::micro_rtsp_streamer(const uint16_t width, const uint16_t height)
+micro_rtsp_streamer::micro_rtsp_streamer(const micro_rtsp_source &source)
+    : source_(source)
 {
-    log_v("width:%d, height:%d", width, height);
-    width_ = width;
-    height_ = height;
     // Random number
     ssrc_ = esp_random();
     sequence_number_ = 0;
@@ -52,8 +50,8 @@ rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_sc
     packet->jpeg_hdr.off = (uint32_t)(*jpg_offset - jpg_scan);                 // fragment byte offset (24 bits in jpg)
     packet->jpeg_hdr.type = 0;                                                 // id of jpeg decoder params
     packet->jpeg_hdr.q = (uint8_t)(include_quantization_tables ? 0x80 : 0x5e); // quantization factor (or table id) 5eh=94d
-    packet->jpeg_hdr.width = (uint8_t)(width_ >> 3);                           // frame width in 8 pixel blocks
-    packet->jpeg_hdr.height = (uint8_t)(height_ >> 3);                         // frame height in 8 pixel blocks
+    packet->jpeg_hdr.width = (uint8_t)(source_.width() >> 3);                           // frame width in 8 pixel blocks
+    packet->jpeg_hdr.height = (uint8_t)(source_.height() >> 3);                         // frame height in 8 pixel blocks
     log_v("jpeg_hdr={.tspec:%u,.off:0x%6x,.type:0x2%x,.q:%u,.width:%u.height:%u}", packet->jpeg_hdr.tspec, packet->jpeg_hdr.off, packet->jpeg_hdr.type, packet->jpeg_hdr.q, packet->jpeg_hdr.width, packet->jpeg_hdr.height);
 
     // Only in first packet of the frame

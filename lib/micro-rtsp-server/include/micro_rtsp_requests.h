@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <string>
 
 class micro_rtsp_requests
@@ -8,40 +9,41 @@ public:
     std::string process_request(const std::string& request);
 
 private:
-    enum rtsp_command
-    {
-        rtsp_command_unknown,
-        rtsp_command_option,   // OPTIONS
-        rtsp_command_describe, // DESCRIBE
-        rtsp_command_setup,    // SETUP
-        rtsp_command_play,     // PLAY
-        rtsp_command_teardown  // TEARDOWN
-    };
+    // enum rtsp_command
+    // {
+    //     rtsp_command_unknown,
+    //     rtsp_command_options,  // OPTIONS
+    //     rtsp_command_describe, // DESCRIBE
+    //     rtsp_command_setup,    // SETUP
+    //     rtsp_command_play,     // PLAY
+    //     rtsp_command_teardown  // TEARDOWN
+    // };
 
-    const char* available_stream_name_ = "mjpeg/1";
+    static const std::string available_stream_name_;
 
-    rtsp_command parse_command(const std::string &request);
+    //rtsp_command parse_command(const std::string &request);
+    //static bool parse_cseq(const std::string &line, unsigned long &cseq);
     bool parse_client_port(const std::string &request);
-    bool parse_cseq(const std::string &request);
-    bool parse_stream_url(const std::string &request);
+    //bool parse_stream_url(const std::string &request);
 
-    std::string date_header();
-    std::string rtsp_error(unsigned short code, const std::string& message);
+    //static std::string date_header();
+    static std::string handle_rtsp_error(unsigned long cseq, unsigned short code, const std::string &message);
 
-    std::string handle_option(const std::string &request);
-    std::string handle_describe(const std::string &request);
-    std::string handle_setup(const std::string &request);
-    std::string handle_play(const std::string &request);
-    std::string handle_teardown(const std::string &request);
+    static std::string handle_options(unsigned long cseq);
+    static std::string handle_describe(unsigned long cseq, const std::string &request);
+    std::string handle_setup(unsigned long cseq, const  std::map<std::string, std::string> &request);
+    std::string handle_play(unsigned long cseq);
+    std::string handle_teardown(unsigned long cseq);
 
-    unsigned long cseq_;
+    //unsigned long cseq_;
 
-    std::string host_url_;
-    unsigned short host_port_;
-    std::string stream_name_;
+    // std::string host_url_;
+    // unsigned short host_port_;
+    // std::string stream_name_;
 
     bool tcp_transport_;
-    unsigned short client_port_;
+    unsigned short start_client_port_;
+    unsigned short end_client_port_;
 
     unsigned short rtp_streamer_port_;
     unsigned short rtcp_streamer_port_;

@@ -5,9 +5,9 @@
 // https://www.ietf.org/rfc/rfc2326#section-10.12
 typedef struct __attribute__((packed))
 {
-    char magic='$';      // Magic encapsulation ASCII dollar sign (24 hexadecimal)
-    uint8_t channel; // Channel identifier
-    uint16_t length; // Network order
+    char magic = '$'; // Magic encapsulation ASCII dollar sign (24 hexadecimal)
+    uint8_t channel;  // Channel identifier
+    uint16_t length;  // Network order
 } rtp_over_tcp_hdr_t;
 
 // RTP data header - http://www.ietf.org/rfc/rfc3550.txt

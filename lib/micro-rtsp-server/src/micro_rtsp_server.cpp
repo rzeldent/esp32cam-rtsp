@@ -6,11 +6,9 @@
 // Check client connections every 100 milliseconds
 #define CHECK_CLIENT_INTERVAL 10
 
-micro_rtsp_server::micro_rtsp_server(micro_rtsp_camera &source, unsigned frame_interval /*= 100*/)
-    : source_(source), streamer_(source.width(), source.height())
+micro_rtsp_server::micro_rtsp_server(micro_rtsp_source &source)
+    : source_(source), streamer_(source)
 {
-    log_v("frame_interval:%d", frame_interval);
-    frame_interval_ = frame_interval;
 }
 
 micro_rtsp_server::~micro_rtsp_server()
@@ -52,7 +50,7 @@ void micro_rtsp_server::loop()
 
     if (next_frame_update_ < now)
     {
-        log_v("Stream frame");
+        log_v("Stream frame t=%d", next_frame_update_);
         next_frame_update_ = now + frame_interval_;
 
         auto ts = time(nullptr);
@@ -96,14 +94,15 @@ void micro_rtsp_server::rtsp_client::handle_request()
     auto bytes_available = available();
     if (bytes_available > 0)
     {
-        std::string request;
-        request.reserve(bytes_available);
-        if (read((uint8_t *)request.data(), bytes_available) == bytes_available)
+        std::string request(bytes_available, '\0');
+        if (read((uint8_t*)&request[0], bytes_available) == bytes_available)
         {
-            log_i("Request: %s", request);
+            request.resize(bytes_available);
+            log_i("Request: %s", request.c_str());
             auto response = process_request(request);
-            log_i("Response: %s", response);
-            write(response.data(), response.size());
+            log_i("Response: %s", response.c_str());
+            println(response.c_str());
+            println();
         }
     }
 }

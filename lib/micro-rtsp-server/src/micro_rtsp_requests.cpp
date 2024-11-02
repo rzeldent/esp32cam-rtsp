@@ -1,33 +1,13 @@
 #include <esp32-hal-log.h>
 
+#include <iomanip>
+#include <unordered_map>
 #include <regex>
 #include "micro_rtsp_requests.h"
 
 // https://datatracker.ietf.org/doc/html/rfc2326
 
-micro_rtsp_requests::rtsp_command micro_rtsp_requests::parse_command(const std::string &request)
-{
-    log_v("request: %s", request.c_str());
-    // Check for RTSP commands: Option, Describe, Setup, Play, Teardown
-
-    if (std::regex_match(request, std::regex("^OPTION ", std::regex_constants::icase)))
-        return rtsp_command::rtsp_command_option;
-
-    if (std::regex_match(request, std::regex("^DESCRIBE ", std::regex_constants::icase)))
-        return rtsp_command::rtsp_command_describe;
-
-    if (std::regex_match(request, std::regex("^SETUP ", std::regex_constants::icase)))
-        return rtsp_command::rtsp_command_setup;
-
-    if (std::regex_match(request, std::regex("^PLAY ", std::regex_constants::icase)))
-        return rtsp_command::rtsp_command_play;
-
-    if (std::regex_match(request, std::regex("^TEARDOWN ", std::regex_constants::icase)))
-        return rtsp_command::rtsp_command_teardown;
-
-    log_e("Invalid rtsp command: %s", request.c_str());
-    return rtsp_command::rtsp_command_unknown;
-}
+const std::string micro_rtsp_requests::available_stream_name_ = "/mjpeg/1";
 
 bool micro_rtsp_requests::parse_client_port(const std::string &request)
 {
@@ -41,189 +21,195 @@ bool micro_rtsp_requests::parse_client_port(const std::string &request)
         return false;
     }
 
-    client_port_ = std::stoi(match[1].str());
+    start_client_port_ = std::stoi(match[1].str());
     return true;
 }
 
-bool micro_rtsp_requests::parse_cseq(const std::string &request)
+std::string micro_rtsp_requests::handle_rtsp_error(unsigned long cseq, unsigned short code, const std::string &message)
 {
-    log_v("request: %s", request.c_str());
-
-    // CSeq: 2
-    std::regex regex("CSeq: (\\d+)", std::regex_constants::icase);
-    std::smatch match;
-    if (!std::regex_match(request, match, regex))
-    {
-        log_e("CSeq not found");
-        return false;
-    }
-
-    cseq_ = std::stoul(match[1].str());
-    return true;
-}
-
-bool micro_rtsp_requests::parse_stream_url(const std::string &request)
-{
-    log_v("request: %s", request.c_str());
-
-    // SETUP rtsp://192.168.10.93:1234/mjpeg/1 RTSP/1.0
-    std::regex regex("rtsp:\\/\\/([\\w.]+):(\\d+)\\/([\\/\\w]+)\\s+RTSP/1.0", std::regex_constants::icase);
-    std::smatch match;
-    if (!std::regex_match(request, match, regex))
-    {
-        log_e("Unable to parse url");
-        return false;
-    }
-
-    host_url_ = match[1].str();
-    host_port_ = std::stoi(match[2].str());
-    stream_name_ = match[3].str();
-    return true;
-}
-
-std::string micro_rtsp_requests::date_header()
-{
-    char buffer[50];
-    auto now = std::time(nullptr);
-    std::strftime(buffer, sizeof(buffer), "Date: %a, %b %d %Y %H:%M:%S GMT", std::gmtime(&now));
-    return buffer;
-}
-
-std::string micro_rtsp_requests::rtsp_error(unsigned short code, const std::string &message)
-{
-    log_v("code: %d, message: %s", code, message.c_str());
-
+    log_e("code: %d, message: %s", code, message.c_str());
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 " << code << " " << message << "\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
-        << "\r\n";
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n";
     return oss.str();
 }
 
-std::string micro_rtsp_requests::handle_option(const std::string &request)
+// OPTIONS rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
+// CSeq: 2
+// User-Agent: LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)
+std::string micro_rtsp_requests::handle_options(unsigned long cseq)
 {
-    log_v("request: %s", request.c_str());
-
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Content-Length: 0\r\n"
-        << "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n"
-        << "\r\n";
+        << "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE";
     return oss.str();
 }
 
-std::string micro_rtsp_requests::handle_describe(const std::string &request)
+// DESCRIBE rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
+// CSeq: 3
+// User-Agent: LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)
+// Accept: application/sdp
+std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::string &request)
 {
-    log_v("request: %s", request.c_str());
+    // Parse the url
+    static const std::regex regex_url("rtsp:\\/\\/([^\\/:]+)(?::(\\d+))?(\\/.*)?\\s+RTSP\\/1\\.0", std::regex_constants::icase);
+    std::smatch match;
+    if (!std::regex_search(request, match, regex_url))
+        return handle_rtsp_error(cseq, 400, "Invalid URL");
 
-    if (!parse_stream_url(request))
-        return rtsp_error(400, "Invalid Stream Name");
+    auto host = match[1].str();
+    auto port = match[2].str().length() > 0 ? std::stoi(match[2].str()) : 554;
+    auto path = match[3].str();
+    log_i("host: %s, port: %d, path: %s", host.c_str(), port, path.c_str());
 
-    if (stream_name_ != available_stream_name_)
-        return rtsp_error(404, "Stream Not Found");
+    if (path != available_stream_name_)
+        return handle_rtsp_error(cseq, 404, "Stream Not Found");
 
-    std::ostringstream sdpos;
-    sdpos << "v=0\r\n"
-          << "o=- " << host_port_ << " 1 IN IP4 " << std::rand() << "\r\n"
-          << "s=\r\n"
-          << "t=0 0\r\n"                // start / stop - 0 -> unbounded and permanent session
-          << "m=video 0 RTP/AVP 26\r\n" // currently we just handle UDP sessions
-          << "c=IN IP4 0.0.0.0\r\n";
-    auto sdp = sdpos.str();
+    std::ostringstream osbody;
+    osbody << "v=0\r\n"
+           << "o=- " << std::rand() << " 1 IN IP4 " << host << "\r\n"
+           << "s=\r\n"
+           << "t=0 0\r\n"                // start / stop - 0 -> unbounded and permanent session
+           << "m=video 0 RTP/AVP 26\r\n" // currently we just handle UDP sessions
+           << "c=IN IP4 0.0.0.0\r\n";
+    auto body = osbody.str();
 
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
-        << "Content-Base: " << stream_name_ << "/\r\n"
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
+        << "Content-Base: rtsp://" << host << ":" << port << path << "\r\n"
         << "Content-Type: application/sdp\r\n"
-        << "Content-Length: " << sdp.size() << "\r\n"
+        << "Content-Length: " << body.size() << "\r\n"
         << "\r\n"
-        << sdp;
+        << body;
     return oss.str();
 }
 
-std::string micro_rtsp_requests::handle_setup(const std::string &request)
+// SETUP rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
+// CSeq: 0
+// Transport: RTP/AVP;unicast;client_port=9058-9059
+std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::map<std::string, std::string> &lines)
 {
     log_v("request: %s", request.c_str());
 
-    tcp_transport_ = request.find("rtp/avp/tcp") != std::string::npos;
+    auto it = lines.find("Transport");
+    if (it == lines.end())
+        return handle_rtsp_error(cseq, 400, "No Transport Header Found");
 
-    if (!parse_client_port(request))
-        return rtsp_error(400, "Could Not Find Client Port");
+    static const std::regex regex_transport("\\s+RTP\\/AVP(\\/TCP)?;unicast;client_port=(\\d+)-(\\d+)", std::regex_constants::icase);
+    std::smatch match;
+    if (!std::regex_search(it->second, match, regex_transport))
+        return handle_rtsp_error(cseq, 400, "Could Not Parse Transport");
+
+    tcp_transport_ = match[1].str().length() > 0;
+    start_client_port_ = std::stoi(match[2].str());
+    end_client_port_ = std::stoi(match[3].str());
+    log_i("tcp_transport: %d, start_client_port: %d, end_client_port: %d", tcp_transport_, start_client_port_, end_client_port_);
 
     std::ostringstream ostransport;
     if (tcp_transport_)
         ostransport << "RTP/AVP/TCP;unicast;interleaved=0-1";
     else
-        ostransport << "RTP/AVP;unicast;destination=127.0.0.1;source=127.0.0.1;client_port=" << client_port_ << "-" << client_port_ + 1 << ";server_port=" << rtp_streamer_port_ << "-" << rtcp_streamer_port_;
+        ostransport << "RTP/AVP;unicast;destination=127.0.0.1;source=127.0.0.1;client_port=" << start_client_port_ << "-" << end_client_port_ + 1 << ";server_port=" << rtp_streamer_port_ << "-" << rtcp_streamer_port_;
 
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Transport: " << ostransport.str() << "\r\n"
-        << "Session: " << rtsp_session_id_ << "\r\n"
-        << "\r\n";
+        << "Session: " << rtsp_session_id_;
     return oss.str();
 }
 
-std::string micro_rtsp_requests::handle_play(const std::string &request)
+std::string micro_rtsp_requests::handle_play(unsigned long cseq)
 {
     log_v("request: %s", request.c_str());
 
     stream_active_ = true;
+
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Range: npt=0.000-\r\n"
         << "Session: " << rtsp_session_id_ << "\r\n"
-        << "RTP-Info: url=rtsp://127.0.0.1:8554/" << available_stream_name_ << "/track1\r\n"
-        << "\r\n";
+        << "RTP-Info: url=rtsp://127.0.0.1:8554" << available_stream_name_ << "/track1" << "\r\n"
+         << "\r\n";
     return oss.str();
 }
 
-std::string micro_rtsp_requests::handle_teardown(const std::string &request)
+std::string micro_rtsp_requests::handle_teardown(unsigned long cseq)
 {
     log_v("request: %s", request.c_str());
 
     stream_stopped_ = true;
+
+    auto now = time(nullptr);
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq_ << "\r\n"
-        << date_header() << "\r\n"
-        << "\r\n";
+        << "CSeq: " << cseq << "\r\n"
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n";
     return oss.str();
 }
+
+// Parse a request e.g.
+// Request: OPTIONS rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
+// CSeq: 2
+// User-Agent: LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)
 
 std::string micro_rtsp_requests::process_request(const std::string &request)
 {
     log_v("request: %s", request.c_str());
-    
-    auto command = parse_command(request);
-    if (command != rtsp_command_unknown)
-    {
-        if (!parse_cseq(request))
-            return rtsp_error(400, "No Sequence Found");
 
-        switch (command)
-        {
-        case rtsp_command_option:
-            return handle_option(request);
-        case rtsp_command_describe:
-            return handle_describe(request);
-        case rtsp_command_setup:
-            return handle_setup(request);
-        case rtsp_command_play:
-            return handle_play(request);
-        case rtsp_command_teardown:
-            return handle_teardown(request);
-        }
+    std::stringstream ss(request);
+    // Get the request line
+    std::string request_line;
+    if (!std::getline(ss, request_line))
+        return handle_rtsp_error(0, 400, "No Request Found");
+
+    // Create a map with headers
+    std::string line;
+    std::map<std::string, std::string> headers;
+    std::size_t pos;
+    while (std::getline(ss, line))
+    {
+        if ((pos = line.find(':')) != std::string::npos)
+            headers[line.substr(0, pos)] = line.substr(pos + 1);
+        else
+            log_e("No : found for header: %s", line.c_str());
     }
 
-    return rtsp_error(400, "Unknown Command");
+    log_i("request_line: %s", request_line.c_str());
+    for (const auto &header : headers)
+        log_i("header: %s: %s", header.first.c_str(), header.second.c_str());
+
+    // Check for CSeq
+    const auto cseq_it = headers.find("CSeq");
+    if (cseq_it == headers.end())
+        return handle_rtsp_error(0, 400, "No Sequence Found");
+
+    auto cseq = std::stoul(cseq_it->second);
+
+    if (request_line.find("OPTIONS") == 0)
+        return handle_options(cseq);
+    if (request_line.find("DESCRIBE") == 0)
+        return handle_describe(cseq, request_line);
+    if (request_line.find("SETUP") == 0)
+        return handle_setup(cseq, headers);
+    if (request_line.find("PLAY") == 0)
+        return handle_play(cseq);
+    if (request_line.find("TEARDOWN") == 0)
+        return handle_teardown(cseq);
+
+    return handle_rtsp_error(cseq, 400, "Unknown Command or malformed request");
 }
