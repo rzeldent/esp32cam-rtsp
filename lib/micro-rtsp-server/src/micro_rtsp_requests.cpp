@@ -47,7 +47,8 @@ std::string micro_rtsp_requests::handle_options(unsigned long cseq)
         << "CSeq: " << cseq << "\r\n"
         << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Content-Length: 0\r\n"
-        << "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE";
+        << "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n"
+        << "\r\n";
     return oss.str();
 }
 
@@ -85,7 +86,7 @@ std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::
     oss << "RTSP/1.0 200 OK\r\n"
         << "CSeq: " << cseq << "\r\n"
         << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Content-Base: rtsp://" << host << ":" << port << path << "\r\n"
+        << "Content-Base: rtsp://" << host << ":" << port << path << "/" << "\r\n"
         << "Content-Type: application/sdp\r\n"
         << "Content-Length: " << body.size() << "\r\n"
         << "\r\n"
@@ -118,7 +119,7 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::map
     if (tcp_transport_)
         ostransport << "RTP/AVP/TCP;unicast;interleaved=0-1";
     else
-        ostransport << "RTP/AVP;unicast;destination=127.0.0.1;source=127.0.0.1;client_port=" << start_client_port_ << "-" << end_client_port_ + 1 << ";server_port=" << rtp_streamer_port_ << "-" << rtcp_streamer_port_;
+        ostransport << "RTP/AVP;unicast;destination=127.0.0.1;source=127.0.0.1;client_port=" << start_client_port_ << "-" << end_client_port_ + 1 << ";server_port=" << rtp_streamer_port_ << "-" << rtp_streamer_port_/*rtcp_streamer_port_*/;
 
     auto now = time(nullptr);
     std::ostringstream oss;
@@ -126,7 +127,7 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::map
         << "CSeq: " << cseq << "\r\n"
         << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Transport: " << ostransport.str() << "\r\n"
-        << "Session: " << rtsp_session_id_;
+        << "Session: " << rtsp_session_id_<< "\r\n";
     return oss.str();
 }
 
@@ -144,7 +145,7 @@ std::string micro_rtsp_requests::handle_play(unsigned long cseq)
         << "Range: npt=0.000-\r\n"
         << "Session: " << rtsp_session_id_ << "\r\n"
         << "RTP-Info: url=rtsp://127.0.0.1:8554" << available_stream_name_ << "/track1" << "\r\n"
-         << "\r\n";
+        << "\r\n";
     return oss.str();
 }
 
@@ -158,7 +159,8 @@ std::string micro_rtsp_requests::handle_teardown(unsigned long cseq)
     std::ostringstream oss;
     oss << "RTSP/1.0 200 OK\r\n"
         << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n";
+        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
+        << "\r\n";
     return oss.str();
 }
 
@@ -185,8 +187,8 @@ std::string micro_rtsp_requests::process_request(const std::string &request)
     {
         if ((pos = line.find(':')) != std::string::npos)
             headers[line.substr(0, pos)] = line.substr(pos + 1);
-        else
-            log_e("No : found for header: %s", line.c_str());
+//        else
+//            log_e("No : found for header: %s", line.c_str());
     }
 
     log_i("request_line: %s", request_line.c_str());

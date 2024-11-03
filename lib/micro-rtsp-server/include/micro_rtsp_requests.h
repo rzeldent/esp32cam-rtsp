@@ -7,7 +7,8 @@ class micro_rtsp_requests
 {
 public:
     std::string process_request(const std::string& request);
-
+    bool active() const { return stream_active_; }
+    
 private:
     // enum rtsp_command
     // {

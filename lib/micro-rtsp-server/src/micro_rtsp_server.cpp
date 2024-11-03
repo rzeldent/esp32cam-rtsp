@@ -68,7 +68,7 @@ void micro_rtsp_server::loop()
             auto packet = streamer_.create_jpg_packet(jpg.jpeg_data_start, jpg.jpeg_data_end, &jpg_scan_current, ts, jpg.quantization_table_luminance_->data, jpg.quantization_table_chrominance_->data);
             for (auto client : clients_)
             {
-                log_v("Stream frame to client: 0x%08x", client);
+                log_i("Stream frame to client: 0x%08x", client);
                 // RTP over TCP encapsulates in a $
                 client.write((const uint8_t *)packet, packet->length + sizeof(rtp_over_tcp_hdr_t));
                 // TODO: UDP
@@ -95,7 +95,7 @@ void micro_rtsp_server::rtsp_client::handle_request()
     if (bytes_available > 0)
     {
         std::string request(bytes_available, '\0');
-        if (read((uint8_t*)&request[0], bytes_available) == bytes_available)
+        if (read((uint8_t *)&request[0], bytes_available) == bytes_available)
         {
             request.resize(bytes_available);
             log_i("Request: %s", request.c_str());
