@@ -151,7 +151,7 @@ cd esp32cam-rtsp
 ```
 
 Next, the firmware has to be build and deployed to the ESP32.
-There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code.
+There are two flavours to do this; using the command line or the graphical interface of Visual Studio Code.
 
 ### Using the command line
 
