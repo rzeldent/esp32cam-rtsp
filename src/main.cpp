@@ -16,6 +16,9 @@
 #include <moustache.h>
 #include <settings.h>
 
+#include <micro_rtsp_camera.h>
+#include <micro_rtsp_server.h>
+
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
 
@@ -47,11 +50,15 @@ auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").labe
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
 // Camera
-OV2640 cam;
+// OV2640 cam;
 // DNS Server
 DNSServer dnsServer;
 // RTSP Server
-std::unique_ptr<rtsp_server> camera_server;
+// std::unique_ptr<rtsp_server> camera_server;
+
+micro_rtsp_camera camera;
+micro_rtsp_server server(camera);
+
 // Web server
 WebServer web_server(80);
 
@@ -100,7 +107,7 @@ void handle_root()
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_memory(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
-      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "RTSP server disabled"},
+      {"NumRTSPSessions", String(server.clients())},
       // Network
       {"HostName", hostname},
       {"MacAddress", WiFi.macAddress()},
@@ -162,10 +169,10 @@ void handle_snapshot()
   // Remove old images stored in the frame buffer
   auto frame_buffers = CAMERA_CONFIG_FB_COUNT;
   while (frame_buffers--)
-    cam.run();
+    camera.update_frame();
 
-  auto fb_len = cam.getSize();
-  auto fb = (const char *)cam.getfb();
+  auto fb_len = camera.size();
+  auto fb = camera.data();
   if (fb == nullptr)
   {
     web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
@@ -175,7 +182,7 @@ void handle_snapshot()
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
-  web_server.sendContent(fb, fb_len);
+  web_server.sendContent((const char *)fb, fb_len);
 }
 
 #define STREAM_CONTENT_BOUNDARY "123456789000000000000987654321"
@@ -197,11 +204,11 @@ void handle_stream()
   while (client.connected())
   {
     client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
-    cam.run();
+    camera.update_frame();
     client.write("Content-Type: image/jpeg\r\nContent-Length: ");
-    sprintf(size_buf, "%d\r\n\r\n", cam.getSize());
+    sprintf(size_buf, "%d\r\n\r\n", camera.size());
     client.write(size_buf);
-    client.write(cam.getfb(), cam.getSize());
+    client.write(camera.data(), camera.size());
   }
 
   log_v("client disconnected");
@@ -218,7 +225,11 @@ esp_err_t initialize_camera()
   log_i("JPEG quality: %d", param_jpg_quality.value());
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  const camera_config_t camera_config = {
+
+  // Set frame duration
+  server.set_frame_interval(param_frame_duration.value());
+
+  camera_config_t camera_config = {
     .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
     .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
     .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
@@ -247,10 +258,12 @@ esp_err_t initialize_camera()
 #if CONFIG_CAMERA_CONVERTER_ENABLED
     conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-    .sccb_i2c_port = SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
+    .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
-  return cam.init(camera_config);
+  return camera.initialize(&camera_config);
+
+  // return cam.init(camera_config);
 }
 
 void update_camera_settings()
@@ -289,7 +302,8 @@ void update_camera_settings()
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
+
+  server.begin(RTSP_PORT);
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
   MDNS.addService("rtsp", "tcp", RTSP_PORT);
@@ -374,20 +388,23 @@ void setup()
 #endif
   iotWebConf.init();
 
+  // Set the time servers
+  configTime(0, 0, NTP_SERVERS);
+
   // Try to initialize 3 times
   for (auto i = 0; i < 3; i++)
   {
+    log_i("Initializing camera...");
     camera_init_result = initialize_camera();
     if (camera_init_result == ESP_OK)
-    {
-      update_camera_settings();
       break;
-    }
 
     esp_camera_deinit();
-    log_e("Failed to initialize camera. Error: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
     delay(500);
   }
+
+  update_camera_settings();
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
@@ -406,6 +423,5 @@ void loop()
 {
   iotWebConf.doLoop();
 
-  if (camera_server)
-    camera_server->doLoop();
+  server.loop();
 }
