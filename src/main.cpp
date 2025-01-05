@@ -150,6 +150,20 @@ void handle_root()
   web_server.send(200, "text/html", html);
 }
 
+#ifdef FLASH_LED_GPIO
+void handle_flash()
+{
+  log_v("handle_flash");
+  // If no value present, use off, otherwise convert v to integer. Depends on analog resolution for max value
+  auto v = web_server.hasArg("v") ? web_server.arg("v").toInt() : 0;
+  // If conversion fails, v = 0
+  analogWrite(FLASH_LED_GPIO, v);
+
+  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  web_server.send(200);
+}
+#endif
+
 void handle_snapshot()
 {
   log_v("handle_snapshot");
@@ -219,35 +233,35 @@ esp_err_t initialize_camera()
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
   const camera_config_t camera_config = {
-    .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
-    .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
-    .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
-    .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
-    .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
-    .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
-    .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
-    .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
-    .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
-    .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
-    .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
-    .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
-    .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
-    .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
-    .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
-    .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
-    .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
-    .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
-    .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
-    .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
-    .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-    .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
-    .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
-    .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
-    .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
+      .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
+      .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
+      .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
+      .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
+      .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
+      .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
+      .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
+      .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
+      .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
+      .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
+      .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
+      .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
+      .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
+      .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
+      .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
+      .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
+      .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+      .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
+      .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
+      .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
+      .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+      .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
+      .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
+      .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
+      .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
 #if CONFIG_CAMERA_CONVERTER_ENABLED
-    conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
+      conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-    .sccb_i2c_port = SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
+      .sccb_i2c_port = SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
   return cam.init(camera_config);
@@ -316,13 +330,21 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+
 #ifdef USER_LED_GPIO
   pinMode(USER_LED_GPIO, OUTPUT);
   digitalWrite(USER_LED_GPIO, !USER_LED_ON_LEVEL);
 #endif
 
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
+#ifdef FLASH_LED_GPIO
+  pinMode(FLASH_LED_GPIO, OUTPUT);
+  // Set resolution to 8 bits
+  analogWriteResolution(8);
+  // Turn flash led off
+  analogWrite(FLASH_LED_GPIO, 0);
+#endif
 
 #ifdef ARDUINO_USB_CDC_ON_BOOT
   // Delay for USB to connect/settle
@@ -397,7 +419,10 @@ void setup()
   web_server.on("/snapshot", HTTP_GET, handle_snapshot);
   // Camera stream
   web_server.on("/stream", HTTP_GET, handle_stream);
-
+#ifdef FLASH_LED_GPIO
+  // Flash led
+  web_server.on("/flash", HTTP_GET, handle_flash);
+#endif
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 }
