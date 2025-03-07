@@ -316,6 +316,11 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+#ifdef CAMERA_POWER_GPIO
+  pinMode(CAMERA_POWER_GPIO, OUTPUT);
+  digitalWrite(CAMERA_POWER_GPIO, CAMERA_POWER_ON_LEVEL);
+#endif
+
 #ifdef USER_LED_GPIO
   pinMode(USER_LED_GPIO, OUTPUT);
   digitalWrite(USER_LED_GPIO, !USER_LED_ON_LEVEL);
