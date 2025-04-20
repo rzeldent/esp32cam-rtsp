@@ -43,6 +43,7 @@ This software supports the following ESP32-CAM (and alike) modules:
 - M5STACK_PSRAM
 - M5STACK_WIDE
 - M5STACK M5PoECAM-W
+- M5STACK Timer CAM (Original and X)
 - M5STACK
 - Seeed Studio XIAO ESP32S3 SENSE
 - TTGO T-CAMERA
