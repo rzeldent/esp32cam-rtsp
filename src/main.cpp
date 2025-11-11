@@ -332,6 +332,10 @@ void setup()
 
   Serial.begin(115200);
   Serial.setDebugOutput(true);
+#ifdef CAMERA_POWER_GPIO
+  pinMode(CAMERA_POWER_GPIO, OUTPUT);
+  digitalWrite(CAMERA_POWER_GPIO, CAMERA_POWER_ON_LEVEL);
+#endif
 
 #ifdef USER_LED_GPIO
   pinMode(USER_LED_GPIO, OUTPUT);
