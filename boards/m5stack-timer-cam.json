@@ -1,0 +1,69 @@
+{
+  "build": {
+    "arduino":{
+      "ldscript": "esp32_out.ld",
+      "partitions": "huge_app.csv"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ARDUINO_M5Stack_Timer_CAM'",
+      "'-D BOARD_HAS_PSRAM'",
+      "'-mfix-esp32-psram-cache-issue'",
+      "'-mfix-esp32-psram-cache-strategy=memw'",
+      "'-D USER_LED_GPIO=2'",
+      "'-D USER_LED_ON_LEVEL=HIGH'",
+      "'-D CAMERA_CONFIG_PIN_PWDN=GPIO_NUM_NC'",
+      "'-D CAMERA_CONFIG_PIN_RESET=15'",
+      "'-D CAMERA_CONFIG_PIN_XCLK=27'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SDA=25'",
+      "'-D CAMERA_CONFIG_PIN_SCCB_SCL=23'",
+      "'-D CAMERA_CONFIG_PIN_Y9=19'",
+      "'-D CAMERA_CONFIG_PIN_Y8=36'",
+      "'-D CAMERA_CONFIG_PIN_Y7=18'",
+      "'-D CAMERA_CONFIG_PIN_Y6=39'",
+      "'-D CAMERA_CONFIG_PIN_Y5=5'",
+      "'-D CAMERA_CONFIG_PIN_Y4=34'",
+      "'-D CAMERA_CONFIG_PIN_Y3=35'",
+      "'-D CAMERA_CONFIG_PIN_Y2=32'",
+      "'-D CAMERA_CONFIG_PIN_VSYNC=22'",
+      "'-D CAMERA_CONFIG_PIN_HREF=26'",
+      "'-D CAMERA_CONFIG_PIN_PCLK=21'",
+      "'-D CAMERA_CONFIG_CLK_FREQ_HZ=20000000'",
+      "'-D CAMERA_CONFIG_LEDC_TIMER=LEDC_TIMER_0'",
+      "'-D CAMERA_CONFIG_LEDC_CHANNEL=LEDC_CHANNEL_0'",
+      "'-D CAMERA_CONFIG_FB_COUNT=2'",
+      "'-D CAMERA_CONFIG_FB_LOCATION=CAMERA_FB_IN_PSRAM'",
+      "'-D SCCB_I2C_PORT=I2C_NUM_0'",
+      "'-D GROVE_SDA=4'",
+      "'-D GROVE_SCL=13'"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "40000000L",
+    "flash_mode": "dio",
+    "mcu": "esp32",
+    "variant": "m5stack_timer_cam"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth",
+    "ethernet",
+    "can"
+  ],
+  "debug": {
+    "openocd_board": "esp-wroom-32.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "M5Stack Timer CAM",
+  "upload": {
+    "flash_size": "4MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 115200
+  },
+  "url": "https://docs.m5stack.com/en/unit/timercam",
+  "vendor": "M5STACK"
+}
