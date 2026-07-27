@@ -9,6 +9,7 @@
       "'-D ESP32CAM_AI_THINKER'",
       "'-D BOARD_HAS_PSRAM'",
       "'-mfix-esp32-psram-cache-issue'",
+      "'-D FLASH_LED_GPIO=4'",
       "'-D USER_LED_GPIO=33'",
       "'-D USER_LED_ON_LEVEL=LOW'",
       "'-D CAMERA_CONFIG_PIN_PWDN=32'",

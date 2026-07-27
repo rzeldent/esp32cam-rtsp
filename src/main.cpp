@@ -157,6 +157,20 @@ void handle_root()
   web_server.send(200, "text/html", html);
 }
 
+#ifdef FLASH_LED_GPIO
+void handle_flash()
+{
+  log_v("handle_flash");
+  // If no value present, use off, otherwise convert v to integer. Depends on analog resolution for max value
+  auto v = web_server.hasArg("v") ? web_server.arg("v").toInt() : 0;
+  // If conversion fails, v = 0
+  analogWrite(FLASH_LED_GPIO, v);
+
+  web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  web_server.send(200);
+}
+#endif
+
 void handle_snapshot()
 {
   log_v("handle_snapshot");
@@ -216,6 +230,13 @@ void handle_stream()
   log_v("stopped streaming");
 }
 
+void handle_restart()
+{
+	log_v("handle_restart");
+	WiFi.disconnect(false, true);
+	ESP.restart();
+}
+
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
@@ -256,7 +277,7 @@ esp_err_t initialize_camera()
     .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
     .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
 #if CONFIG_CAMERA_CONVERTER_ENABLED
-    conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
+      conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
     .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
@@ -330,13 +351,25 @@ void setup()
   // Disable brownout
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+  Serial.begin(115200);
+  Serial.setDebugOutput(true);
+#ifdef CAMERA_POWER_GPIO
+  pinMode(CAMERA_POWER_GPIO, OUTPUT);
+  digitalWrite(CAMERA_POWER_GPIO, CAMERA_POWER_ON_LEVEL);
+#endif
+
 #ifdef USER_LED_GPIO
   pinMode(USER_LED_GPIO, OUTPUT);
   digitalWrite(USER_LED_GPIO, !USER_LED_ON_LEVEL);
 #endif
 
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
+#ifdef FLASH_LED_GPIO
+  pinMode(FLASH_LED_GPIO, OUTPUT);
+  // Set resolution to 8 bits
+  analogWriteResolution(8);
+  // Turn flash led off
+  analogWrite(FLASH_LED_GPIO, 0);
+#endif
 
 #ifdef ARDUINO_USB_CDC_ON_BOOT
   // Delay for USB to connect/settle
@@ -414,7 +447,12 @@ void setup()
   web_server.on("/snapshot", HTTP_GET, handle_snapshot);
   // Camera stream
   web_server.on("/stream", HTTP_GET, handle_stream);
-
+#ifdef FLASH_LED_GPIO
+  // Flash led
+  web_server.on("/flash", HTTP_GET, handle_flash);
+#endif
+  // ESP restart
+  web_server.on("/restart", HTTP_GET, handle_restart);
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 }

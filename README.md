@@ -42,6 +42,8 @@ This software supports the following ESP32-CAM (and alike) modules:
 - M5STACK_V2_PSRAM
 - M5STACK_PSRAM
 - M5STACK_WIDE
+- M5STACK M5PoECAM-W
+- M5STACK Timer CAM (Original and X)
 - M5STACK
 - Seeed Studio XIAO ESP32S3 SENSE
 - TTGO T-CAMERA
@@ -100,7 +102,7 @@ To select the right board use the table below and use the configuration that is 
 | Board                           | Image                                                                                               | CPU                     | SRAM   | Flash  | PSRAM | Camera          | Extras      | Manufacturer site                                                                                                                 |
 |---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---          |---                                                                                                                                |
 | Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                                                                                   |
-| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32-S                 | 520KB  | 4Mb    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
+| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
 | Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4Mb    | 4MB   | OV2640          |             |                                                                                                                                   |
 | Espressif ESP-S3-EYE            | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4Mb    | 4MB   | OV2640          |             | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview)  |
 | LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4Mb    | 4MB   | OV2640 / OV5640 |             |                                                                                                                                   |
@@ -151,7 +153,7 @@ cd esp32cam-rtsp
 ```
 
 Next, the firmware has to be build and deployed to the ESP32.
-There are to flavours to do this; using the command line or the graphical interface of Visual Studio Code.
+There are two flavours to do this; using the command line or the graphical interface of Visual Studio Code.
 
 ### Using the command line
 
@@ -310,22 +312,23 @@ The availability of PSRAM can be seen in the HTML status overview.
 
 Not all the boards are equipped with PSRAM:
 
-|  Board            | PSRAM           |
-|---                |---              |
-| WROVER_KIT        | 8Mb             |
-| ESP_EYE           | 8Mb             |
-| ESP32S3_EYE       | 8Mb             |
-| M5STACK_PSRAM     | 8Mb             |
-| M5STACK_V2_PSRAM  | Version B only  |
-| M5STACK_WIDE      | 8Mb             |
-| M5STACK_ESP32CAM  | No              |
-| M5STACK_UNITCAM   | No              |
-| M5STACK_UNITCAMS3 | 8Mb             |
-| AI_THINKER        | 8Mb             |
-| TTGO_T_JOURNAL    | No              |
-| ESP32_CAM_BOARD   | ?               |
-| ESP32S2_CAM_BOARD | ?               |
-| ESP32S3_CAM_LCD   | ?               |
+| Board              | PSRAM          |
+|--------------------|----------------|
+| WROVER_KIT         | 8Mb            |
+| ESP_EYE            | 8Mb            |
+| ESP32S3_EYE        | 8Mb            |
+| M5STACK_PSRAM      | 8Mb            |
+| M5STACK_V2_PSRAM   | Version B only |
+| M5STACK_WIDE       | 8Mb            |
+| M5STACK_ESP32CAM   | No             |
+| M5STACK_UNITCAM    | No             |
+| M5STACK_UNITCAMS3  | 8Mb            |
+| M5STACK_M5PoECAM-W | 8MB            |
+| AI_THINKER         | 8Mb            |
+| TTGO_T_JOURNAL     | No             |
+| ESP32_CAM_BOARD    | ?              |
+| ESP32S2_CAM_BOARD  | ?              |
+| ESP32S3_CAM_LCD    | ?              |
 
 Depending on the image resolution, framerate and quality, the PSRAM must be enabled and/or the number of frame buffers increased to keep up with the data generated by the sensor.
 There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason. See on [Reddit](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
@@ -357,6 +360,8 @@ esp32cam-rtsp depends on PlatformIO, Bootstrap 5 and Micro-RTSP by Kevin Hester.
 
 ## Change history
 
+- August 2024
+  - Added support for M5Stack M5PoECAM-W
 - January 2024
   - Moved settings to board definitions
   - Added new boards
