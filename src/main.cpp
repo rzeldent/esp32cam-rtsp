@@ -223,6 +223,13 @@ void handle_stream()
   log_v("stopped streaming");
 }
 
+void handle_restart()
+{
+	log_v("handle_restart");
+	WiFi.disconnect(false, true);
+	ESP.restart();
+}
+
 esp_err_t initialize_camera()
 {
   log_v("initialize_camera");
@@ -427,6 +434,8 @@ void setup()
   // Flash led
   web_server.on("/flash", HTTP_GET, handle_flash);
 #endif
+  // ESP restart
+  web_server.on("/restart", HTTP_GET, handle_restart);
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 }
