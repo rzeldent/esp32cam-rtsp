@@ -4,7 +4,8 @@
 
 micro_rtsp_camera::micro_rtsp_camera()
 {
-    init_result_ == ESP_FAIL;
+    init_result_ = ESP_FAIL;
+    fb_ = nullptr;
 }
 
 micro_rtsp_camera::~micro_rtsp_camera()
@@ -27,13 +28,21 @@ esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
 
 esp_err_t micro_rtsp_camera::deinitialize()
 {
+    if (fb_)
+    {
+        esp_camera_fb_return(fb_);
+        fb_ = nullptr;
+    }
     return init_result_ == ESP_OK ? esp_camera_deinit() : ESP_OK;
 }
 
 void micro_rtsp_camera::update_frame()
 {
     if (fb_)
+    {
         esp_camera_fb_return(fb_);
+        fb_ = nullptr;
+    }
 
     fb_ = esp_camera_fb_get();
 }

@@ -17,6 +17,9 @@ Supported protocols
   The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
   It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
   This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+  The video is encoded as Motion-JPEG (RTP payload 26) and streamed over RTP/UDP (default) or RTP/RTSP/TCP.
+  Boards with an onboard microphone (e.g. the Seeed Studio XIAO ESP32S3 SENSE) can additionally stream
+  G.711 a-law audio (RTP payload 8).
   The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
 
 - HTTP Motion JPEG
@@ -245,6 +248,73 @@ If this happens, for the user enter 'admin' and for the password the value that 
 
 RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
+
+### Transports
+
+By default RTP is sent over UDP (the client announces its RTP ports in the `SETUP` request).
+When the network filters or firewalls UDP traffic, force the RTP/RTSP/TCP (interleaved) transport in VLC:
+
+```sh
+vlc rtsp://esp32cam-rtsp.local:554/mjpeg/1 --rtsp-tcp
+```
+
+### Secure RTP (SRTP)
+
+The server can stream over Secure RTP (RFC 3711, crypto suite `AES_CM_128_HMAC_SHA1_80`).
+SRTP encrypts the RTP payload with AES-128 in counter mode and authenticates every packet
+with an HMAC-SHA1 tag, so the video cannot be watched or tampered with by someone sniffing
+the network.
+
+To enable it, build with the `MICRO_RTSP_ENABLE_SRTP` define, for example in `platformio.ini`:
+
+```ini
+build_flags =
+  -DMICRO_RTSP_ENABLE_SRTP
+```
+
+The keys are negotiated per session with the `a=crypto` attribute (RFC 4568) that the server
+advertises in its `DESCRIBE` and `SETUP` replies. A client that offers its own `a=crypto`
+in the `SETUP` request enables SRTP for that session as well. Receive the stream with FFmpeg
+(which picks up the `a=crypto` key automatically):
+
+```sh
+ffmpeg -rtsp_transport tcp -i rtsp://esp32cam-rtsp.local:554/mjpeg/1 -c copy out.mp4
+```
+
+> [!NOTE]
+> SRTP is intentionally **not** enabled by default: it requires an SRTP-capable client and
+> breaks plain players such as VLC. The `a=crypto` negotiation is handled by
+> `lib/micro-rtsp-server`.
+
+### Audio
+
+When the board has an onboard I2S microphone, an additional audio track is offered and streamed
+together with the video as G.711 a-law (PCMA, 8 kHz mono). VLC plays it automatically.
+Currently audio is enabled for the Seeed Studio XIAO ESP32S3 SENSE board (see `boards/` and the
+`MIC_I2S_*` defines). To enable it on another board, add the microphone I2S pins to its board
+configuration, for example:
+
+```json
+"'-D MIC_I2S_BCLK=17'",
+"'-D MIC_I2S_WS=42'",
+"'-D MIC_I2S_DIN=41'"
+```
+
+### ffmpeg
+
+The stream can be recorded to disk, for example:
+
+```sh
+ffmpeg -rtsp_transport tcp -i rtsp://esp32cam-rtsp.local:554/mjpeg/1 -c copy out.mp4
+```
+
+### Implementation
+
+The RTSP server is implemented by the `micro-rtsp-server` library (in `lib/micro-rtsp-server`),
+a small single-threaded server that supports multiple simultaneous clients, RTP/UDP and
+RTP/RTSP/TCP transports, and (optionally) an audio track. The video frames are captured with
+`esp32-camera`, decoded with the `micro-jpg` library to locate the JPEG quantization tables, and
+packetized into RFC 2435 (JPEG over RTP) packets.
 
 ## Connecting to the JPEG motion server
 

@@ -6,6 +6,7 @@
 
 #include <jpg.h>
 #include <micro_rtsp_streamer.h>
+#include <micro_rtsp_srtp.h>
 
 static unsigned char jpeg[8468] = {
     // SOI
@@ -81,29 +82,190 @@ void test_jpg_decode()
 void test_struct_sizes()
 {
     TEST_ASSERT_EQUAL(4, sizeof(rtp_over_tcp_hdr_t));
-    TEST_ASSERT_EQUAL(12, sizeof(rtp_hdr_t));
-    TEST_ASSERT_EQUAL(8, sizeof(jpeg_hdr_t));
-    TEST_ASSERT_EQUAL(4, sizeof(jpeg_hdr_qtable_t));
-    TEST_ASSERT_EQUAL(24, sizeof(jpeg_packet_t));
 }
 
-void test_bitfield()
+// Minimal video source used to exercise the streamer without hardware.
+class test_source : public micro_rtsp_source
 {
-    jpeg_hdr_t jpeg_hdr;
-    jpeg_hdr.tspec = 0x55;
-    jpeg_hdr.off = 0xAAAAAA;
-    TEST_ASSERT_EQUAL(0x55, jpeg_hdr.tspec);
-    TEST_ASSERT_EQUAL(0xAAAAAA, jpeg_hdr.off);
-    jpeg_hdr.tspec = 0xAA;
-    jpeg_hdr.off = 0x555555;
-    TEST_ASSERT_EQUAL(0xAA, jpeg_hdr.tspec);
-    TEST_ASSERT_EQUAL(0x555555, jpeg_hdr.off);
+public:
+    virtual void update_frame() override {}
+    virtual uint8_t *data() const override { return (uint8_t *)data_; }
+    virtual size_t width() const override { return 640; }
+    virtual size_t height() const override { return 480; }
+    virtual size_t size() const override { return size_; }
+
+    const uint8_t *data_;
+    size_t size_;
+};
+
+void test_streamer_packet()
+{
+    jpg jpg;
+    TEST_ASSERT_TRUE(jpg.decode(reinterpret_cast<const uint8_t *>(jpeg), sizeof(jpeg)));
+
+    test_source source;
+    source.data_ = jpg.jpeg_data_start;
+    source.size_ = (size_t)(jpg.jpeg_data_end - jpg.jpeg_data_start);
+
+    micro_rtsp_streamer streamer(source);
+
+    auto offset = (uint8_t *)jpg.jpeg_data_start;
+    size_t packet_size = 0;
+    auto packet = streamer.create_jpg_packet(
+        jpg.jpeg_data_start, jpg.jpeg_data_end, &offset, 90000,
+        jpg.quantization_table_luminance_ ? jpg.quantization_table_luminance_->data : nullptr,
+        jpg.quantization_table_chrominance_ ? jpg.quantization_table_chrominance_->data : nullptr,
+        packet_size);
+
+    TEST_ASSERT_NOT_NULL(packet);
+    // RTP-over-TCP framing header
+    TEST_ASSERT_EQUAL('$', packet[0]);
+    TEST_ASSERT_EQUAL(0, packet[1]);
+    TEST_ASSERT_EQUAL((packet_size - 4) >> 8, packet[2]);
+    TEST_ASSERT_EQUAL((packet_size - 4) & 0xff, packet[3]);
+    // RTP header: version 2 and JPEG payload type (26)
+    TEST_ASSERT_EQUAL(0x80, packet[4]);
+    TEST_ASSERT_EQUAL(26, packet[5] & 0x7f);
+    // First fragment carries the quantization tables:
+    // 4 ($) + 12 (RTP) + 8 (JPEG) + 4 (table header) + 128 (two tables) = 156
+    const size_t header_size = 156;
+    TEST_ASSERT_EQUAL(header_size + (size_t)(offset - jpg.jpeg_data_start), packet_size);
+    // Quantization table header: MBZ=0, precision=0, length=128 (big endian)
+    TEST_ASSERT_EQUAL(0x00, packet[24]);
+    TEST_ASSERT_EQUAL(0x00, packet[25]);
+    TEST_ASSERT_EQUAL(0x00, packet[26]);
+    TEST_ASSERT_EQUAL(128, packet[27]);
+
+    free(packet);
 }
 
-void test_default()
+// Known-answer test for SRTP (AES_CM_128_HMAC_SHA1_80), taken from the libsrtp
+// srtp_driver.c reference vectors: master key/salt from RFC 3711 B.3, RTP
+// packet with SSRC=0xcafebabe, seq=0x1234 and a 16 byte 0xab payload.
+void test_srtp_protect()
 {
-    rtp_over_tcp_hdr_t rtp_over_tcp_hdr;
-    TEST_ASSERT_EQUAL('$', rtp_over_tcp_hdr.magic);
+    const uint8_t master_key[16] = {
+        0xe1, 0xf9, 0x7a, 0x0d, 0x3e, 0x01, 0x8b, 0xe0,
+        0xd6, 0x4f, 0xa3, 0x2c, 0x06, 0xde, 0x41, 0x39};
+    const uint8_t master_salt[14] = {
+        0x0e, 0xc6, 0x75, 0xad, 0x49, 0x8a, 0xfe, 0xeb,
+        0xb6, 0x96, 0x0b, 0x3a, 0xab, 0xe6};
+
+    const uint8_t plaintext[28] = {
+        0x80, 0x0f, 0x12, 0x34, 0xde, 0xca, 0xfb, 0xad,
+        0xca, 0xfe, 0xba, 0xbe, 0xab, 0xab, 0xab, 0xab,
+        0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab,
+        0xab, 0xab, 0xab, 0xab};
+    const uint8_t expected[38] = {
+        0x80, 0x0f, 0x12, 0x34, 0xde, 0xca, 0xfb, 0xad,
+        0xca, 0xfe, 0xba, 0xbe, 0x4e, 0x55, 0xdc, 0x4c,
+        0xe7, 0x99, 0x78, 0xd8, 0x8c, 0xa4, 0xd2, 0x15,
+        0x94, 0x9d, 0x24, 0x02, 0xb7, 0x8d, 0x6a, 0xcc,
+        0x99, 0xea, 0x17, 0x9b, 0x8d, 0xbb};
+
+    micro_rtsp_srtp srtp;
+    TEST_ASSERT_TRUE(srtp.set_key_salt(master_key, master_salt));
+    TEST_ASSERT_TRUE(srtp.enabled());
+
+    uint8_t packet[38];
+    memcpy(packet, plaintext, sizeof(plaintext));
+    size_t len = sizeof(plaintext);
+    srtp.protect_rtp(packet, len);
+
+    TEST_ASSERT_EQUAL(38, len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, packet, sizeof(expected));
+}
+
+// ---- Helpers to build a minimal baseline JPEG for parser edge cases -------
+
+static size_t build_segment(uint8_t *out, uint8_t marker,
+                            const uint8_t *payload, size_t payload_len)
+{
+    out[0] = 0xff;
+    out[1] = marker;
+    out[2] = (uint8_t)((payload_len + 2) >> 8);
+    out[3] = (uint8_t)((payload_len + 2) & 0xff);
+    memcpy(out + 4, payload, payload_len);
+    return payload_len + 4;
+}
+
+// A DQT segment holding one 8-bit table: id byte + 64 zig-zag values.
+// Values are chosen so the two tables are distinguishable (id 1 -> +64).
+static size_t build_dqt(uint8_t *out, uint8_t id)
+{
+    uint8_t payload[65];
+    payload[0] = id;
+    for (int i = 0; i < 64; i++)
+        payload[i + 1] = (uint8_t)(i + (id ? 64 : 0));
+    return build_segment(out, 0xdb, payload, sizeof(payload));
+}
+
+// Builds a tiny baseline JPEG (16x16, 1 component). quant_ids gives the
+// quant table ids in the order they appear. When restart_markers is true a
+// DRI segment and two restart markers are inserted into the scan data.
+static size_t build_test_jpeg(uint8_t *out, size_t cap,
+                              const uint8_t *quant_ids, size_t n_quant,
+                              bool restart_markers)
+{
+    size_t n = 0;
+    out[n++] = 0xff; out[n++] = 0xd8; // SOI
+    for (size_t i = 0; i < n_quant; i++)
+        n += build_dqt(out + n, quant_ids[i]);
+    uint8_t sof[] = {8, 0, 16, 0, 16, 1, 0x11, 0};
+    n += build_segment(out + n, 0xc0, sof, sizeof(sof));
+    if (restart_markers)
+    {
+        uint8_t dri[] = {0, 2}; // restart interval of 2 MCUs
+        n += build_segment(out + n, 0xdd, dri, sizeof(dri));
+    }
+    uint8_t sos[] = {1, 0, 0, 0, 0x3f, 0};
+    n += build_segment(out + n, 0xda, sos, sizeof(sos));
+    static const uint8_t scan1[] = {0x11, 0x22, 0x33, 0xff, 0x00, 0x44, 0x55, 0x66};
+    memcpy(out + n, scan1, sizeof(scan1)); n += sizeof(scan1);
+    if (restart_markers)
+    {
+        out[n++] = 0xff; out[n++] = 0xd0; // RST0
+        static const uint8_t scan2[] = {0x77, 0x88, 0x99};
+        memcpy(out + n, scan2, sizeof(scan2)); n += sizeof(scan2);
+        out[n++] = 0xff; out[n++] = 0xd1; // RST1
+    }
+    out[n++] = 0xff; out[n++] = 0xd9; // EOI
+    (void)cap;
+    return n;
+}
+
+// Quant tables are assigned by their id, not by position, so a JPEG with the
+// chrominance table emitted before the luminance table is still parsed
+// correctly.
+void test_jpg_dqt_by_id()
+{
+    uint8_t buf[512];
+    jpg jpg;
+    uint8_t ids[] = {1, 0}; // chrominance first, then luminance
+    size_t len = build_test_jpeg(buf, sizeof(buf), ids, 2, false);
+    TEST_ASSERT_TRUE(jpg.decode(buf, len));
+    TEST_ASSERT_EQUAL_UINT8(0, jpg.quantization_table_luminance_->id);
+    TEST_ASSERT_EQUAL_UINT8(1, jpg.quantization_table_chrominance_->id);
+    for (int i = 0; i < 64; i++)
+    {
+        TEST_ASSERT_EQUAL_UINT8((uint8_t)i, jpg.quantization_table_luminance_->data[i]);
+        TEST_ASSERT_EQUAL_UINT8((uint8_t)(i + 64), jpg.quantization_table_chrominance_->data[i]);
+    }
+}
+
+// Restart markers (RST0..RST7) have no length field and are followed by more
+// scan data; the parser must skip them and find the EOI. The data region
+// preserves them: scan(8) + RST0(2) + scan2(3) + RST1(2) + EOI(2) = 17 bytes.
+void test_jpg_restart_markers()
+{
+    uint8_t buf[512];
+    jpg jpg;
+    uint8_t ids[] = {0, 1};
+    size_t len = build_test_jpeg(buf, sizeof(buf), ids, 2, true);
+    TEST_ASSERT_TRUE(jpg.decode(buf, len));
+    TEST_ASSERT_EQUAL_UINT32(17, jpg.jpeg_data_end - jpg.jpeg_data_start);
+    TEST_ASSERT_EQUAL_UINT8(0xff, jpg.jpeg_data_start[8]);
+    TEST_ASSERT_EQUAL_UINT8(0xd0, jpg.jpeg_data_start[9]);
 }
 
 void setup()
@@ -116,9 +278,11 @@ void setup()
 
     UNITY_BEGIN();
     RUN_TEST(test_jpg_decode);
+    RUN_TEST(test_jpg_dqt_by_id);
+    RUN_TEST(test_jpg_restart_markers);
     RUN_TEST(test_struct_sizes);
-    RUN_TEST(test_bitfield);
-    RUN_TEST(test_default);
+    RUN_TEST(test_streamer_packet);
+    RUN_TEST(test_srtp_protect);
     UNITY_END();
 }
 

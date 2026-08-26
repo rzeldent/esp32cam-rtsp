@@ -4,9 +4,7 @@
 #include <driver/i2c.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
-#include <OV2640.h>
 #include <ESPmDNS.h>
-#include <rtsp_server.h>
 #include <lookup_camera_effect.h>
 #include <lookup_camera_frame_size.h>
 #include <lookup_camera_gainceiling.h>
@@ -18,6 +16,7 @@
 
 #include <micro_rtsp_camera.h>
 #include <micro_rtsp_server.h>
+#include <micro_rtsp_audio_i2s.h>
 
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
@@ -50,14 +49,18 @@ auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").labe
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
 // Camera
-// OV2640 cam;
 // DNS Server
 DNSServer dnsServer;
-// RTSP Server
-// std::unique_ptr<rtsp_server> camera_server;
 
 micro_rtsp_camera camera;
+#ifdef MIC_I2S_BCLK
+// Optional audio: capture from the onboard I2S MEMS microphone and stream it
+// as G.711 a-law together with the video (see boards/*.json for the pins).
+micro_rtsp_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
+micro_rtsp_server server(camera, &audio);
+#else
 micro_rtsp_server server(camera);
+#endif
 
 // Web server
 WebServer web_server(80);
@@ -385,6 +388,18 @@ void setup()
 
   if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM && !psramInit())
     log_e("Failed to initialize PSRAM");
+
+#ifdef MIC_I2S_BCLK
+  if (!audio.begin())
+    log_e("Failed to initialize the I2S microphone");
+#endif
+
+#ifdef MICRO_RTSP_ENABLE_SRTP
+  // Stream video over Secure RTP (RFC 3711), negotiated with "a=crypto"
+  // (RFC 4568) in the DESCRIBE/SETUP replies.
+  server.set_srtp(true);
+  log_i("SRTP enabled");
+#endif
 
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);

@@ -1,51 +1,30 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
-// https://www.ietf.org/rfc/rfc2326#section-10.12
+// RTP over RTSP/TCP framing header (RFC 2326 section 10.12). This 4 byte
+// header is prepended to every RTP packet when the transport is "RTP/AVP/TCP"
+// (interleaved). The length field is the number of bytes of the encapsulated
+// RTP packet, in network byte order.
 typedef struct __attribute__((packed))
 {
-    char magic = '$'; // Magic encapsulation ASCII dollar sign (24 hexadecimal)
-    uint8_t channel;  // Channel identifier
-    uint16_t length;  // Network order
+    uint8_t magic;   // always '$' (0x24)
+    uint8_t channel; // channel identifier (0/1 = video, 2/3 = audio)
+    uint16_t length; // length of the encapsulated RTP packet (network order)
 } rtp_over_tcp_hdr_t;
 
-// RTP data header - http://www.ietf.org/rfc/rfc3550.txt
-typedef struct __attribute__((packed))
-{
-    uint16_t version : 2;   // protocol version
-    uint16_t padding : 1;   // padding flag
-    uint16_t extension : 1; // header extension flag
-    uint16_t cc : 4;        // CSRC count
-    uint16_t marker : 1;    // marker bit
-    uint16_t pt : 7;        // payload type
-    uint16_t seq : 16;      // sequence number
-    uint32_t ts;            // timestamp
-    uint32_t ssrc;          // synchronization source
-} rtp_hdr_t;
+// Fixed header sizes, in bytes.
+constexpr size_t rtp_over_tcp_hdr_size = sizeof(rtp_over_tcp_hdr_t); // 4
+constexpr size_t rtp_hdr_size = 12;                                  // RFC 3550
+constexpr size_t jpeg_hdr_size = 8;                                  // RFC 2435
+constexpr size_t jpeg_qtable_hdr_size = 4; // MBZ + precision + length
+constexpr size_t jpeg_qtable_size = 64;    // bytes in one quantization table
 
-// https://datatracker.ietf.org/doc/html/rfc2435
-typedef struct __attribute__((packed))
-{
-    uint32_t tspec : 8; // type-specific field
-    uint32_t off : 24;  // fragment byte offset
-    uint8_t type;       // id of jpeg decoder params
-    uint8_t q;          // Q values 0-127 indicate the quantization tables. JPEG types 0 and 1 (and their corresponding types 64 and 65)
-    uint8_t width;      // frame width in 8 pixel blocks
-    uint8_t height;     // frame height in 8 pixel blocks
-} jpeg_hdr_t;
+// Maximum number of JPEG scan bytes carried in a single RTP packet. Kept well
+// below the 1500 byte Ethernet MTU so RTP/UDP datagrams are never fragmented.
+constexpr size_t max_jpeg_payload_size = 1100;
 
-typedef struct __attribute__((packed))
-{
-    uint16_t dri;
-    uint16_t f : 1;
-    uint16_t l : 1;
-    uint16_t count : 14;
-} jpeg_hdr_rst_t;
-
-typedef struct __attribute__((packed))
-{
-    uint8_t mbz;
-    uint8_t precision;
-    uint16_t length;
-} jpeg_hdr_qtable_t;
+// RTP payload types used by this server (RFC 3551).
+constexpr uint8_t RTP_PAYLOAD_JPG = 26; // JPEG (RFC 2435)
+constexpr uint8_t RTP_PAYLOAD_PCMA = 8; // G.711 a-law, 8 kHz

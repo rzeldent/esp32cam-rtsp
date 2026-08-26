@@ -1,8 +1,0 @@
-{
-    "name": "RTSPServer",
-    "version": "1.0.0",
-    "description": "RTSP Server",
-    "dependencies": {
-        "contrem/arduino-timer": "^2.3.1"
-    }    
-}

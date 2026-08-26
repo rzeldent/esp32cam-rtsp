@@ -6,6 +6,11 @@ const jpg_section_t *jpg::find_jpg_section(const uint8_t **ptr, const uint8_t *e
     log_d("find_jpeg_section 0x%02x (%s)", flag, jpg_section_t::flag_name(flag));
     while (*ptr < end)
     {
+        // At least the framing and marker bytes must be present
+        const size_t remaining = (size_t)(end - *ptr);
+        if (remaining < 2)
+            break;
+
         // flag, len MSB, len LSB
         auto section = reinterpret_cast<const jpg_section_t *>((*ptr));
         if (section->framing != 0xff)
@@ -16,19 +21,37 @@ const jpg_section_t *jpg::find_jpg_section(const uint8_t **ptr, const uint8_t *e
 
         if (!jpg_section_t::is_valid_flag(section->flag))
         {
-            log_d("Unknown section 0x%02x", flag);
+            log_d("Unknown section 0x%02x", section->flag);
             return nullptr;
         }
 
-        // Advance pointer section has a length, so not SOI (0xd8) and EOI (0xd9)
-        *ptr += section->section_length();
+        // Length-less markers (SOI, EOI) are 2 bytes; the others carry a
+        // 2 byte length field which must also fit inside the buffer
+        const bool has_length = section->flag != jpg_section_t::jpg_section_flag::SOI &&
+                                section->flag != jpg_section_t::jpg_section_flag::EOI;
+        if (has_length && remaining < 4)
+        {
+            log_e("Truncated section 0x%02x", section->flag);
+            break;
+        }
+
+        // Advance pointer. Note: a section has a length, so not SOI (0xd8) and EOI (0xd9)
+        const size_t length = section->section_length();
+        if (length > remaining)
+        {
+            log_e("Section 0x%02x length %u exceeds remaining %u bytes",
+                  section->flag, (unsigned)length, (unsigned)remaining);
+            break;
+        }
+
+        *ptr += length;
         if (section->flag == flag)
         {
-            log_d("Found section 0x%02x (%s), %d bytes", flag, jpg_section_t::flag_name(section->flag), section->section_length());
+            log_d("Found section 0x%02x (%s), %d bytes", flag, jpg_section_t::flag_name(section->flag), (int)length);
             return section;
         }
 
-        log_d("Skipping section: 0x%02x (%s), %d bytes", section->flag, jpg_section_t::flag_name(section->flag), section->section_length());
+        log_d("Skipping section: 0x%02x (%s), %d bytes", section->flag, jpg_section_t::flag_name(section->flag), (int)length);
     }
 
     // Not found
@@ -50,36 +73,34 @@ bool jpg::decode(const uint8_t *data, size_t size)
         return false;
     }
 
-    // First quantization table (Luminance - black & white images)
-    const jpg_section_t *quantization_table_section;
-    if (!(quantization_table_section = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
+    // Quantization tables. ESP32-CAM emits one segment per table, luminance
+    // (id=0) followed by chrominance (id=1), but the tables are assigned by
+    // their id so the result is correct even if they appear in a different
+    // order.
+    quantization_table_luminance_ = nullptr;
+    quantization_table_chrominance_ = nullptr;
+    while (quantization_table_luminance_ == nullptr || quantization_table_chrominance_ == nullptr)
     {
-        log_e("No quantization_table_luminance section found");
-        return false;
+        const jpg_section_t *quantization_table_section = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT);
+        if (quantization_table_section == nullptr)
+        {
+            log_e("No (more) quantization table sections found");
+            return false;
+        }
+
+        if (quantization_table_section->data_length() != sizeof(jpg_section_dqt_t))
+        {
+            log_w("Invalid quantization table section length. Expected %d but read %d",
+                  sizeof(jpg_section_dqt_t), quantization_table_section->data_length());
+            return false;
+        }
+
+        auto table = reinterpret_cast<const jpg_section_dqt_t *>(quantization_table_section->data);
+        if (table->id == 0)
+            quantization_table_luminance_ = table;
+        else if (table->id == 1)
+            quantization_table_chrominance_ = table;
     }
-
-    if (quantization_table_section->data_length() != sizeof(jpg_section_dqt_t))
-    {
-        log_w("Invalid length of quantization_table_luminance section. Expected %d but read %d", sizeof(jpg_section_dqt_t), quantization_table_section->data_length());
-        return false;
-    }
-
-    quantization_table_luminance_ = reinterpret_cast<const jpg_section_dqt_t *>(quantization_table_section->data);
-
-    // Second quantization table (Chrominance - color images)
-    if (!(quantization_table_section = find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::DQT)))
-    {
-        log_w("No quantization_table_chrominance section found");
-        return false;
-    }
-
-    if (quantization_table_section->data_length() != sizeof(jpg_section_dqt_t))
-    {
-        log_w("Invalid length of quantization_table_chrominance section. Expected %d but read %d", sizeof(jpg_section_dqt_t), quantization_table_section->data_length());
-        return false;
-    }
-
-    quantization_table_chrominance_ = reinterpret_cast<const jpg_section_dqt_t *>(quantization_table_section->data);
 
     // Start of scan
     if (!find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::SOS))
@@ -92,9 +113,26 @@ bool jpg::decode(const uint8_t *data, size_t size)
     jpeg_data_start = ptr;
 
     log_d("Skipping over data sections");
-    // Scan over all the sections. 0xff followed by not zero, is a new section
-    while (ptr < end - 1 && (ptr[0] != 0xff || ptr[1] == 0))
-        ptr++;
+    // Skip the entropy-coded bytes up to the next marker (0xff followed by a
+    // non-zero byte). Stuffed bytes (0xff 0x00) are part of the data. When a
+    // restart marker (RST0..RST7, which have no length field) is encountered
+    // there is more entropy-coded data after it, so keep scanning.
+    while (ptr < end - 1)
+    {
+        while (ptr < end - 1 && (ptr[0] != 0xff || ptr[1] == 0))
+            ptr++;
+        if (ptr >= end - 1)
+            break;
+
+        const uint8_t marker = ptr[1];
+        if (marker >= jpg_section_t::jpg_section_flag::RST0 &&
+            marker <= jpg_section_t::jpg_section_flag::RST7)
+        {
+            ptr += 2;
+            continue;
+        }
+        break;
+    }
 
     // Check if marker is an end of image marker
     if (!find_jpg_section(&ptr, end, jpg_section_t::jpg_section_flag::EOI))

@@ -1,82 +1,170 @@
 #include <stddef.h>
-#include <memory.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
 #include <esp32-hal-log.h>
+#include <esp_random.h>
 
 #include "micro_rtsp_streamer.h"
-#include "esp_random.h"
 
 micro_rtsp_streamer::micro_rtsp_streamer(const micro_rtsp_source &source)
-    : source_(source)
+    : source_(source), srtp_(nullptr)
 {
-    // Random number
-    ssrc_ = esp_random();
-    sequence_number_ = 0;
+    video_ssrc_ = esp_random();
+    video_sequence_number_ = 0;
+
+    audio_ssrc_ = esp_random();
+    audio_timestamp_ = 0;
+    audio_sequence_number_ = 0;
 }
 
-rtp_over_tcp_hdr_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quantization_table_luminance, const uint8_t *quantization_table_chrominance)
+uint8_t *micro_rtsp_streamer::create_jpg_packet(
+    const uint8_t *jpg_scan, const uint8_t *jpg_scan_end,
+    uint8_t **jpg_offset, const uint32_t timestamp,
+    const uint8_t *quant_lum, const uint8_t *quant_chr,
+    size_t &packet_size)
 {
-    log_v("jpg_scan:0x%08x, jpg_scan_end:0x%08x, jpg_offset:0x%08x, timestamp:%d, quantization_table_luminance:0x%08x, quantization_table_chrominance:0x%08x", jpg_scan, jpg_scan_end, jpg_offset, timestamp, quantization_table_luminance, quantization_table_chrominance);
+    log_v("jpg_scan:%p, jpg_scan_end:%p, jpg_offset:%p, timestamp:%u",
+          jpg_scan, jpg_scan_end, (const void *)*jpg_offset, timestamp);
 
-    // The MTU of wireless networks is 2,312 bytes. This size includes the packet headers.
-    const auto isFirstFragment = jpg_scan == *jpg_offset;
-    const auto include_quantization_tables = isFirstFragment && quantization_table_luminance != nullptr && quantization_table_chrominance != nullptr;
-    // Quantization tables musty be included in the first packet
-    const auto headers_size = include_quantization_tables ? sizeof(jpeg_packet_with_quantization_t) : sizeof(jpeg_packet_t);
-    const auto payload_size = max_wifi_mtu - headers_size;
+    const auto is_first_fragment = (jpg_scan == *jpg_offset);
+    const auto include_quantization_tables = is_first_fragment && quant_lum != nullptr && quant_chr != nullptr;
 
-    const auto jpg_bytes_left = jpg_scan_end - *jpg_offset;
-    const bool isLastFragment = jpg_bytes_left <= payload_size;
-    const auto jpg_bytes = isLastFragment ? jpg_bytes_left : payload_size;
-    const uint16_t packet_size = headers_size + jpg_bytes;
+    // Number of JPEG scan bytes in this packet, kept below the Ethernet MTU
+    // so a RTP/UDP datagram is never fragmented.
+    const auto jpg_bytes_left = (size_t)(jpg_scan_end - *jpg_offset);
+    const auto jpg_bytes = std::min(max_jpeg_payload_size, jpg_bytes_left);
+    const auto is_last_fragment = (jpg_bytes_left == jpg_bytes);
 
-    const auto packet = static_cast<jpeg_packet_t *>(calloc(1, packet_size));
+    const size_t header_size = rtp_over_tcp_hdr_size + rtp_hdr_size + jpeg_hdr_size
+        + (include_quantization_tables ? (jpeg_qtable_hdr_size + 2 * jpeg_qtable_size) : 0);
+    // Length of the RTP packet (without the 4 byte '$' header), before SRTP
+    size_t rtp_len = header_size - rtp_over_tcp_hdr_size + jpg_bytes;
+    // Reserve room for the SRTP authentication tag when enabled
+    const size_t tag_size = srtp_ ? srtp_->tag_size() : 0;
+    const size_t buffer_size = rtp_over_tcp_hdr_size + rtp_len + tag_size;
 
-    // 4 bytes RTP over TCP header
-    packet->rtp_over_tcp_hdr.channel = 0;
-    packet->rtp_over_tcp_hdr.length = packet_size;
-    log_v("rtp_over_tcp_hdr_t={.magic=%c,.channel=%u,.length=%u}", packet->rtp_over_tcp_hdr.magic, packet->rtp_over_tcp_hdr.channel, packet->rtp_over_tcp_hdr.length);
+    auto packet = static_cast<uint8_t *>(calloc(1, buffer_size));
+    auto p = packet;
 
-    // 12 bytes RTP header
-    packet->rtp_hdr.version = 2;
-    packet->rtp_hdr.marker = isLastFragment;
-    packet->rtp_hdr.pt = RTP_PAYLOAD_JPG;
-    packet->rtp_hdr.seq = sequence_number_;
-    packet->rtp_hdr.ts = timestamp;
-    packet->rtp_hdr.ssrc = ssrc_;
-    log_v("rtp_hdr={.version:%u,.padding:%u,.extension:%u,.cc:%u,.marker:%u,.pt:%u,.seq:%u,.ts:%u,.ssrc:%u}", packet->rtp_hdr.version, packet->rtp_hdr.padding, packet->rtp_hdr.extension, packet->rtp_hdr.cc, packet->rtp_hdr.marker, packet->rtp_hdr.pt, packet->rtp_hdr.seq, packet->rtp_hdr.ts, packet->rtp_hdr.ssrc);
+    // ---- RTP over TCP framing header ($, channel; length is set at the end,
+    //      after optional SRTP protection has grown the RTP packet) ----
+    *p++ = '$';
+    *p++ = 0; // video RTP channel
+    p += 2;
 
-    // 8 bytes JPEG payload header
-    packet->jpeg_hdr.tspec = 0;                                                // type-specific field
-    packet->jpeg_hdr.off = (uint32_t)(*jpg_offset - jpg_scan);                 // fragment byte offset (24 bits in jpg)
-    packet->jpeg_hdr.type = 0;                                                 // id of jpeg decoder params
-    packet->jpeg_hdr.q = (uint8_t)(include_quantization_tables ? 0x80 : 0x5e); // quantization factor (or table id) 5eh=94d
-    packet->jpeg_hdr.width = (uint8_t)(source_.width() >> 3);                           // frame width in 8 pixel blocks
-    packet->jpeg_hdr.height = (uint8_t)(source_.height() >> 3);                         // frame height in 8 pixel blocks
-    log_v("jpeg_hdr={.tspec:%u,.off:0x%6x,.type:0x2%x,.q:%u,.width:%u.height:%u}", packet->jpeg_hdr.tspec, packet->jpeg_hdr.off, packet->jpeg_hdr.type, packet->jpeg_hdr.q, packet->jpeg_hdr.width, packet->jpeg_hdr.height);
+    // ---- RTP header (RFC 3550), all fields network byte order ----
+    *p++ = 0x80;                                                                     // V=2, P=0, X=0, CC=0
+    *p++ = RTP_PAYLOAD_JPG | (is_last_fragment ? 0x80 : 0x00);                       // marker + payload type
+    *p++ = (uint8_t)(video_sequence_number_ >> 8);                                   // sequence number
+    *p++ = (uint8_t)(video_sequence_number_ & 0xff);
+    *p++ = (uint8_t)(timestamp >> 24);                                               // timestamp (90 kHz)
+    *p++ = (uint8_t)((timestamp >> 16) & 0xff);
+    *p++ = (uint8_t)((timestamp >> 8) & 0xff);
+    *p++ = (uint8_t)(timestamp & 0xff);
+    *p++ = (uint8_t)(video_ssrc_ >> 24);                                             // synchronization source
+    *p++ = (uint8_t)((video_ssrc_ >> 16) & 0xff);
+    *p++ = (uint8_t)((video_ssrc_ >> 8) & 0xff);
+    *p++ = (uint8_t)(video_ssrc_ & 0xff);
 
-    // Only in first packet of the frame
+    // ---- JPEG payload header (RFC 2435) ----
+    const uint32_t fragment_offset = (uint32_t)(*jpg_offset - jpg_scan);
+    *p++ = 0x00;                                                     // type-specific field
+    *p++ = (uint8_t)((fragment_offset >> 16) & 0xff);                // fragment offset (24 bit)
+    *p++ = (uint8_t)((fragment_offset >> 8) & 0xff);
+    *p++ = (uint8_t)(fragment_offset & 0xff);
+    *p++ = 0x00;                                                     // type: standard baseline JPEG
+    *p++ = include_quantization_tables ? 0x80 : 0x5e;                // q: 0x80 = tables follow, otherwise 94
+    *p++ = (uint8_t)(source_.width() >> 3);                          // frame width in 8 pixel blocks
+    *p++ = (uint8_t)(source_.height() >> 3);                         // frame height in 8 pixel blocks
+
+    // ---- Quantization tables (only in the first fragment of a frame) ----
     if (include_quantization_tables)
     {
-        auto packet_with_quantization = reinterpret_cast<jpeg_packet_with_quantization_t *>(packet);
-        packet_with_quantization->jpeg_hdr_qtable.mbz = 0;
-        packet_with_quantization->jpeg_hdr_qtable.precision = 0; // 8 bit precision
-        packet_with_quantization->jpeg_hdr_qtable.length = jpeg_quantization_table_length + jpeg_quantization_table_length;
-        log_v("jpeg_hdr_qtable={.mbz:%u,.precision:%u,.length:%u}", packet_with_quantization->jpeg_hdr_qtable.mbz, packet_with_quantization->jpeg_hdr_qtable.precision, packet_with_quantization->jpeg_hdr_qtable.length);
-        memcpy(packet_with_quantization->quantization_table_luminance, quantization_table_luminance, jpeg_quantization_table_length);
-        memcpy(packet_with_quantization->quantization_table_chrominance, quantization_table_chrominance, jpeg_quantization_table_length);
-        // Copy JPG data
-        memcpy(packet_with_quantization->jpeg_data, *jpg_offset, jpg_bytes);
-    }
-    else
-    {
-        // Copy JPG data
-        memcpy(packet->jpeg_data, *jpg_offset, jpg_bytes);
+        *p++ = 0x00; // MBZ
+        *p++ = 0x00; // 8 bit precision
+        const uint16_t table_length = 2 * jpeg_qtable_size;
+        *p++ = (uint8_t)(table_length >> 8);
+        *p++ = (uint8_t)(table_length & 0xff);
+        memcpy(p, quant_lum, jpeg_qtable_size);
+        p += jpeg_qtable_size;
+        memcpy(p, quant_chr, jpeg_qtable_size);
+        p += jpeg_qtable_size;
     }
 
-    // Update JPG offset
+    // ---- JPEG scan data ----
+    memcpy(p, *jpg_offset, jpg_bytes);
+
+    // ---- Optional SRTP protection (encrypts the payload, appends a tag) ----
+    if (srtp_)
+        srtp_->protect_rtp(packet + rtp_over_tcp_hdr_size, rtp_len);
+
+    // Total size of the buffer handed to the caller (4 byte '$' header +
+    // the possibly protected RTP packet)
+    packet_size = rtp_over_tcp_hdr_size + rtp_len;
+
+    // RTP over TCP framing header: length of the (possibly protected) RTP packet
+    packet[2] = (uint8_t)(rtp_len >> 8);
+    packet[3] = (uint8_t)(rtp_len & 0xff);
+
+    // Advance the scan offset and RTP sequence number
     *jpg_offset += jpg_bytes;
-    // Update sequence number
-    sequence_number_++;
+    video_sequence_number_++;
 
-    return (rtp_over_tcp_hdr_t *)packet;
+    log_v("packet_size:%u, fragment_offset:%u, is_first:%u, is_last:%u, srtp:%u",
+          packet_size, fragment_offset, is_first_fragment, is_last_fragment, srtp_ != nullptr);
+    return packet;
+}
+
+uint8_t *micro_rtsp_streamer::create_audio_packet(
+    const uint8_t *data, size_t len, bool marker, size_t &packet_size)
+{
+    const size_t header_size = rtp_over_tcp_hdr_size + rtp_hdr_size;
+    // Length of the RTP packet (without the 4 byte '$' header), before SRTP
+    size_t rtp_len = header_size - rtp_over_tcp_hdr_size + len;
+    // Reserve room for the SRTP authentication tag when enabled
+    const size_t tag_size = srtp_ ? srtp_->tag_size() : 0;
+    const size_t buffer_size = rtp_over_tcp_hdr_size + rtp_len + tag_size;
+
+    auto packet = static_cast<uint8_t *>(calloc(1, buffer_size));
+    auto p = packet;
+
+    // ---- RTP over TCP framing header ($, channel; length set at the end) ----
+    *p++ = '$';
+    *p++ = 2; // audio RTP channel
+    p += 2;
+
+    // ---- RTP header (RFC 3550), all fields network byte order ----
+    *p++ = 0x80;                                                       // V=2, P=0, X=0, CC=0
+    *p++ = RTP_PAYLOAD_PCMA | (marker ? 0x80 : 0x00);                  // marker + payload type
+    *p++ = (uint8_t)(audio_sequence_number_ >> 8);                     // sequence number
+    *p++ = (uint8_t)(audio_sequence_number_ & 0xff);
+    *p++ = (uint8_t)(audio_timestamp_ >> 24);                          // timestamp (8 kHz)
+    *p++ = (uint8_t)((audio_timestamp_ >> 16) & 0xff);
+    *p++ = (uint8_t)((audio_timestamp_ >> 8) & 0xff);
+    *p++ = (uint8_t)(audio_timestamp_ & 0xff);
+    *p++ = (uint8_t)(audio_ssrc_ >> 24);                               // synchronization source
+    *p++ = (uint8_t)((audio_ssrc_ >> 16) & 0xff);
+    *p++ = (uint8_t)((audio_ssrc_ >> 8) & 0xff);
+    *p++ = (uint8_t)(audio_ssrc_ & 0xff);
+
+    // ---- a-law samples ----
+    memcpy(p, data, len);
+
+    // ---- Optional SRTP protection (encrypts the payload, appends a tag) ----
+    if (srtp_)
+        srtp_->protect_rtp(packet + rtp_over_tcp_hdr_size, rtp_len);
+
+    // Total size of the buffer handed to the caller (4 byte '$' header +
+    // the possibly protected RTP packet)
+    packet_size = rtp_over_tcp_hdr_size + rtp_len;
+
+    // RTP over TCP framing header: length of the (possibly protected) RTP packet
+    packet[2] = (uint8_t)(rtp_len >> 8);
+    packet[3] = (uint8_t)(rtp_len & 0xff);
+
+    audio_sequence_number_++;
+    audio_timestamp_ += (uint32_t)len; // one byte == one 8 kHz sample
+
+    return packet;
 }
