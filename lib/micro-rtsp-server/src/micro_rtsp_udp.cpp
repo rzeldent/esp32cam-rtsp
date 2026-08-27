@@ -1,6 +1,5 @@
-// Include our own header first so Arduino's IPAddress.h is processed before
-// the lwIP headers below (lwIP defines INADDR_NONE/INADDR_ANY macros that
-// would otherwise break IPAddress.h's extern declarations).
+// Include our own header first so Arduino's IPAddress.h is processed before the lwIP headers below
+// lwIP defines INADDR_NONE/INADDR_ANY macros that would otherwise break IPAddress.h's extern declarations.
 #include "micro_rtsp_udp.h"
 
 #include <esp32-hal-log.h>

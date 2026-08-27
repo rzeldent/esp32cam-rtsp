@@ -73,9 +73,9 @@ private:
     void activate_srtp();
 
     bool audio_enabled_;
-    bool srtp_enabled_;    // server configured to always use SRTP
-    bool srtp_requested_;  // client offered a=crypto in the SETUP body
-    bool srtp_active_;     // SRTP in use for this session
+    bool srtp_enabled_;   // server configured to always use SRTP
+    bool srtp_requested_; // client offered a=crypto in the SETUP body
+    bool srtp_active_;    // SRTP in use for this session
 
     micro_rtsp_srtp srtp_;
 

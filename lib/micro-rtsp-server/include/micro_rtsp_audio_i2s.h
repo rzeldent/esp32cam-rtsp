@@ -1,16 +1,16 @@
 #pragma once
 
-#include <micro_rtsp_audio_source.h>
+#include <micro_rtsp_source_audio.h>
 
 #include <stdint.h>
 
-// Captures audio from an I2S MEMS microphone, downsamples it to 8 kHz mono
-// and encodes it to G.711 a-law so it can be streamed over RTP (payload 8).
+// Captures audio from an I2S MEMS microphone, downsamples it to 8 kHz mono and encodes it to G.711 a-law so it can be streamed over RTP (payload 8).
 //
 // Example (Seeed Studio XIAO ESP32S3 Sense onboard microphone):
 //   micro_rtsp_audio_i2s audio(17 /* bclk */, 42 /* ws */, 41 /* din */);
 //   audio.begin();
-class micro_rtsp_audio_i2s : public micro_rtsp_audio_source
+
+class micro_rtsp_audio_i2s : public micro_rtsp_source_audio
 {
 public:
     // bclk_pin - I2S bit clock (BCK), ws_pin - word select (WS), data_pin - data in (DIN)
@@ -22,11 +22,10 @@ public:
 
     virtual bool update_audio();
 
-    virtual const uint8_t *data() const { return alaw_buffer_; }
-    virtual size_t size() const { return alaw_size_; }
-
-    virtual uint32_t sample_rate() const { return 8000; }
-    virtual uint8_t channels() const { return 1; }
+    virtual const uint8_t *data() const;
+    virtual size_t size() const;
+    virtual uint32_t sample_rate() const;
+    virtual uint8_t channels() const;
 
 private:
     static uint8_t linear_to_alaw(int16_t sample);

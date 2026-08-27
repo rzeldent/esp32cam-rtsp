@@ -3,8 +3,7 @@
 
 #include "micro_rtsp_audio_i2s.h"
 
-// Captures 16 kHz mono 16-bit PCM and downsamples it to 8 kHz before
-// encoding to G.711 a-law (one byte per sample).
+// Captures 16 kHz mono 16-bit PCM and downsamples it to 8 kHz before encoding to G.711 a-law (one byte per sample).
 static constexpr uint32_t i2s_sample_rate = 16000;
 static constexpr uint32_t output_sample_rate = 8000;
 
@@ -84,7 +83,6 @@ bool micro_rtsp_audio_i2s::update_audio()
     }
 
     const size_t samples_read = bytes_read / sizeof(int16_t);
-
     // Downsample 16 kHz -> 8 kHz (take every second sample) and encode a-law
     alaw_size_ = 0;
     for (size_t i = 0; i < samples_read && alaw_size_ < alaw_capacity_; i += 2)
@@ -93,12 +91,33 @@ bool micro_rtsp_audio_i2s::update_audio()
     return alaw_size_ > 0;
 }
 
+const uint8_t *micro_rtsp_audio_i2s::data() const
+{
+    return alaw_buffer_;
+}
+
+size_t micro_rtsp_audio_i2s::size() const
+{
+    return alaw_size_;
+}
+
+uint32_t micro_rtsp_audio_i2s::sample_rate() const
+{
+    return 8000;
+}
+
+uint8_t micro_rtsp_audio_i2s::channels() const
+{
+    return 1;
+}
+
 // G.711 a-law encoder (ITU-T G.711), 16 bit PCM in -> 8 bit a-law out.
 uint8_t micro_rtsp_audio_i2s::linear_to_alaw(int16_t pcm)
 {
     uint8_t sign = (pcm >> 8) & 0x80;
     if (sign != 0)
         pcm = (int16_t)-pcm;
+        
     if (pcm > 32635)
         pcm = 32635;
 

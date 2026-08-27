@@ -4,9 +4,12 @@
 #include <stdint.h>
 
 // Interface for a video source
-class micro_rtsp_source
+class micro_rtsp_source_video
 {
 public:
+    virtual ~micro_rtsp_source_video() = default;
+
+    // Capture the next frame. Returns true when a new frame is available (data()/size() are valid).
     virtual void update_frame() = 0;
 
     virtual uint8_t *data() const = 0;

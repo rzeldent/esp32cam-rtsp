@@ -6,13 +6,10 @@
 #include <stdint.h>
 
 // Thin RAII wrapper around a raw lwIP UDP socket, used for RTP transport.
-// Each datagram is sent with a single sendto() call; the Arduino WiFiUDP
-// class instead copies every byte individually, which is far too slow for a
-// multi-fragment JPEG/RTP stream.
+// Each datagram is sent with a single sendto() call; the Arduino WiFiUDP class instead copies every byte individually, which is far too slow for a multi-fragment JPEG/RTP stream.
 //
 // Note: this header includes IPAddress.h before any lwIP header on purpose.
-// lwIP's inet.h defines INADDR_NONE/INADDR_ANY as macros, which would break
-// IPAddress.h's `extern IPAddress INADDR_NONE;` if lwIP were included first.
+// lwIP's inet.h defines INADDR_NONE/INADDR_ANY as macros, which would break IPAddress.h's `extern IPAddress INADDR_NONE;` if lwIP were included first.
 class micro_rtsp_udp
 {
 public:

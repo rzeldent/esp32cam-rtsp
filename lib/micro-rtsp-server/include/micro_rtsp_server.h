@@ -7,8 +7,8 @@
 #include <list>
 #include <memory>
 
-#include "micro_rtsp_audio_source.h"
-#include "micro_rtsp_camera.h"
+#include "micro_rtsp_source_audio.h"
+#include "micro_rtsp_source_video.h"
 #include "micro_rtsp_jpeg_header.h"
 #include "micro_rtsp_requests.h"
 #include "micro_rtsp_srtp.h"
@@ -20,29 +20,27 @@ class micro_rtsp_server : WiFiServer
 public:
 	// audio_source is optional. When set, an audio track (G.711 a-law) is
 	// offered to the clients and streamed alongside the video.
-	micro_rtsp_server(micro_rtsp_source &source, micro_rtsp_audio_source *audio_source = nullptr);
+	micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source = nullptr);
 	~micro_rtsp_server();
 
 	void begin(unsigned short port = 554);
 	void end();
 
-	unsigned get_frame_interval() const { return frame_interval_; }
-	unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }
+	unsigned get_frame_interval() const;
+	unsigned set_frame_interval(unsigned value);
 
-	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its
-	// SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and
-	// SETUP replies and encrypts the outgoing RTP streams. A client that
-	// offers its own "a=crypto" enables SRTP for that session as well.
-	void set_srtp(bool enabled) { srtp_enabled_ = enabled; }
+	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and SETUP replies and encrypts the outgoing RTP streams.
+	// A client that offers its own "a=crypto" enables SRTP for that session as well.
+	void set_srtp(bool enabled);
 
 	void loop();
 
-	size_t clients() const { return clients_.size(); }
+	size_t clients() const;
 
 	class rtsp_client : public WiFiClient, public micro_rtsp_requests
 	{
 	public:
-		rtsp_client(const WiFiClient &client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
+		rtsp_client(const WiFiClient &client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
 		~rtsp_client();
 
 		void handle_request();
@@ -67,11 +65,11 @@ private:
 	// Returns false when the packet could not be sent and should be retried.
 	bool send_packet(rtsp_client &client, micro_rtsp_udp &udp, const uint8_t *packet, size_t packet_size, uint16_t dest_port);
 	bool start_sending_frame(); // capture + decode a frame, begin paced transmission
-	bool send_next_fragment();  // send one fragment, false when the frame is done
+	bool send_next_fragment();	// send one fragment, false when the frame is done
 	void send_audio_chunk();
 
-	micro_rtsp_source &source_;
-	micro_rtsp_audio_source *audio_source_;
+	micro_rtsp_source_video &video_source_;
+	micro_rtsp_source_audio *audio_source_;
 	bool srtp_enabled_;
 	unsigned frame_interval_;
 	unsigned long next_frame_update_;
@@ -79,7 +77,7 @@ private:
 	unsigned long next_check_client_;
 	uint16_t rtp_udp_port_;
 	uint16_t audio_udp_port_;
-	uint16_t rtsp_port_; // RTSP TCP port, advertised in the RTP-Info URL
+	uint16_t rtsp_port_;	   // RTSP TCP port, advertised in the RTP-Info URL
 	micro_rtsp_udp rtp_udp_;   // UDP socket for the RTP video stream
 	micro_rtsp_udp audio_udp_; // UDP socket for the RTP audio stream
 	std::list<std::unique_ptr<rtsp_client>> clients_;
@@ -90,11 +88,11 @@ private:
 	// burst-saturated.
 	bool streaming_frame_;
 	uint8_t *frame_data_start_; // start of the scan data (first fragment)
-	uint8_t *frame_scan_end_;   // end of the scan data
-	const uint8_t *quant_lum_;  // quantization tables (valid while streaming)
+	uint8_t *frame_scan_end_;	// end of the scan data
+	const uint8_t *quant_lum_;	// quantization tables (valid while streaming)
 	const uint8_t *quant_chr_;
-	uint32_t frame_timestamp_;        // RTP timestamp (90 kHz) for this frame
-	unsigned fragment_send_interval_; // ms between two fragments
+	uint32_t frame_timestamp_;		   // RTP timestamp (90 kHz) for this frame
+	unsigned fragment_send_interval_;  // ms between two fragments
 	unsigned long next_fragment_send_; // when to send the next fragment
 
 	// Cached JPEG header (quantization tables + scan data start offset),

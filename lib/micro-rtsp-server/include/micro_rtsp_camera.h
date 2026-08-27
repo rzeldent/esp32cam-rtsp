@@ -1,14 +1,13 @@
 #pragma once
 
-#include <micro_rtsp_source.h>
+#include <micro_rtsp_source_video.h>
 #include <esp_camera.h>
 #include <map>
 
 // Video source that captures JPEG frames using the esp32-camera driver.
-// Each frame is copied out of the camera framebuffer and the framebuffer is
-// returned immediately, so the camera keeps capturing while the copied frame
-// is streamed (decoupling capture from transmission).
-class micro_rtsp_camera : public micro_rtsp_source
+// Each frame is copied out of the camera framebuffer and the framebuffer is returned immediately,
+//  so the camera keeps capturing while the copied frame is streamed (decoupling capture from transmission).
+class micro_rtsp_camera : public micro_rtsp_source_video
 {
 public:
     micro_rtsp_camera();
@@ -39,8 +38,8 @@ private:
     void free_jpeg_buffer();
 
     esp_err_t init_result_;
-    camera_fb_t *fb_;            // transient: held only while copying a frame
-    uint8_t *jpeg_buffer_;       // owned copy of the current JPEG frame
+    camera_fb_t *fb_;      // transient: held only while copying a frame
+    uint8_t *jpeg_buffer_; // owned copy of the current JPEG frame
     size_t jpeg_buffer_capacity_;
     size_t jpeg_size_;
     size_t frame_width_;

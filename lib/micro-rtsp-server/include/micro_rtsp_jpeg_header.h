@@ -21,10 +21,10 @@ public:
     // when the frame cannot be decoded.
     bool prepare(const uint8_t *data, size_t size);
 
-    const uint8_t *scan_start() const { return scan_start_; }
-    const uint8_t *scan_end() const { return scan_end_; }
-    const uint8_t *luminance() const { return quant_lum_; }
-    const uint8_t *chrominance() const { return quant_chr_; }
+    const uint8_t *scan_start() const;
+    const uint8_t *scan_end() const;
+    const uint8_t *luminance() const;
+    const uint8_t *chrominance() const;
 
 private:
     // Frame-independent header info, constant for a fixed quality/frame size.

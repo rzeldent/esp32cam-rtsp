@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <micro_rtsp_source.h>
+#include <micro_rtsp_source_video.h>
 #include <micro_rtsp_structs.h>
 #include <micro_rtsp_srtp.h>
 
@@ -14,12 +14,11 @@
 class micro_rtsp_streamer
 {
 public:
-    explicit micro_rtsp_streamer(const micro_rtsp_source &source);
+    explicit micro_rtsp_streamer(const micro_rtsp_source_video &source);
 
-    // Enable SRTP (RFC 3711) protection of the generated RTP packets. When
-    // set, every packet is encrypted and carries an authentication tag.
-    void set_srtp(micro_rtsp_srtp *srtp) { srtp_ = srtp; }
-    micro_rtsp_srtp *srtp() const { return srtp_; }
+    // Enable SRTP (RFC 3711) protection of the generated RTP packets. When set, every packet is encrypted and carries an authentication tag.
+    void set_srtp(micro_rtsp_srtp *srtp);
+    micro_rtsp_srtp *srtp() const ;
 
     // Create a single RTP/JPEG packet for the current JPEG fragment.
     //   jpg_scan     - pointer to the first byte of the JPEG scan data
@@ -51,7 +50,7 @@ public:
     static size_t max_payload_size() { return max_jpeg_payload_size; }
 
 private:
-    const micro_rtsp_source &source_;
+    const micro_rtsp_source_video &source_;
     micro_rtsp_srtp *srtp_;
 
     uint32_t video_ssrc_;
@@ -61,10 +60,8 @@ private:
     uint32_t audio_timestamp_;
     uint16_t audio_sequence_number_;
 
-    // Fixed-size buffer used to build each RTP packet. Sized for the largest
-    // possible packet: a JPEG fragment including quantization tables and the
-    // SRTP authentication tag. Reusing a single buffer avoids a malloc/free
-    // per RTP packet, which otherwise fragments the heap while streaming.
+    // Fixed-size buffer used to build each RTP packet. Sized for the largest possible packet: a JPEG fragment including quantization tables and the SRTP authentication tag.
+    // Reusing a single buffer avoids a malloc/free per RTP packet, which otherwise fragments the heap while streaming.
     static constexpr size_t max_packet_buffer_size = rtp_over_tcp_hdr_size + rtp_hdr_size + jpeg_hdr_size + jpeg_qtable_hdr_size + 2 * jpeg_qtable_size + max_jpeg_payload_size + micro_rtsp_srtp::auth_tag_size;
 
     uint8_t packet_buffer_[max_packet_buffer_size];

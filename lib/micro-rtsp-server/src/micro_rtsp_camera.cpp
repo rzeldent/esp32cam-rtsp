@@ -25,13 +25,13 @@ const std::map<uint16_t, const char *> micro_rtsp_camera::sensor_names_ = {
 };
 
 micro_rtsp_camera::micro_rtsp_camera()
-: init_result_(ESP_FAIL),
-  fb_(nullptr),
-  jpeg_buffer_(nullptr),
-  jpeg_buffer_capacity_(0),
-  jpeg_size_(0),
-  frame_width_(0),
-  frame_height_(0)
+    : init_result_(ESP_FAIL),
+      fb_(nullptr),
+      jpeg_buffer_(nullptr),
+      jpeg_buffer_capacity_(0),
+      jpeg_size_(0),
+      frame_width_(0),
+      frame_height_(0)
 {
 }
 
@@ -130,7 +130,7 @@ bool micro_rtsp_camera::ensure_jpeg_buffer(size_t capacity)
     uint8_t *buffer = (uint8_t *)heap_caps_malloc(capacity, MALLOC_CAP_SPIRAM);
     if (buffer == nullptr)
         buffer = (uint8_t *)heap_caps_malloc(capacity, MALLOC_CAP_8BIT);
-    
+
     if (buffer == nullptr)
         return false;
 

@@ -16,14 +16,13 @@ micro_rtsp_jpeg_header::micro_rtsp_jpeg_header()
 
 bool micro_rtsp_jpeg_header::prepare(const uint8_t *data, size_t size)
 {
-    // The header (quantization tables and scan data start) is constant for a
-    // fixed quality / frame size, so reuse it when the cached copy matches.
-    // This skips the full parse which would otherwise walk every entropy-coded
-    // byte to locate EOI.
+    // The header (quantization tables and scan data start) is constant for a fixed quality / frame size.
+    // Reuse it when the cached copy matches.
+    // This skips the full parse which would otherwise walk every entropy-coded byte to locate EOI.
     if (valid_ &&
         size > scan_start_offset_ + 2 &&
-        data[0] == 0xff && data[1] == 0xd8 &&                 // SOI
-        data[size - 2] == 0xff && data[size - 1] == 0xd9)     // EOI at the end
+        data[0] == 0xff && data[1] == 0xd8 &&             // SOI
+        data[size - 2] == 0xff && data[size - 1] == 0xd9) // EOI at the end
     {
         scan_start_ = data + scan_start_offset_;
         scan_end_ = data + size;
@@ -51,4 +50,24 @@ bool micro_rtsp_jpeg_header::prepare(const uint8_t *data, size_t size)
     scan_end_ = jpg.jpeg_data_end;
 
     return true;
+}
+
+const uint8_t *micro_rtsp_jpeg_header::scan_start() const
+{
+    return scan_start_;
+}
+
+const uint8_t *micro_rtsp_jpeg_header::scan_end() const
+{
+    return scan_end_;
+}
+
+const uint8_t *micro_rtsp_jpeg_header::luminance() const
+{
+    return quant_lum_;
+}
+
+const uint8_t *micro_rtsp_jpeg_header::chrominance() const
+{
+    return quant_chr_;
 }

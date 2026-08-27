@@ -4,16 +4,14 @@
 #include <stdint.h>
 
 // Interface for an optional audio source (e.g. an I2S microphone).
-// The source is responsible for capturing and encoding the samples; the RTSP
-// server reads complete chunks of G.711 a-law encoded samples (one byte per
-// 8 kHz sample) and packetizes them into RTP packets.
-class micro_rtsp_audio_source
+// The source is responsible for capturing and encoding the samples.
+// The RTSP server reads complete chunks of G.711 a-law encoded samples (one byte per 8 kHz sample) and packetizes them into RTP packets.
+class micro_rtsp_source_audio
 {
 public:
-    virtual ~micro_rtsp_audio_source() = default;
+    virtual ~micro_rtsp_source_audio() = default;
 
-    // Capture the next chunk of audio. Returns true when new samples are
-    // available (data()/size() are valid).
+    // Capture the next chunk of audio. Returns true when new samples are available (data()/size() are valid).
     virtual bool update_audio() = 0;
 
     // G.711 a-law encoded samples (one byte per sample).

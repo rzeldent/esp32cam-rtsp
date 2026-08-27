@@ -18,8 +18,8 @@
 // Poll the audio source every 20 milliseconds (160 samples at 8 kHz)
 #define AUDIO_UPDATE_INTERVAL 20
 
-micro_rtsp_server::micro_rtsp_server(micro_rtsp_source &source, micro_rtsp_audio_source *audio_source /*= nullptr*/)
-    : source_(source),
+micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source /*= nullptr*/)
+    : video_source_(video_source),
       audio_source_(audio_source),
       srtp_enabled_(false),
       frame_interval_(200),
@@ -66,6 +66,26 @@ void micro_rtsp_server::end()
     clients_.clear();
 }
 
+unsigned micro_rtsp_server::get_frame_interval() const
+{
+    return frame_interval_;
+}
+
+unsigned micro_rtsp_server::set_frame_interval(unsigned value)
+{
+    return frame_interval_ = value;
+}
+
+void micro_rtsp_server::set_srtp(bool enabled)
+{
+    srtp_enabled_ = enabled;
+}
+
+size_t micro_rtsp_server::clients() const
+{
+    return clients_.size();
+}
+
 void micro_rtsp_server::loop()
 {
     auto now = millis();
@@ -79,7 +99,7 @@ void micro_rtsp_server::loop()
         WiFiClient client;
         while ((client = accept()))
         {
-            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, source_, audio_source_ != nullptr, srtp_enabled_, rtsp_port_));
+            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_source_, audio_source_ != nullptr, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
             clients_.push_back(std::move(c));
             log_i("New RTSP client, total: %d", clients_.size());
@@ -151,18 +171,19 @@ bool micro_rtsp_server::start_sending_frame()
             break;
         }
     }
+
     if (!any_active)
         return false;
 
     // Get the next JPEG frame from the camera. The framebuffer is kept until
     // the whole frame has been transmitted (see send_next_fragment), so the
     // scan/quantization pointers below stay valid across loop() passes.
-    source_.update_frame();
-    if (source_.data() == nullptr || source_.size() == 0)
+    video_source_.update_frame();
+    if (video_source_.data() == nullptr || video_source_.size() == 0)
         return false;
 
-    const uint8_t *data = source_.data();
-    const size_t size = source_.size();
+    const uint8_t *data = video_source_.data();
+    const size_t size = video_source_.size();
 
     // Prepare the frame for streaming. The JPEG header (quantization tables
     // and scan data start) is constant for a fixed quality / frame size, so
@@ -217,9 +238,7 @@ bool micro_rtsp_server::send_next_fragment()
         {
             auto offset = client->video_frame_offset_;
             size_t packet_size = 0;
-            auto packet = client->streamer.create_jpg_packet(
-                frame_data_start_, frame_scan_end_, &offset, frame_timestamp_,
-                quant_lum_, quant_chr_, packet_size);
+            auto packet = client->streamer.create_jpg_packet(frame_data_start_, frame_scan_end_, &offset, frame_timestamp_, quant_lum_, quant_chr_, packet_size);
             if (packet == nullptr)
             {
                 log_e("Failed to build JPEG RTP fragment");
@@ -232,8 +251,7 @@ bool micro_rtsp_server::send_next_fragment()
         }
 
         // Send the pending fragment; keep it for a retry when the send fails.
-        if (client->pending_packet_ != nullptr &&
-            send_packet(*client, rtp_udp_, client->pending_packet_, client->pending_packet_size_, client->video_rtp_port()))
+        if (client->pending_packet_ != nullptr && send_packet(*client, rtp_udp_, client->pending_packet_, client->pending_packet_size_, client->video_rtp_port()))
         {
             client->pending_packet_ = nullptr;
             client->pending_packet_size_ = 0;
@@ -251,7 +269,7 @@ void micro_rtsp_server::send_audio_chunk()
     if (audio_source_ == nullptr)
         return;
 
-    bool any_audio = false;
+    auto any_audio = false;
     for (auto &client : clients_)
     {
         if (client->active() && client->audio_ready())
@@ -260,6 +278,7 @@ void micro_rtsp_server::send_audio_chunk()
             break;
         }
     }
+
     if (!any_audio)
         return;
 
@@ -287,9 +306,8 @@ void micro_rtsp_server::send_audio_chunk()
     }
 }
 
-micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
-    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source),
-      video_frame_offset_(nullptr), pending_packet_(nullptr), pending_packet_size_(0)
+micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
+    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source), video_frame_offset_(nullptr), pending_packet_(nullptr), pending_packet_size_(0)
 {
     // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP)
     // are sent immediately instead of being coalesced/delayed.
@@ -302,6 +320,7 @@ micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro
     auto server_ip = WiFi.localIP();
     if (server_ip == IPAddress(0, 0, 0, 0))
         server_ip = WiFi.softAPIP();
+
     set_server_address(std::string(server_ip.toString().c_str()), rtsp_port);
 }
 
@@ -335,6 +354,7 @@ void micro_rtsp_server::rtsp_client::handle_request()
         size_t total = rtp_over_tcp_hdr_size + length;
         if (request_buffer.size() < total)
             break; // wait for the rest of the packet
+
         log_v("Skipping %u bytes of interleaved data on channel %d", length, (uint8_t)request_buffer[1]);
         request_buffer.erase(0, total);
     }
