@@ -212,18 +212,36 @@ void handle_stream()
   }
 
   log_v("starting streaming");
-  // Blocks further handling of HTTP server until stopped
+  // Pace frames to the configured frame interval and service the RTSP server
+  // and the web config/DNS/mDNS machinery between frames, so this handler
+  // does not block the rest of the firmware while the connection is open.
   char size_buf[12];
   auto client = web_server.client();
   client.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" STREAM_CONTENT_BOUNDARY "\r\n");
+
+  const auto frame_interval = server.get_frame_interval();
+  unsigned long next_frame = 0;
   while (client.connected())
   {
-    client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
-    camera.update_frame();
-    client.write("Content-Type: image/jpeg\r\nContent-Length: ");
-    sprintf(size_buf, "%d\r\n\r\n", camera.size());
-    client.write(size_buf);
-    client.write(camera.data(), camera.size());
+    auto now = millis();
+    if (now >= next_frame)
+    {
+      camera.update_frame();
+      if (camera.data() != nullptr)
+      {
+        client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
+        client.write("Content-Type: image/jpeg\r\nContent-Length: ");
+        sprintf(size_buf, "%d\r\n\r\n", camera.size());
+        client.write(size_buf);
+        client.write(camera.data(), camera.size());
+      }
+      next_frame = now + frame_interval;
+    }
+
+    // Keep RTSP streaming and the web config/DNS/mDNS loop alive while this
+    // HTTP connection is open.
+    server.loop();
+    iotWebConf.doLoop();
   }
 
   log_v("client disconnected");
