@@ -86,7 +86,6 @@ void handle_root()
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
   auto ipv4 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIP() : WiFi.localIP();
-  auto ipv6 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIPv6() : WiFi.localIPv6();
 
   auto initResult = esp_err_to_name(camera_init_result);
   if (initResult == nullptr)
@@ -118,7 +117,6 @@ void handle_root()
       {"SignalStrength", String(WiFi.RSSI())},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
       {"IPv4", ipv4.toString()},
-      {"IPv6", ipv6.toString()},
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
@@ -393,6 +391,8 @@ void setup()
   if (!audio.begin())
     log_e("Failed to initialize the I2S microphone");
 #endif
+
+  WiFi.setSleep(false);
 
 #ifdef MICRO_RTSP_ENABLE_SRTP
   // Stream video over Secure RTP (RFC 3711), negotiated with "a=crypto"

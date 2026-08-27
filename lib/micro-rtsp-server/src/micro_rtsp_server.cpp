@@ -8,7 +8,6 @@
 
 #include <micro_rtsp_server.h>
 #include <micro_rtsp_structs.h>
-#include <jpg.h>
 
 // Check client connections every 10 milliseconds
 #define CHECK_CLIENT_INTERVAL 10
@@ -29,7 +28,15 @@ micro_rtsp_server::micro_rtsp_server(micro_rtsp_source &source, micro_rtsp_audio
       next_check_client_(0),
       rtp_udp_port_(RTP_UDP_PORT),
       audio_udp_port_(AUDIO_UDP_PORT),
-      rtsp_port_(554)
+      rtsp_port_(554),
+      streaming_frame_(false),
+      frame_data_start_(nullptr),
+      frame_scan_end_(nullptr),
+      quant_lum_(nullptr),
+      quant_chr_(nullptr),
+      frame_timestamp_(0),
+      fragment_send_interval_(0),
+      next_fragment_send_(0)
 {
 }
 
@@ -53,8 +60,9 @@ void micro_rtsp_server::begin(unsigned short port /*= 554*/)
 void micro_rtsp_server::end()
 {
     WiFiServer::end();
-    rtp_udp_.stop();
-    audio_udp_.stop();
+    rtp_udp_.end();
+    audio_udp_.end();
+    streaming_frame_ = false;
     clients_.clear();
 }
 
@@ -91,11 +99,22 @@ void micro_rtsp_server::loop()
         }
     }
 
-    if (next_frame_update_ < now)
+    // Send the next fragment of the current frame, paced across the frame
+    // interval so the Wi-Fi TX path is never burst-saturated.
+    if (streaming_frame_ && next_fragment_send_ <= now)
+    {
+        if (send_next_fragment())
+            next_fragment_send_ = now + fragment_send_interval_;
+        else
+            streaming_frame_ = false; // frame fully sent
+    }
+
+    // Capture a new frame when the previous one is fully sent and one is due
+    if (!streaming_frame_ && next_frame_update_ < now)
     {
         log_v("Stream frame t=%d", next_frame_update_);
         next_frame_update_ = now + frame_interval_;
-        send_video_frame();
+        start_sending_frame();
     }
 
     if (audio_source_ != nullptr && next_audio_update_ < now)
@@ -105,24 +124,24 @@ void micro_rtsp_server::loop()
     }
 }
 
-void micro_rtsp_server::send_packet(rtsp_client &client, WiFiUDP &udp, const uint8_t *packet, size_t packet_size, uint16_t dest_port)
+bool micro_rtsp_server::send_packet(rtsp_client &client, micro_rtsp_udp &udp, const uint8_t *packet, size_t packet_size, uint16_t dest_port)
 {
     if (client.tcp_transport())
     {
         // RTP over RTSP/TCP: the packet already starts with the '$' framing header
-        client.write(packet, packet_size);
+        return client.write(packet, packet_size) == packet_size;
     }
     else
     {
-        // RTP over UDP: send the RTP packet without the 4 byte '$' framing header
-        udp.beginPacket(client.remoteIP(), dest_port);
-        udp.write(packet + rtp_over_tcp_hdr_size, packet_size - rtp_over_tcp_hdr_size);
-        udp.endPacket();
+        // RTP over UDP: send the RTP packet (without the 4 byte '$' framing
+        // header) in a single sendto() call via the micro_rtsp_udp socket.
+        return udp.send(client.remoteIP(), dest_port, packet + rtp_over_tcp_hdr_size, packet_size - rtp_over_tcp_hdr_size);
     }
 }
 
-void micro_rtsp_server::send_video_frame()
+bool micro_rtsp_server::start_sending_frame()
 {
+    // Nothing to do when no client is actively streaming video
     bool any_active = false;
     for (auto &client : clients_)
     {
@@ -133,54 +152,98 @@ void micro_rtsp_server::send_video_frame()
         }
     }
     if (!any_active)
-        return;
+        return false;
 
-    // Get the next JPEG frame from the camera
+    // Get the next JPEG frame from the camera. The framebuffer is kept until
+    // the whole frame has been transmitted (see send_next_fragment), so the
+    // scan/quantization pointers below stay valid across loop() passes.
     source_.update_frame();
     if (source_.data() == nullptr || source_.size() == 0)
-        return;
+        return false;
 
-    // Decode the frame to extract the quantization tables and the scan data
-    jpg jpg;
-    if (!jpg.decode(source_.data(), source_.size()))
+    const uint8_t *data = source_.data();
+    const size_t size = source_.size();
+
+    // Prepare the frame for streaming. The JPEG header (quantization tables
+    // and scan data start) is constant for a fixed quality / frame size, so
+    // it is decoded once and cached; subsequent frames skip the full parse.
+    if (!jpeg_header_.prepare(data, size))
+        return false;
+
+    frame_data_start_ = (uint8_t *)jpeg_header_.scan_start();
+    frame_scan_end_ = (uint8_t *)jpeg_header_.scan_end();
+    quant_lum_ = jpeg_header_.luminance();
+    quant_chr_ = jpeg_header_.chrominance();
+
+    // Reset per-client send progress for the new frame.
+    for (auto &client : clients_)
     {
-        log_e("Unable to decode JPEG frame");
-        return;
+        client->video_frame_offset_ = nullptr;
+        client->pending_packet_ = nullptr;
+        client->pending_packet_size_ = 0;
     }
 
     // RTP timestamp for the frame, using a 90 kHz clock (RFC 3551)
-    const uint32_t timestamp = millis() * 90;
+    frame_timestamp_ = millis() * 90;
 
-    auto jpg_scan = (uint8_t *)jpg.jpeg_data_start;
-    auto jpg_scan_end = (uint8_t *)jpg.jpeg_data_end;
+    // Spread the fragments of this frame evenly across the frame interval so
+    // the Wi-Fi TX path is never burst-saturated (min 1 ms between fragments).
+    const size_t fragment_count = (size_t)(frame_scan_end_ - frame_data_start_) / micro_rtsp_streamer::max_payload_size() + 1;
+    fragment_send_interval_ = std::max(1u, frame_interval_ / (unsigned)fragment_count);
 
-    // Stream the scan data in fragments to every active client
-    while (jpg_scan < jpg_scan_end)
+    streaming_frame_ = true;
+    next_fragment_send_ = millis(); // send the first fragment immediately
+    return true;
+}
+
+bool micro_rtsp_server::send_next_fragment()
+{
+    bool frame_done = true;
+
+    // Each client progresses through the frame independently so a fragment
+    // that fails to send (Wi-Fi TX backpressure, e.g. ENOMEM/ENOBUFS) is
+    // retried on the next tick instead of being silently dropped.
+    for (auto &client : clients_)
     {
-        for (auto &client : clients_)
-        {
-            if (!client->active() || !client->video_ready())
-                continue;
+        if (!client->active() || !client->video_ready())
+            continue;
 
+        // Lazily initialize this client's progress for the current frame.
+        if (client->video_frame_offset_ == nullptr)
+            client->video_frame_offset_ = frame_data_start_;
+
+        // Build the next fragment if nothing is pending for this client.
+        if (client->pending_packet_ == nullptr && client->video_frame_offset_ < frame_scan_end_)
+        {
+            auto offset = client->video_frame_offset_;
             size_t packet_size = 0;
-            auto offset = jpg_scan; // per-client copy of the fragment start
             auto packet = client->streamer.create_jpg_packet(
-                jpg.jpeg_data_start, jpg.jpeg_data_end, &offset, timestamp,
-                jpg.quantization_table_luminance_ ? jpg.quantization_table_luminance_->data : nullptr,
-                jpg.quantization_table_chrominance_ ? jpg.quantization_table_chrominance_->data : nullptr,
-                packet_size);
-            if (packet != nullptr)
+                frame_data_start_, frame_scan_end_, &offset, frame_timestamp_,
+                quant_lum_, quant_chr_, packet_size);
+            if (packet == nullptr)
             {
-                // packet points into the client streamer's fixed buffer; no free needed
-                send_packet(*client, rtp_udp_, packet, packet_size, client->video_rtp_port());
+                log_e("Failed to build JPEG RTP fragment");
+                return false;
             }
+
+            client->video_frame_offset_ = offset; // advanced by create_jpg_packet
+            client->pending_packet_ = packet;     // points into the streamer's fixed buffer
+            client->pending_packet_size_ = packet_size;
         }
 
-        // All clients consume the same fragment size, advance to the next fragment
-        auto remaining = (size_t)(jpg_scan_end - jpg_scan);
-        auto fragment_size = std::min(micro_rtsp_streamer::max_payload_size(), remaining);
-        jpg_scan += fragment_size;
+        // Send the pending fragment; keep it for a retry when the send fails.
+        if (client->pending_packet_ != nullptr &&
+            send_packet(*client, rtp_udp_, client->pending_packet_, client->pending_packet_size_, client->video_rtp_port()))
+        {
+            client->pending_packet_ = nullptr;
+            client->pending_packet_size_ = 0;
+        }
+
+        if (client->pending_packet_ != nullptr || client->video_frame_offset_ < frame_scan_end_)
+            frame_done = false;
     }
+
+    return !frame_done;
 }
 
 void micro_rtsp_server::send_audio_chunk()
@@ -225,8 +288,13 @@ void micro_rtsp_server::send_audio_chunk()
 }
 
 micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
-    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source)
+    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source),
+      video_frame_offset_(nullptr), pending_packet_(nullptr), pending_packet_size_(0)
 {
+    // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP)
+    // are sent immediately instead of being coalesced/delayed.
+    WiFiClient::setNoDelay(true);
+
     // Advertise the correct addresses in the SETUP Transport header and the
     // PLAY RTP-Info URL instead of the reference implementation's bogus
     // 127.0.0.1 values: destination = the client, source = this server.
