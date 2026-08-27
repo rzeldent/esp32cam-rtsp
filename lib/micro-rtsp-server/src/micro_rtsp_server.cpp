@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <vector>
 
+#include <WiFi.h>
+
 #include <micro_rtsp_server.h>
 #include <micro_rtsp_structs.h>
 #include <jpg.h>
@@ -26,7 +28,8 @@ micro_rtsp_server::micro_rtsp_server(micro_rtsp_source &source, micro_rtsp_audio
       next_audio_update_(0),
       next_check_client_(0),
       rtp_udp_port_(RTP_UDP_PORT),
-      audio_udp_port_(AUDIO_UDP_PORT)
+      audio_udp_port_(AUDIO_UDP_PORT),
+      rtsp_port_(554)
 {
 }
 
@@ -37,6 +40,7 @@ micro_rtsp_server::~micro_rtsp_server()
 
 void micro_rtsp_server::begin(unsigned short port /*= 554*/)
 {
+    rtsp_port_ = port;
     WiFiServer::begin(port);
     log_i("RTSP server listening on TCP port %u", port);
 
@@ -67,7 +71,7 @@ void micro_rtsp_server::loop()
         WiFiClient client;
         while ((client = accept()))
         {
-            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, source_, audio_source_ != nullptr, srtp_enabled_));
+            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, source_, audio_source_ != nullptr, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
             clients_.push_back(std::move(c));
             log_i("New RTSP client, total: %d", clients_.size());
@@ -167,8 +171,8 @@ void micro_rtsp_server::send_video_frame()
                 packet_size);
             if (packet != nullptr)
             {
+                // packet points into the client streamer's fixed buffer; no free needed
                 send_packet(*client, rtp_udp_, packet, packet_size, client->video_rtp_port());
-                free(packet);
             }
         }
 
@@ -214,15 +218,23 @@ void micro_rtsp_server::send_audio_chunk()
         auto packet = client->streamer.create_audio_packet(data, size, false, packet_size);
         if (packet != nullptr)
         {
+            // packet points into the client streamer's fixed buffer; no free needed
             send_packet(*client, audio_udp_, packet, packet_size, client->audio_rtp_port());
-            free(packet);
         }
     }
 }
 
-micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled)
+micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
     : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source)
 {
+    // Advertise the correct addresses in the SETUP Transport header and the
+    // PLAY RTP-Info URL instead of the reference implementation's bogus
+    // 127.0.0.1 values: destination = the client, source = this server.
+    set_client_ip(std::string(remoteIP().toString().c_str()));
+    auto server_ip = WiFi.localIP();
+    if (server_ip == IPAddress(0, 0, 0, 0))
+        server_ip = WiFi.softAPIP();
+    set_server_address(std::string(server_ip.toString().c_str()), rtsp_port);
 }
 
 micro_rtsp_server::rtsp_client::~rtsp_client()

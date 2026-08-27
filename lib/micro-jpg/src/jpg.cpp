@@ -27,8 +27,7 @@ const jpg_section_t *jpg::find_jpg_section(const uint8_t **ptr, const uint8_t *e
 
         // Length-less markers (SOI, EOI) are 2 bytes; the others carry a
         // 2 byte length field which must also fit inside the buffer
-        const bool has_length = section->flag != jpg_section_t::jpg_section_flag::SOI &&
-                                section->flag != jpg_section_t::jpg_section_flag::EOI;
+        const bool has_length = section->flag != jpg_section_t::jpg_section_flag::SOI && section->flag != jpg_section_t::jpg_section_flag::EOI;
         if (has_length && remaining < 4)
         {
             log_e("Truncated section 0x%02x", section->flag);
@@ -39,8 +38,7 @@ const jpg_section_t *jpg::find_jpg_section(const uint8_t **ptr, const uint8_t *e
         const size_t length = section->section_length();
         if (length > remaining)
         {
-            log_e("Section 0x%02x length %u exceeds remaining %u bytes",
-                  section->flag, (unsigned)length, (unsigned)remaining);
+            log_e("Section 0x%02x length %u exceeds remaining %u bytes", section->flag, (unsigned)length, (unsigned)remaining);
             break;
         }
 
@@ -125,8 +123,7 @@ bool jpg::decode(const uint8_t *data, size_t size)
             break;
 
         const uint8_t marker = ptr[1];
-        if (marker >= jpg_section_t::jpg_section_flag::RST0 &&
-            marker <= jpg_section_t::jpg_section_flag::RST7)
+        if (marker >= jpg_section_t::jpg_section_flag::RST0 && marker <= jpg_section_t::jpg_section_flag::RST7)
         {
             ptr += 2;
             continue;

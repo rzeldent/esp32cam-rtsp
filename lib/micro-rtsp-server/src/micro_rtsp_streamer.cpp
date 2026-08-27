@@ -43,8 +43,17 @@ uint8_t *micro_rtsp_streamer::create_jpg_packet(
     // Reserve room for the SRTP authentication tag when enabled
     const size_t tag_size = srtp_ ? srtp_->tag_size() : 0;
     const size_t buffer_size = rtp_over_tcp_hdr_size + rtp_len + tag_size;
+    if (buffer_size > sizeof(packet_buffer_))
+    {
+        log_e("JPEG RTP packet (%u bytes) exceeds the fixed packet buffer (%u bytes)", (unsigned)buffer_size, (unsigned)sizeof(packet_buffer_));
+        return nullptr;
+    }
 
-    auto packet = static_cast<uint8_t *>(calloc(1, buffer_size));
+    // Build the packet in the streamer's fixed buffer: no per-packet heap
+    // allocation, avoiding malloc/free churn (and heap fragmentation) while
+    // streaming a frame.
+    auto packet = packet_buffer_;
+    memset(packet, 0, buffer_size);
     auto p = packet;
 
     // ---- RTP over TCP framing header ($, channel; length is set at the end,
@@ -125,8 +134,15 @@ uint8_t *micro_rtsp_streamer::create_audio_packet(
     // Reserve room for the SRTP authentication tag when enabled
     const size_t tag_size = srtp_ ? srtp_->tag_size() : 0;
     const size_t buffer_size = rtp_over_tcp_hdr_size + rtp_len + tag_size;
+    if (buffer_size > sizeof(packet_buffer_))
+    {
+        log_e("Audio RTP packet (%u bytes) exceeds the fixed packet buffer (%u bytes)", (unsigned)buffer_size, (unsigned)sizeof(packet_buffer_));
+        return nullptr;
+    }
 
-    auto packet = static_cast<uint8_t *>(calloc(1, buffer_size));
+    // Build the packet in the streamer's fixed buffer (see create_jpg_packet).
+    auto packet = packet_buffer_;
+    memset(packet, 0, buffer_size);
     auto p = packet;
 
     // ---- RTP over TCP framing header ($, channel; length set at the end) ----

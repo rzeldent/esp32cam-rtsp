@@ -135,8 +135,7 @@ void test_streamer_packet()
     TEST_ASSERT_EQUAL(0x00, packet[25]);
     TEST_ASSERT_EQUAL(0x00, packet[26]);
     TEST_ASSERT_EQUAL(128, packet[27]);
-
-    free(packet);
+    // packet points into the streamer's fixed buffer; no free needed
 }
 
 // Known-answer test for SRTP (AES_CM_128_HMAC_SHA1_80), taken from the libsrtp

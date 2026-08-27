@@ -42,6 +42,11 @@ public:
     // UDP port numbers of the server, reported in the SETUP reply.
     void set_server_ports(uint16_t rtp, uint16_t rtcp);
 
+    // Addresses reported in the SETUP Transport header (source/destination)
+    // and the PLAY RTP-Info URL. Set by the server when the client connects.
+    void set_client_ip(const std::string &ip);
+    void set_server_address(const std::string &ip, uint16_t rtsp_port);
+
 private:
     static const std::string available_stream_name_;
     static const std::string crypto_suite_; // AES_CM_128_HMAC_SHA1_80
@@ -87,6 +92,12 @@ private:
 
     uint16_t rtp_server_port_;
     uint16_t rtcp_server_port_;
+
+    // Client IP (RTP destination) and server IP + RTSP port (RTP source),
+    // advertised in the SETUP Transport header and the PLAY RTP-Info URL.
+    std::string client_ip_;
+    std::string server_ip_;
+    uint16_t rtsp_port_;
 
     unsigned long rtsp_session_id_;
 };

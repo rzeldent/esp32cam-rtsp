@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-//  http://www.ietf.org/rfc/rfc2345.txt Each table is an array of 64 values given in zig-zag order, identical to the format used in a JFIF DQT marker segment.
+// http://www.ietf.org/rfc/rfc2345.txt Each table is an array of 64 values given in zig-zag order, identical to the format used in a JFIF DQT marker segment.
 constexpr size_t jpeg_quantization_table_length = 64;
 
 typedef struct __attribute__((packed))

@@ -15,28 +15,28 @@
 
 namespace
 {
-// Minimal base64 encoder (RFC 4648), used to carry the SRTP master key and
-// salt in the "a=crypto" attribute.
-std::string base64_encode(const uint8_t *data, size_t len)
-{
-    static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::string out;
-    out.reserve(((len + 2) / 3) * 4);
-    for (size_t i = 0; i < len; i += 3)
+    // Minimal base64 encoder (RFC 4648), used to carry the SRTP master key and
+    // salt in the "a=crypto" attribute.
+    std::string base64_encode(const uint8_t *data, size_t len)
     {
-        uint32_t n = (uint32_t)data[i] << 16;
-        if (i + 1 < len)
-            n |= (uint32_t)data[i + 1] << 8;
-        if (i + 2 < len)
-            n |= data[i + 2];
+        static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string out;
+        out.reserve(((len + 2) / 3) * 4);
+        for (size_t i = 0; i < len; i += 3)
+        {
+            uint32_t n = (uint32_t)data[i] << 16;
+            if (i + 1 < len)
+                n |= (uint32_t)data[i + 1] << 8;
+            if (i + 2 < len)
+                n |= data[i + 2];
 
-        out += table[(n >> 18) & 0x3f];
-        out += table[(n >> 12) & 0x3f];
-        out += (i + 1 < len) ? table[(n >> 6) & 0x3f] : '=';
-        out += (i + 2 < len) ? table[n & 0x3f] : '=';
+            out += table[(n >> 18) & 0x3f];
+            out += table[(n >> 12) & 0x3f];
+            out += (i + 1 < len) ? table[(n >> 6) & 0x3f] : '=';
+            out += (i + 2 < len) ? table[n & 0x3f] : '=';
+        }
+        return out;
     }
-    return out;
-}
 } // namespace
 
 const std::string micro_rtsp_requests::available_stream_name_ = "/mjpeg/1";
@@ -58,6 +58,9 @@ micro_rtsp_requests::micro_rtsp_requests(bool audio_enabled /*= false*/, bool sr
       audio_client_rtcp_port_(0),
       rtp_server_port_(0),
       rtcp_server_port_(0),
+      client_ip_(),
+      server_ip_(),
+      rtsp_port_(554), // default RTSP port, replaced by set_server_address()
       rtsp_session_id_(0)
 {
     // Create a unique session id for this client
@@ -68,6 +71,17 @@ void micro_rtsp_requests::set_server_ports(uint16_t rtp, uint16_t rtcp)
 {
     rtp_server_port_ = rtp;
     rtcp_server_port_ = rtcp;
+}
+
+void micro_rtsp_requests::set_client_ip(const std::string &ip)
+{
+    client_ip_ = ip;
+}
+
+void micro_rtsp_requests::set_server_address(const std::string &ip, uint16_t rtsp_port)
+{
+    server_ip_ = ip;
+    rtsp_port_ = rtsp_port;
 }
 
 // Build the RFC 4568 crypto attribute from the SRTP master key and salt:
@@ -149,8 +163,8 @@ std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::
     osbody << "v=0\r\n"
            << "o=- " << std::rand() << " 1 IN IP4 " << host << "\r\n"
            << "s=\r\n"
-           << "t=0 0\r\n"                                  // start / stop - 0 -> unbounded and permanent session
-           << "m=video 0 RTP/AVP 26\r\n"                   // JPEG video track
+           << "t=0 0\r\n"                // start / stop - 0 -> unbounded and permanent session
+           << "m=video 0 RTP/AVP 26\r\n" // JPEG video track
            << "c=IN IP4 0.0.0.0\r\n"
            << "a=control:track1\r\n";
     if (srtp_enabled_)
@@ -159,7 +173,7 @@ std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::
         osbody << build_crypto_attribute() << "\r\n";
     }
     if (audio_enabled_)
-        osbody << "m=audio 0 RTP/AVP 8\r\n"                // G.711 a-law audio track
+        osbody << "m=audio 0 RTP/AVP 8\r\n" // G.711 a-law audio track
                << "c=IN IP4 0.0.0.0\r\n"
                << "a=rtpmap:8 PCMA/8000/1\r\n"
                << "a=control:track2\r\n";
@@ -227,8 +241,9 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::str
             video_client_rtp_port_ = rtp_port;
             video_client_rtcp_port_ = rtcp_port;
         }
-        ostransport << "RTP/AVP;unicast;destination=127.0.0.1;source=127.0.0.1;client_port="
-                    << rtp_port << "-" << rtcp_port
+        ostransport << "RTP/AVP;unicast;destination=" << client_ip_
+                    << ";source=" << server_ip_
+                    << ";client_port=" << rtp_port << "-" << rtcp_port
                     << ";server_port=" << rtp_server_port_ << "-" << rtcp_server_port_;
     }
 
@@ -273,9 +288,9 @@ std::string micro_rtsp_requests::handle_play(unsigned long cseq)
         << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
         << "Range: npt=0.000-\r\n"
         << "Session: " << rtsp_session_id_ << "\r\n"
-        << "RTP-Info: url=rtsp://127.0.0.1:8554" << available_stream_name_ << "/track1";
+        << "RTP-Info: url=rtsp://" << server_ip_ << ":" << rtsp_port_ << available_stream_name_ << "/track1";
     if (audio_setup_)
-        oss << ",url=rtsp://127.0.0.1:8554" << available_stream_name_ << "/track2";
+        oss << ",url=rtsp://" << server_ip_ << ":" << rtsp_port_ << available_stream_name_ << "/track2";
     oss << "\r\n"
         << "\r\n";
     return oss.str();

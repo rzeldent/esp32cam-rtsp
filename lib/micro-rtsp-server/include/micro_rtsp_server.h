@@ -41,7 +41,7 @@ public:
 	class rtsp_client : public WiFiClient, public micro_rtsp_requests
 	{
 	public:
-		rtsp_client(const WiFiClient &client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled);
+		rtsp_client(const WiFiClient &client, micro_rtsp_source &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
 		~rtsp_client();
 
 		void handle_request();
@@ -70,6 +70,7 @@ private:
 	unsigned long next_check_client_;
 	uint16_t rtp_udp_port_;
 	uint16_t audio_udp_port_;
+	uint16_t rtsp_port_; // RTSP TCP port, advertised in the RTP-Info URL
 	WiFiUDP rtp_udp_;
 	WiFiUDP audio_udp_;
 	std::list<std::unique_ptr<rtsp_client>> clients_;
