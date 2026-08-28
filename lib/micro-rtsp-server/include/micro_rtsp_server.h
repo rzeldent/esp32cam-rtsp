@@ -18,8 +18,7 @@
 class micro_rtsp_server : WiFiServer
 {
 public:
-	// audio_source is optional. When set, an audio track (G.711 a-law) is
-	// offered to the clients and streamed alongside the video.
+	// audio_source is optional. When set, an audio track (G.711 a-law) is offered to the clients and streamed alongside the video.
 	micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source = nullptr);
 	~micro_rtsp_server();
 
@@ -29,7 +28,7 @@ public:
 	unsigned get_frame_interval() const;
 	unsigned set_frame_interval(unsigned value);
 
-	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and SETUP replies and encrypts the outgoing RTP streams.
+	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and SETUP replies and encrypts the outgoing RTP streams
 	// A client that offers its own "a=crypto" enables SRTP for that session as well.
 	void set_srtp(bool enabled);
 
@@ -60,8 +59,7 @@ public:
 
 private:
 	// Sends one RTP packet to a client using its configured transport.
-	// udp is the socket used for RTP/UDP transport, dest_port the client RTP
-	// port (both ignored for RTP/AVP/TCP interleaved transport).
+	// UDP is the socket used for RTP/UDP transport, dest_port the client RTP port (both ignored for RTP/AVP/TCP interleaved transport).
 	// Returns false when the packet could not be sent and should be retried.
 	bool send_packet(rtsp_client &client, micro_rtsp_udp &udp, const uint8_t *packet, size_t packet_size, uint16_t dest_port);
 	bool start_sending_frame(); // capture + decode a frame, begin paced transmission
@@ -82,10 +80,8 @@ private:
 	micro_rtsp_udp audio_udp_; // UDP socket for the RTP audio stream
 	std::list<std::unique_ptr<rtsp_client>> clients_;
 
-	// Paced transmission of the current frame: the captured framebuffer is
-	// held until every fragment has been sent, and the fragments are spread
-	// evenly across the frame interval so the Wi-Fi TX path is never
-	// burst-saturated.
+	// Paced transmission of the current frame: the captured framebuffer is held until every fragment has been sent, and the fragments are spread
+	// evenly across the frame interval so the Wi-Fi TX path is never burst-saturated.
 	bool streaming_frame_;
 	uint8_t *frame_data_start_; // start of the scan data (first fragment)
 	uint8_t *frame_scan_end_;	// end of the scan data
@@ -94,6 +90,7 @@ private:
 	uint32_t frame_timestamp_;		   // RTP timestamp (90 kHz) for this frame
 	unsigned fragment_send_interval_;  // ms between two fragments
 	unsigned long next_fragment_send_; // when to send the next fragment
+	bool fragment_retry_pending_;	   // a fragment failed to send; retry soon
 
 	// Cached JPEG header (quantization tables + scan data start offset),
 	// reused across frames so the full JPEG parse only happens once.

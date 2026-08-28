@@ -20,16 +20,14 @@ public:
     micro_rtsp_udp(const micro_rtsp_udp &) = delete;
     micro_rtsp_udp &operator=(const micro_rtsp_udp &) = delete;
 
-    // Create and bind a non-blocking UDP socket to the given local port.
+    // Create and bind a UDP socket to the given local port.
     // Returns true on success. Closes any previously held socket.
     bool begin(uint16_t port);
 
     // Close the socket, if open.
     void end();
 
-    // Send one datagram to dest:port. Returns true when sendto() accepted the
-    // datagram. Never blocks (the socket is non-blocking); when the network
-    // stack is busy it fails and logs, so the caller should drop the packet.
+    // Send one datagram to dest:port. Returns true when sendto() accepted the datagram
     bool send(const IPAddress &dest, uint16_t port, const uint8_t *data, size_t len);
 
 private:

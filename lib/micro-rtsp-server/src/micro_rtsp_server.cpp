@@ -1,4 +1,5 @@
 #include <esp32-hal-log.h>
+#include <esp_heap_caps.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -17,6 +18,9 @@
 #define AUDIO_UDP_PORT 6972
 // Poll the audio source every 20 milliseconds (160 samples at 8 kHz)
 #define AUDIO_UPDATE_INTERVAL 20
+// Retry a failed RTP fragment after this many milliseconds instead of waiting for the next paced slot
+// So a transient Wi-Fi TX failure (errno 12) does not stall the frame for a full fragment interval.
+#define FRAGMENT_RETRY_INTERVAL 2
 
 micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source /*= nullptr*/)
     : video_source_(video_source),
@@ -36,7 +40,8 @@ micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video &video_source, micr
       quant_chr_(nullptr),
       frame_timestamp_(0),
       fragment_send_interval_(0),
-      next_fragment_send_(0)
+      next_fragment_send_(0),
+      fragment_retry_pending_(false)
 {
 }
 
@@ -119,12 +124,14 @@ void micro_rtsp_server::loop()
         }
     }
 
-    // Send the next fragment of the current frame, paced across the frame
-    // interval so the Wi-Fi TX path is never burst-saturated.
+    // Send the next fragment of the current frame, paced across the frame interval so the Wi-Fi TX path is never burst-saturated
+    // When a send fails (transient Wi-Fi TX backpressure, e.g. errno 12) the fragment is
+    // retried after a short delay instead of waiting for the next paced slot,
+    // so a single dropped attempt does not stall the frame.
     if (streaming_frame_ && next_fragment_send_ <= now)
     {
         if (send_next_fragment())
-            next_fragment_send_ = now + fragment_send_interval_;
+            next_fragment_send_ = now + (fragment_retry_pending_ ? (unsigned long)FRAGMENT_RETRY_INTERVAL : fragment_send_interval_);
         else
             streaming_frame_ = false; // frame fully sent
     }
@@ -149,7 +156,11 @@ bool micro_rtsp_server::send_packet(rtsp_client &client, micro_rtsp_udp &udp, co
     if (client.tcp_transport())
     {
         // RTP over RTSP/TCP: the packet already starts with the '$' framing header
-        return client.write(packet, packet_size) == packet_size;
+        const size_t written = client.write(packet, packet_size);
+        if (written != packet_size)
+            log_e("TCP interleaved write failed: %u of %u bytes, free_internal: %u", (unsigned)written, (unsigned)packet_size, (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_DMA));
+
+        return written == packet_size;
     }
     else
     {
@@ -175,9 +186,8 @@ bool micro_rtsp_server::start_sending_frame()
     if (!any_active)
         return false;
 
-    // Get the next JPEG frame from the camera. The framebuffer is kept until
-    // the whole frame has been transmitted (see send_next_fragment), so the
-    // scan/quantization pointers below stay valid across loop() passes.
+    // Get the next JPEG frame from the camera. The framebuffer is kept until the whole frame has been transmitted (see send_next_fragment),
+    // so the scan/quantization pointers below stay valid across loop() passes.
     video_source_.update_frame();
     if (video_source_.data() == nullptr || video_source_.size() == 0)
         return false;
@@ -220,6 +230,7 @@ bool micro_rtsp_server::start_sending_frame()
 bool micro_rtsp_server::send_next_fragment()
 {
     bool frame_done = true;
+    fragment_retry_pending_ = false;
 
     // Each client progresses through the frame independently so a fragment
     // that fails to send (Wi-Fi TX backpressure, e.g. ENOMEM/ENOBUFS) is
@@ -256,6 +267,10 @@ bool micro_rtsp_server::send_next_fragment()
             client->pending_packet_ = nullptr;
             client->pending_packet_size_ = 0;
         }
+
+        // A still-pending packet means the send failed this tick (Wi-Fi TX backpressure); request a fast retry instead of the full paced slot.
+        if (client->pending_packet_ != nullptr)
+            fragment_retry_pending_ = true;
 
         if (client->pending_packet_ != nullptr || client->video_frame_offset_ < frame_scan_end_)
             frame_done = false;
@@ -309,8 +324,7 @@ void micro_rtsp_server::send_audio_chunk()
 micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
     : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source), video_frame_offset_(nullptr), pending_packet_(nullptr), pending_packet_size_(0)
 {
-    // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP)
-    // are sent immediately instead of being coalesced/delayed.
+    // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP) are sent immediately instead of being coalesced/delayed.
     WiFiClient::setNoDelay(true);
 
     // Advertise the correct addresses in the SETUP Transport header and the

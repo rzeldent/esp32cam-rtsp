@@ -2,15 +2,16 @@
 // lwIP defines INADDR_NONE/INADDR_ANY macros that would otherwise break IPAddress.h's extern declarations.
 #include "micro_rtsp_udp.h"
 
+#include <WiFi.h>
 #include <esp32-hal-log.h>
+#include <esp_heap_caps.h>
 
 #include <cstring>
 #include <errno.h>
-#include <fcntl.h>
 #include <lwip/sockets.h>
 
-micro_rtsp_udp::micro_rtsp_udp() 
-: sock_(-1)
+micro_rtsp_udp::micro_rtsp_udp()
+    : sock_(-1)
 {
 }
 
@@ -42,8 +43,8 @@ bool micro_rtsp_udp::begin(uint16_t port)
         return false;
     }
 
-    // Non-blocking so send() never blocks the calling task
-    fcntl(sock, F_SETFL, O_NONBLOCK);
+    // Blocking socket: a momentary network-stack squeeze delays the sendto instead of failing it,
+    //  which matters less for UDP (lwIP does not queue UDP datagrams) but matches the reference WiFiUDP semantics.
     sock_ = sock;
     return true;
 }
@@ -70,8 +71,13 @@ bool micro_rtsp_udp::send(const IPAddress &dest, uint16_t port, const uint8_t *d
     const int sent = sendto(sock_, data, len, 0, (sockaddr *)&dst, sizeof(dst));
     if (sent < 0)
     {
-        log_e("sendto failed: %d", errno);
+        // errno 12 (ENOMEM) maps to lwIP ERR_MEM from the Wi-Fi driver's TX queue being momentarily full when sendto() is called
+        // The heap is NOT the cause: the free/largest internal blocks below stay in the tens of KB while streaming
+        const size_t free_internal = heap_caps_get_free_size(MALLOC_CAP_8BIT | MALLOC_CAP_DMA);
+        const size_t largest_internal = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_DMA);
+        log_e("sendto failed: %d, free_internal: %u, largest_internal: %u, RSSI: %d dBm", errno, (unsigned)free_internal, (unsigned)largest_internal, (int)WiFi.RSSI());
         return false;
     }
+
     return true;
 }
