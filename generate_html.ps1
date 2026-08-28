@@ -1,4 +1,4 @@
-. python3 -m pip install --upgrade pip setuptools wheel
-. python3 -m pip install minify-html
+. python -m pip install --upgrade pip setuptools wheel
+. python -m pip install minify-html
 
-. python3 ./minify.py ./html/index.html ./html/index.min.html
+. python ./minify.py ./html/index.html ./html/index.min.html

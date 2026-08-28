@@ -7,49 +7,38 @@
 
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
 
+> [!NOTE]
+> A [`develop`](https://github.com/rzeldent/esp32cam-rtsp/tree/develop) branch is available with the newest boards (including the Seeed Studio XIAO ESP32S3). It may be ahead of `main`; feedback and testing are welcome.
+
 Flashing this software on a ESP32CAM module will make it a **RTSP streaming camera** server, a **HTTP Motion JPEG streamer** and a **HTTP image server**.
 
-## Quick Start
+## Contents
 
-```sh
-git clone https://github.com/rzeldent/esp32cam-rtsp.git
-cd esp32cam-rtsp
-pio run -t upload -e esp32cam_ai_thinker
-pio device monitor
-```
-
-> Put the ESP32-CAM in **download mode** first! See [below](#putting-the-esp32-cam-in-download-mode).
-
----
-
-## Table of Contents
-
-- [Supported Protocols](#supported-protocols)
-- [Supported Boards](#boards)
-- [Security](#security)
-- [Required Hardware & Software](#required)
-- [Installing and Running PlatformIO](#installing-and-running-platformio)
-- [Putting the ESP32-CAM in Download Mode](#putting-the-esp32-cam-in-download-mode)
-- [Compiling and Deploying](#compiling-and-deploying-the-software)
-- [Setting Up](#setting-up-the-esp32cam-rtsp)
-- [Connecting to the Configuration](#connecting-to-the-configuration)
-- [RTSP Stream](#connecting-to-the-rtsp-stream)
-- [JPEG Motion Stream](#connecting-to-the-jpeg-motion-stream)
-- [Image Server](#connecting-to-the-image-server)
-- [API Reference](#api)
-- [Troubleshooting & Tips](#issues--nice-to-know)
+- [Features](#features)
+- [Supported boards](#boards)
+- [Installing and running PlatformIO](#installing-and-running-platformio)
+- [Putting the ESP32-CAM in download mode](#putting-the-esp32-cam-in-download-mode)
+- [Compiling and deploying the software](#compiling-and-deploying-the-software)
+- [Setting up the ESP32CAM-RTSP](#setting-up-the-esp32cam-rtsp)
+- [Connecting to the configuration](#connecting-to-the-configuration)
+- [Connecting to the RTSP stream](#connecting-to-the-rtsp-stream)
+- [Connecting to the JPEG motion server](#connecting-to-the-jpeg-motion-server)
+- [Connecting to the image server](#connecting-to-the-image-server)
+- [API](#api)
+- [Issues / Nice to know](#issues--nice-to-know)
 - [Credits](#credits)
-- [License](#license)
-- [Change History](#change-history)
 
----
+## Features
 
-## Supported Protocols
+Supported protocols
 
 - RTSP
   The RTSP protocol is an industry standard and allows many CCTV systems and applications (like for example [VLC](https://www.videolan.org/vlc/)) to connect directly to the ESP32CAM camera stream.
   It is also possible to stream directly to a server using [ffmpeg](https://ffmpeg.org).
   This makes the module a camera server allowing recording and the stream can be stored on a disk and replayed later.
+  The video is encoded as Motion-JPEG (RTP payload 26) and streamed over RTP/UDP (default) or RTP/RTSP/TCP.
+  Boards with an onboard microphone (e.g. the Seeed Studio XIAO ESP32S3 SENSE) can additionally stream
+  G.711 a-law audio (RTP payload 8).
   The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
 
 - HTTP Motion JPEG
@@ -60,19 +49,37 @@ pio device monitor
   The HTTP Image returns an HTTP JPEG image of the camera.
   The URL is http://&lt;ip address&gt;/snapshot
 
-This software supports a wide range of ESP32-CAM (and alike) modules — see the [Boards](#boards) section for the full list with specifications.
+This software supports the following ESP32-CAM (and alike) modules:
 
-The software provides a **configuration web server**, that can be used to:
+- AI THINKER
+- Espressif ESP-EYE
+- Espressif ESP32S2-CAM
+- Espressif ESP32S3-CAM-LCD
+- Espressif ESP32S3-EYE
+- Freenove WROVER KIT
+- M5STACK ESP32CAM
+- M5STACK_PSRAM
+- M5STACK_UNITCAM
+- M5STACK_UNITCAMS3
+- M5STACK_V2_PSRAM
+- M5STACK_WIDE
+- M5STACK M5PoECAM-W
+- M5STACK Timer CAM (Original and X)
+- Seeed Studio XIAO ESP32S3 SENSE
+- TTGO T-CAMERA
+- TTGO T-JOURNAL
 
-- Provide information about the state of the device, wifi connection and camera,
+The software provides a **configuration web server** that can be used to:
+
+- Provide information about the state of the device, WiFi connection and camera,
 - Set the WiFi parameters,
 - Set the timeout for connecting to the access point,
 - Set an access password,
 - Select the image size,
 - Select the frame rate,
-- Select the JPEG quality
-- Enable the use of the PSRAM
-- Set the number of frame buffers
+- Select the JPEG quality,
+- Enable the use of the PSRAM,
+- Set the number of frame buffers,
 - Configure the camera options:
   - Brightness
   - Contrast
@@ -80,6 +87,7 @@ The software provides a **configuration web server**, that can be used to:
   - Special effect (Normal, Negative, Gray-scale, Red/Green/Blue tint, Sepia)
   - White balance
   - Automatic White Balance gain
+  - White Balance mode
   - White Balance mode
   - Exposure control
   - Auto Exposure (dsp)
@@ -94,18 +102,11 @@ The software provides a **configuration web server**, that can be used to:
   - Lens correction
   - Horizontal mirror
   - Vertical flip
-  - Downside enable
+  - Downsize enable
   - Color bar
 
-The software also contains a mDNS server to be easily discoverable on the local network.
+The software also provides a mDNS server to be easily discoverable on the local network.
 It advertises HTTP (port 80) and RTSP (port 554).
-
-## Security
-
-> :bangbang: By default, there is **no password** on the video streams!
-> Anyone with network access to the device can view the streams or snapshots.
-> It is **strongly recommended** to configure an access password in the settings to restrict access.
-> The configuration and API endpoints use HTTP Basic Authentication (user: `admin`, password: your AP password).
 
 ## Required
 
@@ -119,21 +120,21 @@ There are a lot of boards available that are all called ESP32-CAM.
 However, there are differences in CPU (type/speed/cores), how the camera is connected, presence of PSRAM or not...
 To select the right board use the table below and use the configuration that is listed below for your board:
 
-| Board                           | Image                                                                                               | CPU                     | SRAM   | Flash  | PSRAM | Camera          | Notes        | Site                                                                                                                              |
-|---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---           |---                                                                                                                                |
-| Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |              |                                                                                                                                   |
-| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |              | [docs.ai-thinker.com](https://docs.ai-thinker.com/esp32-cam)                                                                     |
-| Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |              |                                                                                                                                   |
-| Espressif ESP-S3-EYE            | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4MB    | 4MB   | OV2640          |              | [espressif.com](https://www.espressif.com/en/products/devkits/esp-eye/overview)                                                   |
-| LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4MB    | 4MB   | OV2640 / OV5640 |              |                                                                                                                                   |
-| LilyGo Simcam                   | ![img](assets/boards/lilygo-simcam.jpg)                                                             | —                       | —      | —      | —     | OV2640          |              |                                                                                                                                   |
-| LilyGo TTGO-T Camera            | ![img](assets/boards/lilygo-ttgo-t-camera.jpg)                                                      | —                       | —      | —      | —     | OV2640          |              |                                                                                                                                   |
-| M5Stack ESP32CAM                | ![img](assets/boards/m5stack_esp32cam_02.webp)                                                      | ESP32                   | 520KB  | 4MB    | —     | OV2640          | Microphone   | [docs.m5stack.com](https://docs.m5stack.com/en/unit/esp32cam)                                                                    |
-| M5Stack UnitCam                 | ![img](assets/boards/m5stack_unit_cam_02.webp) ![img](assets/boards/m5stack_unit_cam_03.webp)       | ESP32-WROOM-32E         | 520KB  | 4MB    | —     | OV2640          |              | [docs.m5stack.com](https://docs.m5stack.com/en/unit/unit_cam)                                                                    |
-| M5Stack Camera                  | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520KB  | 4MB    | —     | OV2640          |              | [docs.m5stack.com](https://docs.m5stack.com/en/unit/m5camera)                                                                    |
-| M5Stack Camera PSRAM            | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |              | [docs.m5stack.com](https://docs.m5stack.com/en/unit/m5camera)                                                                    |
-| M5Stack UnitCamS3               | ![img](assets/boards/m5stack_Unitcams3.webp) ![img](assets/boards/m5stack_Unitcams32.webp)          | ESP32-S3-WROOM-1-N16R8  | 520KB  | 16MB   | 8MB   | OV2640          |              | [docs.m5stack.com](https://docs.m5stack.com/en/unit/Unit-CamS3)                                                                  |
-| Seeed studio Xiao ESP32S3 Sense | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg)                                           | ESP32-S3R8              | 520KB  | 8MB    | 8MB   | OV2640          | Microphone   | [seeedstudio.com](https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html)                                                     |
+| Board                           | Image                                                                                               | CPU                     | SRAM   | Flash  | PSRAM | Camera          | Extras      | Manufacturer site                                                                                                                 |
+|---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---          |---                                                                                                                                |
+| Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
+| AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
+| Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
+| Espressif ESP32-S3-EYE          | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4MB    | 8MB   | OV2640          |             | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview)  |
+| LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4MB    | 8MB   | OV2640 / OV5640 |             |                                                                                                                                   |
+| LilyGo Simcam                   | ![img](assets/boards/lilygo-simcam.jpg)                                                             |                         |        |        |       | OV2640          |             |                                                                                                                                   |
+| LilyGo TTGO-T Camera            | ![img](assets/boards/lilygo-ttgo-t-camera.jpg)                                                      |                         |        |        |       | OV2640          |             |                                                                                                                                   |
+| M5Stack ESP32CAM                | ![img](assets/boards/m5stack_esp32cam_02.webp)                                                      | ESP32                   | 520KB  | 4MB    | -     | OV2640          | Microphone  | [https://docs.m5stack.com/en/unit/esp32cam](https://docs.m5stack.com/en/unit/esp32cam)                                            |
+| M5Stack UnitCam                 | ![img](assets/boards/m5stack_unit_cam_02.webp) ![img](assets/boards/m5stack_unit_cam_03.webp)       | ESP32-WROOM-32E         | 520KB  | 4MB    | -     | OV2640          |             | [https://docs.m5stack.com/en/unit/unit_cam](https://docs.m5stack.com/en/unit/unit_cam)                                            |
+| M5Stack Camera                  | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520KB  | 4MB    | -     | OV2640          |             | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                            |
+| M5Stack Camera PSRAM            | ![img](assets/boards/m5stack-esp32-camera.jpg)                                                      | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |             | [https://docs.m5stack.com/en/unit/m5camera](https://docs.m5stack.com/en/unit/m5camera)                                            |
+| M5Stack UnitCamS3               | ![img](assets/boards//m5stack_Unitcams3.webp) ![img](assets/boards/m5stack_Unitcams32.webp)         | ESP32-S3-WROOM-1-N16R8  | 520KB  | 16MB   | 8MB   | OV2640          |             | [https://docs.m5stack.com/en/unit/Unit-CamS3](https://docs.m5stack.com/en/unit/Unit-CamS3)                                        |
+| Seeed Studio XIAO ESP32S3 Sense | ![img](assets/boards/seeed-studio-xiao-esp32s3-sense.jpg)                                           | ESP32-S3R8              | 520KB  | 8MB    | 8MB   | OV2640          | Microphone  | [https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html](https://www.seeedstudio.com/XIAO-ESP32S3-Sense-p-5639.html)          |
 
 ## Installing and running PlatformIO
 
@@ -146,8 +147,8 @@ Install [Visual Studio Code](https://code.visualstudio.com) and install the Plat
 
 ### ESP32-CAM-MB
 
-When using the ESP32-CAM-MB board, press and hold the GP0 button on the ESP32-CAM-MB board.
-Then press short the reset button (on the inside) on the ESP32-CAM board and release the GP0 button.
+When using the ESP32-CAM-MB board, press and hold the GPIO0 button on the ESP32-CAM-MB board.
+Then press short the reset button (on the inside) on the ESP32-CAM board and release the GPIO0 button.
 This will put the ESP32-CAM board in download mode.
 
 ### FTDI adapter
@@ -156,7 +157,7 @@ When using an FTDI adapter, make sure the adapter is set to 3.3 volt before conn
 
 ![ESP FTDI wiring](assets/ESP32CAM-to-FTDI.png)
 
-After programming, remove the wire to the GPIO0 pin to exit the download mode.
+After programming remove the wire to the GPIO0 pin to exit the download mode.
 
 ## Compiling and deploying the software
 
@@ -166,13 +167,13 @@ Open a command line or terminal window and clone this repository from GitHub.
 git clone https://github.com/rzeldent/esp32cam-rtsp.git
 ```
 
-go into the folder
+Go into the folder
 
 ```sh
 cd esp32cam-rtsp
 ```
 
-Next, the firmware has to be build and deployed to the ESP32.
+Next, the firmware has to be built and deployed to the ESP32.
 There are two flavours to do this; using the command line or the graphical interface of Visual Studio Code.
 
 ### Using the command line
@@ -189,7 +190,7 @@ First the source code has to be compiled to build all targets
 pio run
 ```
 
-if only a specific target is required, for example the ```esp32cam_ttgo_t_journal``` type:
+If only a specific target is required, for example the ```esp32cam_ttgo_t_journal``` type:
 
 ```sh
 pio run -e esp32cam_ttgo_t_journal
@@ -231,8 +232,10 @@ Initially there is no password present.
 
 After connecting, the browser should automatically open the status page.
 In case this does not happen automatically, connect to [http://192.168.4.1](http://192.168.4.1).
+In case this does not happen automatically, connect to [http://192.168.4.1](http://192.168.4.1).
 This page will display the current settings and status. On the bottom, there is a link to the config. Click on this link.
 
+This link brings up the configuration screen when connecting for the first time.
 This link brings up the configuration screen when connecting for the first time.
 
 ![Configuration screen](assets/Configuration.png)
@@ -251,27 +254,97 @@ It is also possible to restart manually by pressing the reset button.
 
 After the initial configuration and the device is connected to an access point, the device can be configured over http.
 
-When a connection is made to [http://esp32cam-rtsp](http://esp32cam-rtsp) the status screen is shown.
+The device announces itself on the local network via mDNS as `esp32cam-rtsp-<mac>.local`, where `<mac>` is the device's MAC address (also shown on the status page). Connect to `http://esp32cam-rtsp-<mac>` — or to the device's IP address — to open the status screen.
 
 ![Status screen](assets/index.png)
 
 In case changes have been made to the configuration, this is shown and the possibility to restart is given.
 
 Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
-If prompted, enter `admin` as the username and your configured Access Point password as the password.
+If this happens, enter 'admin' as the user and the configured Access Point password as the password.
 
 ## Connecting to the RTSP stream
 
-RTSP stream is available at: [rtsp://esp32cam-rtsp.local:554/mjpeg/1](rtsp://esp32cam-rtsp.local:554/mjpeg/1).
+RTSP stream is available at `rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1` (replace `<mac>` with the device's MAC address, or use its IP address).
 This link can be opened with for example [VLC](https://www.videolan.org/vlc/).
 
-## Connecting to the JPEG motion stream
+### Transports
 
-The JPEG motion stream is available using a normal web browser at: [http://esp32cam-rtsp.local/stream](http://esp32cam-rtsp.local/stream).
+By default RTP is sent over UDP (the client announces its RTP ports in the `SETUP` request).
+When the network filters or firewalls UDP traffic, force the RTP/RTSP/TCP (interleaved) transport in VLC:
+
+```sh
+vlc rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1 --rtsp-tcp
+```
+
+### Secure RTP (SRTP)
+
+The server can stream over Secure RTP (RFC 3711, crypto suite `AES_CM_128_HMAC_SHA1_80`).
+SRTP encrypts the RTP payload with AES-128 in counter mode and authenticates every packet
+with an HMAC-SHA1 tag, so the video cannot be watched or tampered with by someone sniffing
+the network.
+
+To enable it, build with the `MICRO_RTSP_ENABLE_SRTP` define, for example in `platformio.ini`:
+
+```ini
+build_flags =
+  -DMICRO_RTSP_ENABLE_SRTP
+```
+
+The keys are negotiated per session with the `a=crypto` attribute (RFC 4568) that the server
+advertises in its `DESCRIBE` and `SETUP` replies. A client that offers its own `a=crypto`
+in the `SETUP` request enables SRTP for that session as well. Receive the stream with FFmpeg
+(which picks up the `a=crypto` key automatically):
+
+```sh
+ffmpeg -rtsp_transport tcp -i rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1 -c copy out.mp4
+```
+
+> [!NOTE]
+> SRTP is intentionally **not** enabled by default: it requires an SRTP-capable client and
+> breaks plain players such as VLC. The `a=crypto` negotiation is handled by
+> `lib/micro-rtsp-server`.
+
+### Audio
+
+When the board has an onboard I2S microphone, an additional audio track is offered and streamed
+together with the video as G.711 a-law (PCMA, 8 kHz mono). VLC plays it automatically.
+Currently audio is enabled for the Seeed Studio XIAO ESP32S3 SENSE board (see `boards/` and the
+`MIC_I2S_*` defines). To enable it on another board, add the microphone I2S pins to its board
+configuration, for example:
+
+```json
+"'-D MIC_I2S_BCLK=17'",
+"'-D MIC_I2S_WS=42'",
+"'-D MIC_I2S_DIN=41'"
+```
+
+### ffmpeg
+
+The stream can be recorded to disk, for example:
+
+```sh
+ffmpeg -rtsp_transport tcp -i rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1 -c copy out.mp4
+```
+
+### Implementation
+
+The RTSP server is implemented by the `micro-rtsp-server` library (in `lib/micro-rtsp-server`),
+a small single-threaded server that supports multiple simultaneous clients, RTP/UDP and
+RTP/RTSP/TCP transports, and (optionally) an audio track. The video frames are captured with
+`esp32-camera`, decoded with the `micro-jpg` library to locate the JPEG quantization tables, and
+packetized into RFC 2435 (JPEG over RTP) packets.
+
+## Connecting to the JPEG motion server
+
+The JPEG motion server is available in a web browser at `http://esp32cam-rtsp-<mac>.local/stream` (replace `<mac>` with the device's MAC address).
 
 ## Connecting to the image server
 
-The image server is available using a normal web browser at: [http://esp32cam-rtsp.local/snapshot](http://esp32cam-rtsp.local/snapshot).
+The image server is available in a web browser at `http://esp32cam-rtsp-<mac>.local/snapshot`.
+
+> [!WARNING]
+> There is no password protection by default. Anyone with network access to the device can view the streams or images.
 
 ## API
 
@@ -326,6 +399,16 @@ If not stable, it has been reported that restarts occur when starting up (probab
 The software disables the brown out protection so there is some margin in the voltage.
 Some people suggest to add a capacitor over the 5V input to stabilize the voltage.
 
+An unstable power supply is also the most common cause of **horizontal color stripes/bands
+(blue, yellow or orange)** in the camera image. The OV2640 sensor is sensitive to supply noise
+and voltage sag, which shows up as intermittent colored bands, often near the top or bottom
+of the frame. If you see these stripes:
+
+- power the board from a stable **5V/2A** supply on the **5V** pin (not the 3.3V pin),
+- use short, thick wires,
+- add a **100–470 µF** electrolytic capacitor across 5V and GND right at the board,
+- avoid thin or long USB cables.
+
 ### PSRAM / Buffers / JPEG quality
 
 Some esp32cam modules have additional ram on the board. This allows to use this ram as frame buffer.
@@ -333,72 +416,68 @@ The availability of PSRAM can be seen in the HTML status overview.
 
 Not all the boards are equipped with PSRAM:
 
-| Board                   | PSRAM          |
-|-------------------------|----------------|
-| ESP32-Wrover CAM        | 4MB            |
-| AI_THINKER              | 4MB            |
-| ESP_EYE                 | 4MB            |
-| ESP32S3_EYE             | 4MB            |
-| M5STACK_PSRAM           | 4MB            |
-| M5STACK_V2_PSRAM        | Version B only |
-| M5STACK_WIDE            | 4MB            |
-| M5STACK_M5PoECAM-W      | 8MB            |
-| M5STACK_UNITCAMS3       | 8MB            |
-| M5STACK_ESP32CAM        | No             |
-| M5STACK_UNITCAM         | No             |
-| M5STACK_TIMER_CAM       | No             |
-| M5STACK Camera          | No             |
-| TTGO_T_JOURNAL          | No             |
-| TTGO_T_CAMERA           | No             |
-| Seeed Xiao ESP32S3 Sense| 8MB            |
-| ESP32_CAM_BOARD         | ?              |
-| ESP32S2_CAM_BOARD       | ?              |
-| ESP32S3_CAM_LCD         | ?              |
+| Board              | PSRAM          |
+|--------------------|----------------|
+| WROVER_KIT         | 8MB            |
+| ESP_EYE            | 8MB            |
+| ESP32S3_EYE        | 8MB            |
+| M5STACK_PSRAM      | 8MB            |
+| M5STACK_V2_PSRAM   | Version B only |
+| M5STACK_WIDE       | 8MB            |
+| M5STACK_ESP32CAM   | No             |
+| M5STACK_UNITCAM    | No             |
+| M5STACK_UNITCAMS3  | 8MB            |
+| M5STACK_M5PoECAM-W | 8MB            |
+| AI_THINKER         | 4MB            |
+| TTGO_T_JOURNAL     | No             |
+| ESP32_CAM_BOARD    | ?              |
+| ESP32S2_CAM_BOARD  | ?              |
+| ESP32S3_CAM_LCD    | ?              |
 
 Depending on the image resolution, framerate and quality, the PSRAM must be enabled and/or the number of frame buffers increased to keep up with the data generated by the sensor.
-There are (a lot of?) boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason. See on [Reddit](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
-In this case disable the use of PSRAM in the configuration and do not use camera modes that require PSRAM,
+There are many boards around with faulty PSRAM. If the camera fails to initialize, this might be a reason — see this [Reddit post](https://www.reddit.com/r/esp32/comments/z2hyns/i_have_a_faulty_psram_on_my_esp32cam_what_should/).
+In this case disable the use of PSRAM in the configuration and do not use camera modes that require PSRAM.
 
 For the setting JPEG quality, a lower number means higher quality.
 Be aware that a very high quality (low number) can cause the ESP32 cam to crash or return no image.
 
 The default settings are:
 
-- No PSRAM
-  - SVGA (800x600)
-  - 1 frame buffer
-  - JPEG quality 12
-
-- With PSRAM
-  - UXGA (1600x1200)
-  - 2 frame buffers
-  - JPEG quality 10
+- Frame size: **QVGA (320×240)**
+- JPEG quality: **12** with PSRAM, **14** without PSRAM
+- Frame buffers: **2**
 
 ### Camera module
 
 Be careful when connecting the camera module.
 Make sure it is connected the right way around (Camera pointing away from the board) and the ribbon cable inserted to the end before locking it.
 
+### Image artifacts (color stripes / bands)
+
+If the image shows horizontal color stripes or bands (e.g. blue, yellow or orange), the most likely causes are:
+
+- **Power supply instability** (most common) — see [Power](#power) above.
+- **Frame tearing** — reading a frame buffer while the camera is still writing it; keep at least 2 frame buffers.
+- **Flickering artificial light** — the rolling shutter beats against LED/fluorescent flicker; test by covering the lens.
+- **WiFi interference** — the antenna sits close to the camera; try lowering TX power or repositioning.
+
 ## Credits
 
-esp32cam-rtsp depends on PlatformIO, Bootstrap 5, and [Micro-RTSP](https://github.com/geeksville/Micro-RTSP) by Kevin Hester.
-
-## License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+esp32cam-rtsp depends on PlatformIO, IotWebConf, Bootstrap 5, micro-moustache and micro-timezonedb, plus the bundled `micro-rtsp-server` and `micro-jpg` libraries.
 
 ## Change history
 
-- **July 2026**
-  - Updated documentation and README improvements
-- **August 2024**
+- August 2026
+  - Rewrote the RTSP server (`micro-rtsp-server`): RTP/UDP and RTP/RTSP/TCP, SRTP, G.711 audio
+  - Improved streaming stability and performance
+- August 2024
   - Added support for M5Stack M5PoECAM-W
 - **January 2024**
   - Moved settings to board definitions
   - Added new boards
   - Removed OTA to increase performance
-- **October 2023**
-  - Added support for Seeed Xiao ESP32S3
+- October 2023
+  - Added support for Seeed Xiao esp32s3
   - New build system
   - Updated documentation
 - **March 2023**

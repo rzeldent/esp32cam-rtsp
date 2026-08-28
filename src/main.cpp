@@ -4,9 +4,7 @@
 #include <driver/i2c.h>
 #include <IotWebConf.h>
 #include <IotWebConfTParameter.h>
-#include <OV2640.h>
 #include <ESPmDNS.h>
-#include <rtsp_server.h>
 #include <lookup_camera_effect.h>
 #include <lookup_camera_frame_size.h>
 #include <lookup_camera_gainceiling.h>
@@ -15,6 +13,10 @@
 #include <format_number.h>
 #include <moustache.h>
 #include <settings.h>
+
+#include <micro_rtsp_camera.h>
+#include <micro_rtsp_server.h>
+#include <micro_rtsp_audio_i2s.h>
 
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
@@ -47,11 +49,19 @@ auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").labe
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
 // Camera
-OV2640 cam;
 // DNS Server
 DNSServer dnsServer;
-// RTSP Server
-std::unique_ptr<rtsp_server> camera_server;
+
+micro_rtsp_camera camera;
+#ifdef MIC_I2S_BCLK
+// Optional audio: capture from the onboard I2S MEMS microphone and stream it
+// as G.711 a-law together with the video (see boards/*.json for the pins).
+micro_rtsp_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
+micro_rtsp_server server(camera, &audio);
+#else
+micro_rtsp_server server(camera);
+#endif
+
 // Web server
 WebServer web_server(80);
 
@@ -76,7 +86,6 @@ void handle_root()
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
   auto ipv4 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIP() : WiFi.localIP();
-  auto ipv6 = WiFi.getMode() == WIFI_MODE_AP ? WiFi.softAPIPv6() : WiFi.localIPv6();
 
   auto initResult = esp_err_to_name(camera_init_result);
   if (initResult == nullptr)
@@ -100,7 +109,7 @@ void handle_root()
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_memory(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
-      {"NumRTSPSessions", camera_server != nullptr ? String(camera_server->num_connected()) : "RTSP server disabled"},
+      {"NumRTSPSessions", String(server.clients())},
       // Network
       {"HostName", hostname},
       {"MacAddress", WiFi.macAddress()},
@@ -108,7 +117,6 @@ void handle_root()
       {"SignalStrength", String(WiFi.RSSI())},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
       {"IPv4", ipv4.toString()},
-      {"IPv6", ipv6.toString()},
       {"NetworkState.ApMode", String(iotWebConf.getState() == iotwebconf::NetworkState::ApMode)},
       {"NetworkState.OnLine", String(iotWebConf.getState() == iotwebconf::NetworkState::OnLine)},
       // Camera
@@ -176,10 +184,10 @@ void handle_snapshot()
   // Remove old images stored in the frame buffer
   auto frame_buffers = CAMERA_CONFIG_FB_COUNT;
   while (frame_buffers--)
-    cam.run();
+    camera.update_frame();
 
-  auto fb_len = cam.getSize();
-  auto fb = (const char *)cam.getfb();
+  auto fb_len = camera.size();
+  auto fb = camera.data();
   if (fb == nullptr)
   {
     web_server.send(404, "text/plain", "Unable to obtain frame buffer from the camera");
@@ -189,7 +197,7 @@ void handle_snapshot()
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   web_server.setContentLength(fb_len);
   web_server.send(200, "image/jpeg", "");
-  web_server.sendContent(fb, fb_len);
+  web_server.sendContent((const char *)fb, fb_len);
 }
 
 #define STREAM_CONTENT_BOUNDARY "123456789000000000000987654321"
@@ -204,18 +212,36 @@ void handle_stream()
   }
 
   log_v("starting streaming");
-  // Blocks further handling of HTTP server until stopped
+  // Pace frames to the configured frame interval and service the RTSP server
+  // and the web config/DNS/mDNS machinery between frames, so this handler
+  // does not block the rest of the firmware while the connection is open.
   char size_buf[12];
   auto client = web_server.client();
   client.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" STREAM_CONTENT_BOUNDARY "\r\n");
+
+  const auto frame_interval = server.get_frame_interval();
+  unsigned long next_frame = 0;
   while (client.connected())
   {
-    client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
-    cam.run();
-    client.write("Content-Type: image/jpeg\r\nContent-Length: ");
-    sprintf(size_buf, "%d\r\n\r\n", cam.getSize());
-    client.write(size_buf);
-    client.write(cam.getfb(), cam.getSize());
+    auto now = millis();
+    if (now >= next_frame)
+    {
+      camera.update_frame();
+      if (camera.data() != nullptr)
+      {
+        client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
+        client.write("Content-Type: image/jpeg\r\nContent-Length: ");
+        sprintf(size_buf, "%d\r\n\r\n", camera.size());
+        client.write(size_buf);
+        client.write(camera.data(), camera.size());
+      }
+      next_frame = now + frame_interval;
+    }
+
+    // Keep RTSP streaming and the web config/DNS/mDNS loop alive while this
+    // HTTP connection is open.
+    server.loop();
+    iotWebConf.doLoop();
   }
 
   log_v("client disconnected");
@@ -225,9 +251,9 @@ void handle_stream()
 
 void handle_restart()
 {
-	log_v("handle_restart");
-	WiFi.disconnect(false, true);
-	ESP.restart();
+  log_v("handle_restart");
+  WiFi.disconnect(false, true);
+  ESP.restart();
 }
 
 esp_err_t initialize_camera()
@@ -239,7 +265,11 @@ esp_err_t initialize_camera()
   log_i("JPEG quality: %d", param_jpg_quality.value());
   auto jpeg_quality = param_jpg_quality.value();
   log_i("Frame duration: %d ms", param_frame_duration.value());
-  const camera_config_t camera_config = {
+
+  // Set frame duration
+  server.set_frame_interval(param_frame_duration.value());
+
+  camera_config_t camera_config = {
       .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
       .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
       .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
@@ -268,10 +298,12 @@ esp_err_t initialize_camera()
 #if CONFIG_CAMERA_CONVERTER_ENABLED
       conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-      .sccb_i2c_port = SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
+      .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
-  return cam.init(camera_config);
+  return camera.initialize(&camera_config);
+
+  // return cam.init(camera_config);
 }
 
 void update_camera_settings()
@@ -310,15 +342,38 @@ void update_camera_settings()
 void start_rtsp_server()
 {
   log_v("start_rtsp_server");
-  camera_server = std::unique_ptr<rtsp_server>(new rtsp_server(cam, param_frame_duration.value(), RTSP_PORT));
+
+  server.begin(RTSP_PORT);
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
   MDNS.addService("rtsp", "tcp", RTSP_PORT);
 }
 
+// Runtime Wi-Fi throughput optimizations (the prebuilt Arduino core has no sdkconfig to tweak, but these esp_wifi API calls work at runtime)
+// Applied on every STA connect so they survive reconnects. Modem sleep is already disabled in setup() via WiFi.setSleep(false).
+void tune_wifi_throughput()
+{
+  // Maximum TX power (subject to the configured regulatory domain).
+  if (!WiFi.setTxPower(WIFI_POWER_19_5dBm))
+    log_w("Failed to set TX power");
+
+  // 802.11g/n only: drop 802.11b rates to avoid protection-frame overhead.
+  if (esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N) != ESP_OK)
+    log_w("Failed to set Wi-Fi protocol");
+
+  // 40 MHz channel width; only effective when the AP is configured for HT40, otherwise the driver falls back to 20 MHz.
+  if (esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40) != ESP_OK)
+    log_w("Failed to set Wi-Fi bandwidth");
+  // Note: TX frame aggregation (A-MPDU) is already enabled by default in this core; it is only configurable at build time (no runtime API on ESP-IDF 4.x).
+}
+
 void on_connected()
 {
   log_v("on_connected");
+
+  // Apply the Wi-Fi throughput settings now that the STA interface is up.
+  tune_wifi_throughput();
+
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
     start_rtsp_server();
@@ -372,6 +427,33 @@ void setup()
   if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM && !psramInit())
     log_e("Failed to initialize PSRAM");
 
+  // Try to initialize the camera 3 times
+  for (auto i = 0; i < 3; i++)
+  {
+    log_i("Initializing camera...");
+    camera_init_result = initialize_camera();
+    if (camera_init_result == ESP_OK)
+      break;
+
+    esp_camera_deinit();
+    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    delay(500);
+  }
+
+#ifdef MIC_I2S_BCLK
+  if (!audio.begin())
+    log_e("Failed to initialize the I2S microphone");
+#endif
+
+  WiFi.setSleep(false);
+
+#ifdef MICRO_RTSP_ENABLE_SRTP
+  // Stream video over Secure RTP (RFC 3711), negotiated with "a=crypto"
+  // (RFC 4568) in the DESCRIBE/SETUP replies.
+  server.set_srtp(true);
+  log_i("SRTP enabled");
+#endif
+
   param_group_camera.addItem(&param_frame_duration);
   param_group_camera.addItem(&param_frame_size);
   param_group_camera.addItem(&param_jpg_quality);
@@ -407,20 +489,10 @@ void setup()
 #endif
   iotWebConf.init();
 
-  // Try to initialize 3 times
-  for (auto i = 0; i < 3; i++)
-  {
-    camera_init_result = initialize_camera();
-    if (camera_init_result == ESP_OK)
-    {
-      update_camera_settings();
-      break;
-    }
+  // Set the time servers
+  configTime(0, 0, NTP_SERVERS);
 
-    esp_camera_deinit();
-    log_e("Failed to initialize camera. Error: 0x%0x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
-    delay(500);
-  }
+  update_camera_settings();
 
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
@@ -444,6 +516,5 @@ void loop()
 {
   iotWebConf.doLoop();
 
-  if (camera_server)
-    camera_server->doLoop();
+  server.loop();
 }

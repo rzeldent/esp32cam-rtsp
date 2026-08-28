@@ -1,0 +1,98 @@
+#pragma once
+
+#include <Arduino.h>
+#include <WiFiServer.h>
+
+#include <string>
+#include <list>
+#include <memory>
+
+#include "micro_rtsp_source_audio.h"
+#include "micro_rtsp_source_video.h"
+#include "micro_rtsp_jpeg_header.h"
+#include "micro_rtsp_requests.h"
+#include "micro_rtsp_srtp.h"
+#include "micro_rtsp_streamer.h"
+#include "micro_rtsp_udp.h"
+
+class micro_rtsp_server : WiFiServer
+{
+public:
+	// audio_source is optional. When set, an audio track (G.711 a-law) is offered to the clients and streamed alongside the video.
+	micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source = nullptr);
+	~micro_rtsp_server();
+
+	void begin(unsigned short port = 554);
+	void end();
+
+	unsigned get_frame_interval() const;
+	unsigned set_frame_interval(unsigned value);
+
+	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and SETUP replies and encrypts the outgoing RTP streams
+	// A client that offers its own "a=crypto" enables SRTP for that session as well.
+	void set_srtp(bool enabled);
+
+	void loop();
+
+	size_t clients() const;
+
+	class rtsp_client : public WiFiClient, public micro_rtsp_requests
+	{
+	public:
+		rtsp_client(const WiFiClient &client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
+		~rtsp_client();
+
+		void handle_request();
+
+		// Buffers an incoming chunk until a complete request is available.
+		void append_request_data(const uint8_t *data, size_t size);
+
+		micro_rtsp_streamer streamer;
+		std::string request_buffer;
+
+		// Per-frame send progress: the next fragment offset within the current
+		// frame and the built-but-not-yet-sent fragment (retried on failure).
+		uint8_t *video_frame_offset_;
+		uint8_t *pending_packet_;
+		size_t pending_packet_size_;
+	};
+
+private:
+	// Sends one RTP packet to a client using its configured transport.
+	// UDP is the socket used for RTP/UDP transport, dest_port the client RTP port (both ignored for RTP/AVP/TCP interleaved transport).
+	// Returns false when the packet could not be sent and should be retried.
+	bool send_packet(rtsp_client &client, micro_rtsp_udp &udp, const uint8_t *packet, size_t packet_size, uint16_t dest_port);
+	bool start_sending_frame(); // capture + decode a frame, begin paced transmission
+	bool send_next_fragment();	// send one fragment, false when the frame is done
+	void send_audio_chunk();
+
+	micro_rtsp_source_video &video_source_;
+	micro_rtsp_source_audio *audio_source_;
+	bool srtp_enabled_;
+	unsigned frame_interval_;
+	unsigned long next_frame_update_;
+	unsigned long next_audio_update_;
+	unsigned long next_check_client_;
+	uint16_t rtp_udp_port_;
+	uint16_t audio_udp_port_;
+	uint16_t rtsp_port_;	   // RTSP TCP port, advertised in the RTP-Info URL
+	micro_rtsp_udp rtp_udp_;   // UDP socket for the RTP video stream
+	micro_rtsp_udp audio_udp_; // UDP socket for the RTP audio stream
+	std::list<std::unique_ptr<rtsp_client>> clients_;
+
+	// Paced transmission of the current frame: the captured framebuffer is held until every fragment has been sent, and the fragments are spread
+	// evenly across the frame interval so the Wi-Fi TX path is never burst-saturated.
+	bool streaming_frame_;
+	uint8_t *frame_data_start_; // start of the scan data (first fragment)
+	uint8_t *frame_scan_end_;	// end of the scan data
+	const uint8_t *quant_lum_;	// quantization tables (valid while streaming)
+	const uint8_t *quant_chr_;
+	uint32_t frame_timestamp_;		   // RTP timestamp (90 kHz) for this frame
+	unsigned fragment_send_interval_;  // ms between two fragments
+	unsigned long next_fragment_send_; // when to send the next fragment
+	bool fragment_retry_pending_;	   // a fragment failed to send; retry soon
+
+	// Cached JPEG header (quantization tables + scan data start offset),
+	// reused across frames so the full JPEG parse only happens once.
+	micro_rtsp_jpeg_header jpeg_header_;
+};
