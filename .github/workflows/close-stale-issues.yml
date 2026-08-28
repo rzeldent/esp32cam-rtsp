@@ -1,0 +1,36 @@
+name: Close stale issues
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: # allow manual trigger from the Actions tab
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Issues
+          days-before-issue-stale: 60   # mark as stale after 60 days of inactivity
+          days-before-issue-close: 7    # close 7 days after being marked stale
+          stale-issue-message: >
+            This issue has been automatically marked as stale because it has had no
+            activity in the last 60 days. It will be closed in 7 days if no further
+            activity occurs. If this is still relevant, please leave a comment.
+          close-issue-message: >
+            This issue was automatically closed because it was stale for 7 days with
+            no activity. Feel free to reopen it if the problem still occurs.
+
+          # Pull requests (set to -1 to leave them alone)
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+
+          # Options
+          exempt-issue-labels: 'keep, enhancement, bug'  # never auto-close these
+          operations-per-run: 200                        # avoid API rate limits

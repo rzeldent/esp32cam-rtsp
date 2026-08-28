@@ -1,6 +1,9 @@
 # ESP32CAM-RTSP
 
 [![Platform IO CI](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml/badge.svg)](https://github.com/rzeldent/esp32cam-rtsp/actions/workflows/main.yml)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![PlatformIO](https://img.shields.io/badge/platform-PlatformIO-orange)
+![ESP32](https://img.shields.io/badge/target-ESP32%2FESP32--S3%2FESP32--S2-green)
 
 Simple [RTSP](https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol), [HTTP JPEG Streamer](https://en.wikipedia.org/wiki/Motion_JPEG) and image server with configuration through the web interface.
 
@@ -84,6 +87,7 @@ The software provides a **configuration web server** that can be used to:
   - Special effect (Normal, Negative, Gray-scale, Red/Green/Blue tint, Sepia)
   - White balance
   - Automatic White Balance gain
+  - White Balance mode
   - White Balance mode
   - Exposure control
   - Auto Exposure (dsp)
@@ -212,14 +216,13 @@ To monitor the output, start a terminal using:
  pio device monitor
 ```
 
-### Using Visual studio
+### Using Visual Studio Code
 
-Open the project in a new window. Run the following tasks using the ```Terminal -> Run Task``` or CTRL+ALT+T command in the menu (or use the icons below on the toolbar). Make sure the ESP32-CAM is in download mode during the uploads.
+Open the project in Visual Studio Code with the PlatformIO extension installed. Run the following tasks using ```Terminal -> Run Task``` (or `Ctrl+Alt+T`). Make sure the ESP32-CAM is in download mode during uploads.
 
-- PlatformIO: Build (esp32cam)
-- PlatformIO: Upload (esp32cam)
-
-To monitor the behavior run the task, run: ```PlatformIO: Monitor (esp32cam)```
+- **PlatformIO: Build (esp32cam)** — compiles the firmware
+- **PlatformIO: Upload (esp32cam)** — uploads the firmware to the device
+- **PlatformIO: Monitor (esp32cam)** — opens the serial monitor to view debug output
 
 ## Setting up the ESP32CAM-RTSP
 
@@ -229,8 +232,10 @@ Initially there is no password present.
 
 After connecting, the browser should automatically open the status page.
 In case this does not happen automatically, connect to [http://192.168.4.1](http://192.168.4.1).
+In case this does not happen automatically, connect to [http://192.168.4.1](http://192.168.4.1).
 This page will display the current settings and status. On the bottom, there is a link to the config. Click on this link.
 
+This link brings up the configuration screen when connecting for the first time.
 This link brings up the configuration screen when connecting for the first time.
 
 ![Configuration screen](assets/Configuration.png)
@@ -343,11 +348,16 @@ The image server is available in a web browser at `http://esp32cam-rtsp-<mac>.lo
 
 ## API
 
-There is a minimum API present to perform some tasks using HTTP requests. For some requests authentication is required.
-The authentication used is basic authentication. The user is always admin and the password the access point key.\
-If using a browser, remember that the authentication is stored in the browser session so needs to be entered only once.
+There is a minimal API to perform tasks via HTTP requests. Some endpoints require **HTTP Basic Authentication**.
 
-The URLs are below:
+| Credential | Value                            |
+|------------|----------------------------------|
+| Username   | `admin`                          |
+| Password   | Your configured AP password      |
+
+> Authentication is cached in the browser session, so you only need to enter it once.
+
+The available endpoints are:
 
 ### GET: /restart
 
@@ -462,7 +472,7 @@ esp32cam-rtsp depends on PlatformIO, IotWebConf, Bootstrap 5, micro-moustache an
   - Improved streaming stability and performance
 - August 2024
   - Added support for M5Stack M5PoECAM-W
-- January 2024
+- **January 2024**
   - Moved settings to board definitions
   - Added new boards
   - Removed OTA to increase performance
@@ -470,18 +480,18 @@ esp32cam-rtsp depends on PlatformIO, IotWebConf, Bootstrap 5, micro-moustache an
   - Added support for Seeed Xiao esp32s3
   - New build system
   - Updated documentation
-- March 2023
+- **March 2023**
   - Added options to set PSRAM / Frame buffers
   - Added JPEG Motion streaming
-- Feb 2023
+- **February 2023**
   - Added additional settings for camera configuration
-- Nov 2022
+- **November 2022**
   - Added OTA
   - Fix for grabbing frame
   - Fixed bug: Increased WiFi password length
-- Sep 2022
-  - Added GUI with bootstrap
+- **September 2022**
+  - Added GUI with Bootstrap
   - More information in web page
   - Added camera preview in HTML
-- Jul 2022
+- **July 2022**
   - Initial version
