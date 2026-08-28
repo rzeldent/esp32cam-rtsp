@@ -251,9 +251,9 @@ void handle_stream()
 
 void handle_restart()
 {
-	log_v("handle_restart");
-	WiFi.disconnect(false, true);
-	ESP.restart();
+  log_v("handle_restart");
+  WiFi.disconnect(false, true);
+  ESP.restart();
 }
 
 esp_err_t initialize_camera()
@@ -270,35 +270,35 @@ esp_err_t initialize_camera()
   server.set_frame_interval(param_frame_duration.value());
 
   camera_config_t camera_config = {
-    .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
-    .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
-    .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
-    .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
-    .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
-    .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
-    .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
-    .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
-    .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
-    .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
-    .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
-    .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
-    .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
-    .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
-    .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
-    .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
-    .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
-    .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
-    .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
-    .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
-    .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-    .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
-    .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
-    .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
-    .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
+      .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
+      .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
+      .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
+      .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
+      .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
+      .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
+      .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
+      .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
+      .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
+      .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
+      .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
+      .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
+      .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
+      .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
+      .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
+      .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
+      .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+      .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
+      .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
+      .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
+      .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
+      .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
+      .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
+      .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
+      .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
 #if CONFIG_CAMERA_CONVERTER_ENABLED
       conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
 #endif
-    .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
+      .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
   };
 
   return camera.initialize(&camera_config);
@@ -349,9 +349,31 @@ void start_rtsp_server()
   MDNS.addService("rtsp", "tcp", RTSP_PORT);
 }
 
+// Runtime Wi-Fi throughput optimizations (the prebuilt Arduino core has no sdkconfig to tweak, but these esp_wifi API calls work at runtime)
+// Applied on every STA connect so they survive reconnects. Modem sleep is already disabled in setup() via WiFi.setSleep(false).
+void tune_wifi_throughput()
+{
+  // Maximum TX power (subject to the configured regulatory domain).
+  if (!WiFi.setTxPower(WIFI_POWER_19_5dBm))
+    log_w("Failed to set TX power");
+
+  // 802.11g/n only: drop 802.11b rates to avoid protection-frame overhead.
+  if (esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N) != ESP_OK)
+    log_w("Failed to set Wi-Fi protocol");
+
+  // 40 MHz channel width; only effective when the AP is configured for HT40, otherwise the driver falls back to 20 MHz.
+  if (esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40) != ESP_OK)
+    log_w("Failed to set Wi-Fi bandwidth");
+  // Note: TX frame aggregation (A-MPDU) is already enabled by default in this core; it is only configurable at build time (no runtime API on ESP-IDF 4.x).
+}
+
 void on_connected()
 {
   log_v("on_connected");
+
+  // Apply the Wi-Fi throughput settings now that the STA interface is up.
+  tune_wifi_throughput();
+
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
     start_rtsp_server();
@@ -405,6 +427,19 @@ void setup()
   if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM && !psramInit())
     log_e("Failed to initialize PSRAM");
 
+  // Try to initialize the camera 3 times
+  for (auto i = 0; i < 3; i++)
+  {
+    log_i("Initializing camera...");
+    camera_init_result = initialize_camera();
+    if (camera_init_result == ESP_OK)
+      break;
+
+    esp_camera_deinit();
+    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    delay(500);
+  }
+
 #ifdef MIC_I2S_BCLK
   if (!audio.begin())
     log_e("Failed to initialize the I2S microphone");
@@ -456,19 +491,6 @@ void setup()
 
   // Set the time servers
   configTime(0, 0, NTP_SERVERS);
-
-  // Try to initialize 3 times
-  for (auto i = 0; i < 3; i++)
-  {
-    log_i("Initializing camera...");
-    camera_init_result = initialize_camera();
-    if (camera_init_result == ESP_OK)
-      break;
-
-    esp_camera_deinit();
-    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
-    delay(500);
-  }
 
   update_camera_settings();
 
