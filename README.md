@@ -309,6 +309,73 @@ ffmpeg -rtsp_transport tcp -i rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1 -c co
 > breaks plain players such as VLC. The `a=crypto` negotiation is handled by
 > `lib/micro-rtsp-server`.
 
+#### Testing SRTP with `srtp_client.py`
+
+The repository contains a small Python client, `tools/srtp_client.py`, that verifies the
+SRTP stream end-to-end. It negotiates SRTP by offering its own `a=crypto` attribute
+(RFC 4568) in the RTSP `SETUP` request, derives the session keys exactly like the firmware
+(`lib/micro-rtsp-server/src/micro_rtsp_srtp.cpp`), decrypts the incoming RTP, reassembles
+the JPEG frames (RFC 2435) and saves them to disk.
+
+Requirements:
+
+```sh
+pip install cryptography
+```
+
+Usage:
+
+```sh
+python tools/srtp_client.py --host <ip address> [--port 554] [--rtp-port 50000]
+    [--frames 5] [--time 10] [--out frames]
+```
+
+| Option        | Default | Description                                                       |
+|---------------|---------|-------------------------------------------------------------------|
+| `--host`      | —       | IP address (or mDNS name) of the camera (**required**)            |
+| `--port`      | 554     | RTSP port                                                         |
+| `--rtp-port`  | 50000   | Local UDP port to receive the RTP/SRTP stream                     |
+| `--frames`    | 0       | Stop after N frames (0 = receive for `--time` seconds)            |
+| `--time`      | 10.0    | Receive for this many seconds                                     |
+| `--out`       | frames  | Output directory for the raw JPEG frames                          |
+
+Example run:
+
+```sh
+python tools/srtp_client.py --host 192.168.1.149
+```
+
+```text
+--- SDP ---
+v=0
+o=- 1085377743 1 IN IP4 192.168.1.149
+s=
+t=0 0
+m=video 0 RTP/AVP 26
+c=IN IP4 0.0.0.0
+a=control:track1
+
+--- SETUP response ---
+a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:TUAwUoKwQs9G/qhlrmG5KnVyh/ZXLVUxtcGgabHB
+Content-Type: application/sdp
+
+server master key : 4d40305282b042cf46fea865ae61b92a
+server master salt: 757287f6572d5531b5c1a069b1c1
+Receiving SRTP on UDP 50000 ...
+  frame 1: 3166 bytes -> frames\frame_0001.bin
+  frame 2: 2770 bytes -> frames\frame_0002.bin
+  frame 3: 3373 bytes -> frames\frame_0003.bin
+  frame 4: 3373 bytes -> frames\frame_0004.bin
+  frame 5: 3373 bytes -> frames\frame_0005.bin
+```
+
+> [!IMPORTANT]
+> Do **not** enable **RTSP authentication** (basic auth) when using this tool. The client
+> sends `OPTIONS`, `DESCRIBE`, `SETUP` and `PLAY` requests without credentials, so when
+> basic auth is enabled the server rejects them and the SRTP session cannot be established.
+> Leave the **username**/**password** under **RTSP settings** empty while testing with
+> `srtp_client.py`.
+
 ### Audio
 
 When the board has an onboard I2S microphone, an additional audio track is offered and streamed

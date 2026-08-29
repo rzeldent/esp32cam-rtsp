@@ -356,30 +356,9 @@ void start_rtsp_server()
   MDNS.addService("rtsp", "tcp", rtsp_server.get_rtsp_port());
 }
 
-// Runtime Wi-Fi throughput optimizations (the prebuilt Arduino core has no sdkconfig to tweak, but these esp_wifi API calls work at runtime)
-// Applied on every STA connect so they survive reconnects. Modem sleep is already disabled in setup() via WiFi.setSleep(false).
-void tune_wifi_throughput()
-{
-  // Maximum TX power (subject to the configured regulatory domain).
-  if (!WiFi.setTxPower(WIFI_POWER_19_5dBm))
-    log_w("Failed to set TX power");
-
-  // 802.11g/n only: drop 802.11b rates to avoid protection-frame overhead.
-  if (esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N) != ESP_OK)
-    log_w("Failed to set Wi-Fi protocol");
-
-  // 40 MHz channel width; only effective when the AP is configured for HT40, otherwise the driver falls back to 20 MHz.
-  if (esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT40) != ESP_OK)
-    log_w("Failed to set Wi-Fi bandwidth");
-  // Note: TX frame aggregation (A-MPDU) is already enabled by default in this core; it is only configurable at build time (no runtime API on ESP-IDF 4.x).
-}
-
 void on_connected()
 {
   log_v("on_connected");
-
-  // Apply the Wi-Fi throughput settings now that the STA interface is up.
-  tune_wifi_throughput();
 
   // Start the RTSP Server if initialized
   if (camera_init_result == ESP_OK)
