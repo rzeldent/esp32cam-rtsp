@@ -58,19 +58,21 @@ DNSServer dnsServer;
 
 // ESP32 Camera
 micro_rtsp_source_video_camera camera;
+
 #ifdef MIC_I2S_BCLK
 // Optional audio: capture from the onboard I2S MEMS microphone and stream it
 // as G.711 a-law together with the video (see boards/*.json for the pins).
 micro_rtsp_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
-micro_rtsp_server server(&camera, &audio);
+micro_rtsp_server server(DEFAULT_WWW_REALM, &camera, &audio);
 #else
-micro_rtsp_server rtsp_server(&camera);
+micro_rtsp_server rtsp_server(DEFAULT_WWW_REALM, &camera);
 #endif
 
 // Web server on port 80 for configuration and diagnostics. The RTSP server runs on port 554 (default) or the configured port.
 WebServer web_server;
 
-auto thingName = String(WIFI_SSID) + "-" + String(ESP.getEfuseMac(), 16);
+auto macAddress = String(ESP.getEfuseMac(), 16);
+auto thingName = String(WIFI_SSID) + "-" + macAddress;
 IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
 // Camera initialization result (ESP_FAIL until the camera is initialized)
@@ -84,9 +86,7 @@ void handle_root()
     return;
 
   // Format hostname format: esp32-<mac address>.local
-  auto hostname = "esp32-" + WiFi.macAddress() + ".local";
-  hostname.replace(":", "");
-  hostname.toLowerCase();
+  auto hostname = "esp32-" + macAddress + ".local";
 
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
@@ -117,7 +117,7 @@ void handle_root()
       {"NumRTSPSessions", String(rtsp_server.clients())},
       // Network
       {"HostName", hostname},
-      {"MacAddress", WiFi.macAddress()},
+      {"MacAddress", macAddress},
       {"AccessPoint", WiFi.SSID()},
       {"SignalStrength", String(WiFi.RSSI())},
       {"WifiMode", wifi_modes[WiFi.getMode()]},
@@ -390,7 +390,7 @@ bool is_authenticated()
     return true;
 
   // Otherwise, request authentication.
-  web_server.requestAuthentication(BASIC_AUTH, "ESP32CAM-RTSP");
+  web_server.requestAuthentication(BASIC_AUTH, DEFAULT_WWW_REALM);
   return false;
 }
 

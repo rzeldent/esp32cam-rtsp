@@ -12,7 +12,7 @@
 class micro_rtsp_requests
 {
 public:
-    micro_rtsp_requests(bool video_enabled = true, bool audio_enabled = false, bool srtp_enabled = false);
+    micro_rtsp_requests(const std::string &realm, bool video_enabled = true, bool audio_enabled = false, bool srtp_enabled = false);
 
     // Process a complete RTSP request (headers terminated by an empty line,
     // followed by an optional body) and return the response that must be sent
@@ -74,8 +74,8 @@ private:
     std::string handle_teardown(unsigned long cseq);
     std::string handle_unauthorized(unsigned long cseq);
 
-    // Verifies the "Authorization: Basic ..." header (RFC 2617) against the
-    // configured credentials.
+    std::string realm_; // RTSP Basic auth realm
+    // Verifies the "Authorization: Basic ..." header (RFC 2617) against the configured credentials.
     bool check_authorization(const std::map<std::string, std::string> &headers) const;
 
 

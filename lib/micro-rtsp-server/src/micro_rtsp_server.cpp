@@ -22,8 +22,9 @@
 // Poll the audio source every 20 milliseconds (160 samples at 8 kHz)
 #define AUDIO_UPDATE_INTERVAL 20
 
-micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video *video_source /*= nullptr*/, micro_rtsp_source_audio *audio_source /*= nullptr*/)
-    : video_source_(video_source),
+micro_rtsp_server::micro_rtsp_server(const std::string &realm, micro_rtsp_source_video *video_source /*= nullptr*/, micro_rtsp_source_audio *audio_source /*= nullptr*/)
+    : realm_(realm),
+      video_source_(video_source),
       audio_source_(audio_source),
       srtp_enabled_(false),
       frame_interval_(200),
@@ -82,20 +83,16 @@ void micro_rtsp_server::loop()
         WiFiClient client;
         while ((client = accept()))
         {
-            // Capture the peer address before the client is copied into rtsp_client.
-            // Logging it makes automated probes (e.g. RTSP scanner bots) easy to spot.
-            auto peer_ip = client.remoteIP().toString();
-
             // Only advertise/stream a track when its source is attached AND actually available
             // (video: camera initialized; audio: I2S mic initialized). Both streams are optional.
             auto video_available = video_source_ != nullptr && video_source_->available();
             auto audio_available = audio_source_ != nullptr && audio_source_->available();
-            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_available, audio_available, srtp_enabled_, rtsp_port_));
+            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, realm_, video_available, audio_available, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
             if (!username_.empty())
                 c->set_credentials(username_, password_);
             clients_.push_back(std::move(c));
-            log_i("New RTSP client from %s, total: %d", peer_ip.c_str(), clients_.size());
+            log_i("New RTSP client from %s, total: %d", client.remoteIP().toString().c_str(), clients_.size());
         }
 
         // Check for idle clients. A client is removed when it sent TEARDOWN or
@@ -324,8 +321,11 @@ void micro_rtsp_server::send_audio_chunk()
     }
 }
 
-micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, bool video_enabled, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
-    : WiFiClient(wifi_client), micro_rtsp_requests(video_enabled, audio_enabled, srtp_enabled), streamer(), video_frame_offset_(nullptr)
+micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, const std::string &realm, bool video_enabled, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
+    : WiFiClient(wifi_client)
+    , micro_rtsp_requests(realm, video_enabled, audio_enabled, srtp_enabled)
+    , streamer()
+    , video_frame_offset_(nullptr)
 {
     // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP) are sent immediately instead of being coalesced/delayed.
     WiFiClient::setNoDelay(true);

@@ -2,7 +2,6 @@
 #include <esp_random.h>
 
 #include <sstream>
-#include <cstdio>
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
@@ -95,8 +94,9 @@ namespace
 const std::string micro_rtsp_requests::available_stream_name_ = "/mjpeg/1";
 const std::string micro_rtsp_requests::crypto_suite_ = "AES_CM_128_HMAC_SHA1_80";
 
-micro_rtsp_requests::micro_rtsp_requests(bool video_enabled /*= true*/, bool audio_enabled /*= false*/, bool srtp_enabled /*= false*/)
-    : video_enabled_(video_enabled),
+micro_rtsp_requests::micro_rtsp_requests(const std::string &realm, bool video_enabled /*= true*/, bool audio_enabled /*= false*/, bool srtp_enabled /*= false*/)
+    : realm_(realm),
+      video_enabled_(video_enabled),
       audio_enabled_(audio_enabled),
       srtp_enabled_(srtp_enabled),
       srtp_requested_(false),

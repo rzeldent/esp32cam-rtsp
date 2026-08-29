@@ -21,7 +21,7 @@ public:
 	// Both sources are optional. When a source is set and available, the matching track
 	// (video: MJPEG, audio: G.711 a-law) is offered to clients and streamed. A device
 	// without a camera or microphone serves only the tracks it actually has.
-	micro_rtsp_server( micro_rtsp_source_video *video_source = nullptr, micro_rtsp_source_audio *audio_source = nullptr);
+	micro_rtsp_server(const std::string &realm, micro_rtsp_source_video *video_source = nullptr, micro_rtsp_source_audio *audio_source = nullptr);
 	~micro_rtsp_server();
 
 	void begin();
@@ -47,7 +47,7 @@ public:
 	class rtsp_client : public WiFiClient, public micro_rtsp_requests
 	{
 	public:
-		rtsp_client(const WiFiClient &client, bool video_enabled, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
+		rtsp_client(const WiFiClient &client, const std::string &realm, bool video_enabled, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
 		~rtsp_client();
 
 		void handle_request();
@@ -76,6 +76,7 @@ private:
 	bool send_next_fragment();	// send one fragment, false when the frame is done
 	void send_audio_chunk();
 
+	const std::string realm_; // RTSP Basic auth realm
 	micro_rtsp_source_video *video_source_;
 	micro_rtsp_source_audio *audio_source_;
 	bool srtp_enabled_;
