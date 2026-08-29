@@ -7,8 +7,8 @@
 
 #include "micro_rtsp_streamer.h"
 
-micro_rtsp_streamer::micro_rtsp_streamer(const micro_rtsp_source_video &source)
-    : source_(source), srtp_(nullptr)
+micro_rtsp_streamer::micro_rtsp_streamer()
+    : srtp_(nullptr)
 {
     video_ssrc_ = esp_random();
     video_sequence_number_ = 0;
@@ -18,7 +18,7 @@ micro_rtsp_streamer::micro_rtsp_streamer(const micro_rtsp_source_video &source)
     audio_sequence_number_ = 0;
 }
 
-uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quant_lum, const uint8_t *quant_chr, size_t &packet_size)
+uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint16_t width, const uint16_t height, const uint8_t *quant_lum, const uint8_t *quant_chr, size_t &packet_size)
 {
     log_v("jpg_scan:%p, jpg_scan_end:%p, jpg_offset:%p, timestamp:%u", jpg_scan, jpg_scan_end, (const void *)*jpg_offset, timestamp);
 
@@ -76,8 +76,8 @@ uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const u
     *p++ = (uint8_t)(fragment_offset & 0xff);
     *p++ = 0x00;                                      // type: standard baseline JPEG
     *p++ = include_quantization_tables ? 0x80 : 0x5e; // q: 0x80 = tables follow, otherwise 94
-    *p++ = (uint8_t)(source_.width() >> 3);           // frame width in 8 pixel blocks
-    *p++ = (uint8_t)(source_.height() >> 3);          // frame height in 8 pixel blocks
+    *p++ = (uint8_t)(width >> 3);   // frame width in 8 pixel blocks
+    *p++ = (uint8_t)(height >> 3);  // frame height in 8 pixel blocks
 
     // ---- Quantization tables (only in the first fragment of a frame) ----
     if (include_quantization_tables)

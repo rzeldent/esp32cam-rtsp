@@ -42,8 +42,9 @@ namespace
 const std::string micro_rtsp_requests::available_stream_name_ = "/mjpeg/1";
 const std::string micro_rtsp_requests::crypto_suite_ = "AES_CM_128_HMAC_SHA1_80";
 
-micro_rtsp_requests::micro_rtsp_requests(bool audio_enabled /*= false*/, bool srtp_enabled /*= false*/)
-    : audio_enabled_(audio_enabled),
+micro_rtsp_requests::micro_rtsp_requests(bool video_enabled /*= true*/, bool audio_enabled /*= false*/, bool srtp_enabled /*= false*/)
+    : video_enabled_(video_enabled),
+      audio_enabled_(audio_enabled),
       srtp_enabled_(srtp_enabled),
       srtp_requested_(false),
       srtp_active_(false),
@@ -163,10 +164,11 @@ std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::
     osbody << "v=0\r\n"
            << "o=- " << std::rand() << " 1 IN IP4 " << host << "\r\n"
            << "s=\r\n"
-           << "t=0 0\r\n"                // start / stop - 0 -> unbounded and permanent session
-           << "m=video 0 RTP/AVP 26\r\n" // JPEG video track
-           << "c=IN IP4 0.0.0.0\r\n"
-           << "a=control:track1\r\n";
+           << "t=0 0\r\n";               // start / stop - 0 -> unbounded and permanent session
+    if (video_enabled_)
+        osbody << "m=video 0 RTP/AVP 26\r\n" // JPEG video track
+               << "c=IN IP4 0.0.0.0\r\n"
+               << "a=control:track1\r\n";
     if (srtp_enabled_)
     {
         activate_srtp();
@@ -201,6 +203,9 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::str
     int track = 1;
     parse_track(request_line, track);
     log_i("track: %d", track);
+
+    if (track == 1 && !video_enabled_)
+        return handle_rtsp_error(cseq, 404, "Stream Not Found");
 
     if (track == 2 && !audio_enabled_)
         return handle_rtsp_error(cseq, 404, "Stream Not Found");

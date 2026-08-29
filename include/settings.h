@@ -15,8 +15,6 @@
 #define NTP_SERVER_3 "time.nist.gov"
 #define NTP_SERVERS NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3
 
-#define RTSP_PORT 554
-
 #define DEFAULT_FRAME_DURATION 200
 #define DEFAULT_FRAME_SIZE "QVGA (320x240)"
 #define DEFAULT_JPEG_QUALITY (psramFound() ? 12 : 14)

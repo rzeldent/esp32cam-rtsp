@@ -12,7 +12,7 @@
 class micro_rtsp_requests
 {
 public:
-    micro_rtsp_requests(bool audio_enabled = false, bool srtp_enabled = false);
+    micro_rtsp_requests(bool video_enabled = true, bool audio_enabled = false, bool srtp_enabled = false);
 
     // Process a complete RTSP request (headers terminated by an empty line,
     // followed by an optional body) and return the response that must be sent
@@ -23,7 +23,7 @@ public:
     bool active() const { return stream_active_; }        // PLAY received
     bool stopped() const { return stream_stopped_; }      // TEARDOWN received
     bool tcp_transport() const { return tcp_transport_; } // RTP over RTSP/TCP
-    bool video_ready() const { return video_setup_; }     // video track set up
+    bool video_ready() const { return video_enabled_ && video_setup_; } // video track set up
     bool audio_ready() const { return audio_enabled_ && audio_setup_; }
     bool audio_enabled() const { return audio_enabled_; }
 
@@ -71,6 +71,7 @@ private:
     // Enable SRTP for this session (generates the master key/salt once).
     void activate_srtp();
 
+    bool video_enabled_;
     bool audio_enabled_;
     bool srtp_enabled_;   // server configured to always use SRTP
     bool srtp_requested_; // client offered a=crypto in the SETUP body

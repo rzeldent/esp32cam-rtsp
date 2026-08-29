@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <micro_rtsp_source_video.h>
 #include <micro_rtsp_structs.h>
 #include <micro_rtsp_srtp.h>
 
@@ -14,7 +13,7 @@
 class micro_rtsp_streamer
 {
 public:
-    explicit micro_rtsp_streamer(const micro_rtsp_source_video &source);
+    micro_rtsp_streamer();
 
     // Enable SRTP (RFC 3711) protection of the generated RTP packets. When set, every packet is encrypted and carries an authentication tag.
     void set_srtp(micro_rtsp_srtp *srtp) { srtp_ = srtp; }
@@ -26,6 +25,8 @@ public:
     //   jpg_offset   - in/out: current position, advanced by the number of
     //                  scan bytes packed into this packet
     //   timestamp    - RTP timestamp (90 kHz clock) for the whole frame
+    //   width/height - frame dimensions in pixels (fixed property of the video
+    //                  source), written into the JPEG payload header
     //   quant_lum / quant_chr - quantization tables, only used in the first
     //                  packet of a frame (may be nullptr)
     //   packet_size  - out: total size of the returned buffer (including the
@@ -35,7 +36,7 @@ public:
     // For UDP transport skip the first 4 bytes. The buffer is only valid
     // until the next create_jpg_packet()/create_audio_packet() call on the
     // same streamer and must NOT be freed by the caller.
-    uint8_t *create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, uint32_t timestamp, const uint8_t *quant_lum, const uint8_t *quant_chr, size_t &packet_size);
+    uint8_t *create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, uint32_t timestamp, uint16_t width, uint16_t height, const uint8_t *quant_lum, const uint8_t *quant_chr, size_t &packet_size);
 
     // Create a single RTP packet carrying G.711 a-law samples (payload 8).
     //   data        - a-law encoded samples (one byte per 8 kHz sample)
@@ -50,7 +51,6 @@ public:
     static size_t max_payload_size() { return max_jpeg_payload_size; }
 
 private:
-    const micro_rtsp_source_video &source_;
     micro_rtsp_srtp *srtp_;
 
     uint32_t video_ssrc_;

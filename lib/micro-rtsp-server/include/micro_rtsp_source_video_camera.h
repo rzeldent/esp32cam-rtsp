@@ -13,7 +13,7 @@ public:
     micro_rtsp_source_video_camera();
     virtual ~micro_rtsp_source_video_camera();
 
-    esp_err_t initialize(camera_config_t *camera_config);
+    esp_err_t initialize(framesize_t frame_size, int jpeg_quality);
     esp_err_t deinitialize();
 
     // The camera is only available when the driver initialized successfully.

@@ -5,6 +5,7 @@
 #include <unity.h>
 
 #include <jpg.h>
+#include <micro_rtsp_source_video.h>
 #include <micro_rtsp_streamer.h>
 #include <micro_rtsp_srtp.h>
 
@@ -85,10 +86,11 @@ void test_struct_sizes()
 }
 
 // Minimal video source used to exercise the streamer without hardware.
-class test_source : public micro_rtsp_source
+class test_source : public micro_rtsp_source_video
 {
 public:
-    virtual void update_frame() override {}
+    virtual void update() override {}
+    virtual bool available() const override { return true; }
     virtual uint8_t *data() const override { return (uint8_t *)data_; }
     virtual size_t width() const override { return 640; }
     virtual size_t height() const override { return 480; }
@@ -107,12 +109,13 @@ void test_streamer_packet()
     source.data_ = jpg.jpeg_data_start;
     source.size_ = (size_t)(jpg.jpeg_data_end - jpg.jpeg_data_start);
 
-    micro_rtsp_streamer streamer(source);
+    micro_rtsp_streamer streamer;
 
     auto offset = (uint8_t *)jpg.jpeg_data_start;
     size_t packet_size = 0;
     auto packet = streamer.create_jpg_packet(
         jpg.jpeg_data_start, jpg.jpeg_data_end, &offset, 90000,
+        source.width(), source.height(),
         jpg.quantization_table_luminance_ ? jpg.quantization_table_luminance_->data : nullptr,
         jpg.quantization_table_chrominance_ ? jpg.quantization_table_chrominance_->data : nullptr,
         packet_size);

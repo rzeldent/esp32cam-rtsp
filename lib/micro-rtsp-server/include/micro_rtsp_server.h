@@ -18,13 +18,17 @@
 class micro_rtsp_server : WiFiServer
 {
 public:
-	// audio_source is optional. When set, an audio track (G.711 a-law) is offered to the clients and streamed alongside the video.
-	micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source = nullptr);
+	// Both sources are optional. When a source is set and available, the matching track
+	// (video: MJPEG, audio: G.711 a-law) is offered to clients and streamed. A device
+	// without a camera or microphone serves only the tracks it actually has.
+	micro_rtsp_server( micro_rtsp_source_video *video_source = nullptr, micro_rtsp_source_audio *audio_source = nullptr);
 	~micro_rtsp_server();
 
-	void begin(unsigned short port = 554);
+	void begin();
 	void end();
 
+	unsigned short get_rtsp_port() const { return rtsp_port_; }
+	unsigned short set_rtsp_port(unsigned short port) { return rtsp_port_ = port; }
 	unsigned get_frame_interval() const { return frame_interval_; }
 	unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }
 
@@ -39,7 +43,7 @@ public:
 	class rtsp_client : public WiFiClient, public micro_rtsp_requests
 	{
 	public:
-		rtsp_client(const WiFiClient &client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
+		rtsp_client(const WiFiClient &client, bool video_enabled, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port);
 		~rtsp_client();
 
 		void handle_request();
@@ -63,7 +67,7 @@ private:
 	bool send_next_fragment();	// send one fragment, false when the frame is done
 	void send_audio_chunk();
 
-	micro_rtsp_source_video &video_source_;
+	micro_rtsp_source_video *video_source_;
 	micro_rtsp_source_audio *audio_source_;
 	bool srtp_enabled_;
 	unsigned frame_interval_;
@@ -72,7 +76,7 @@ private:
 	unsigned long next_check_client_;
 	uint16_t rtp_udp_port_;
 	uint16_t audio_udp_port_;
-	uint16_t rtsp_port_;	   // RTSP TCP port, advertised in the RTP-Info URL
+	uint16_t rtsp_port_ = 554;	// 554 is the default RTSP port, see RFC 2326. The server listens on this TCP port for incoming RTSP connections and advertises it in the RTP-Info URL.
 	micro_rtsp_udp rtp_udp_;   // UDP socket for the RTP video stream
 	micro_rtsp_udp audio_udp_; // UDP socket for the RTP audio stream
 	std::list<std::unique_ptr<rtsp_client>> clients_;

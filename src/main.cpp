@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <esp_wifi.h>
 #include <soc/rtc_cntl_reg.h>
-#include <driver/i2c.h>
 #include <IotWebConf.h>
+#include <string>
+#include <esp_random.h>
 #include <IotWebConfTParameter.h>
 #include <ESPmDNS.h>
 #include <lookup_camera_effect.h>
@@ -48,22 +49,22 @@ auto param_vflip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").lab
 auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").label("Downsize enable").defaultValue(DEFAULT_DCW).build();
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
-// Camera
 // DNS Server
 DNSServer dnsServer;
 
+// ESP32 Camera
 micro_rtsp_source_video_camera camera;
 #ifdef MIC_I2S_BCLK
 // Optional audio: capture from the onboard I2S MEMS microphone and stream it
 // as G.711 a-law together with the video (see boards/*.json for the pins).
 micro_rtsp_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
-micro_rtsp_server server(camera, &audio);
+micro_rtsp_server server(&camera, &audio);
 #else
-micro_rtsp_server server(camera);
+micro_rtsp_server rtsp_server(&camera);
 #endif
 
-// Web server
-WebServer web_server(80);
+// Web server on port 80 for configuration and diagnostics. The RTSP server runs on port 554 (default) or the configured port.
+WebServer web_server;
 
 auto thingName = String(WIFI_SSID) + "-" + String(ESP.getEfuseMac(), 16);
 IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
@@ -78,7 +79,7 @@ void handle_root()
   if (iotWebConf.handleCaptivePortal())
     return;
 
-  // Format hostname
+  // Format hostname format: esp32-<mac address>.local
   auto hostname = "esp32-" + WiFi.macAddress() + ".local";
   hostname.replace(":", "");
   hostname.toLowerCase();
@@ -109,7 +110,7 @@ void handle_root()
       {"Uptime", String(format_duration(millis() / 1000))},
       {"FreeHeap", format_memory(ESP.getFreeHeap())},
       {"MaxAllocHeap", format_memory(ESP.getMaxAllocHeap())},
-      {"NumRTSPSessions", String(server.clients())},
+      {"NumRTSPSessions", String(rtsp_server.clients())},
       // Network
       {"HostName", hostname},
       {"MacAddress", WiFi.macAddress()},
@@ -151,7 +152,7 @@ void handle_root()
       {"Dcw", String(param_dcw.value())},
       {"ColorBar", String(param_colorbar.value())},
       // RTSP
-      {"RtspPort", String(RTSP_PORT)}};
+      {"RtspPort", String(rtsp_server.get_rtsp_port())}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = moustache_render(index_html_min_start, substitutions);
@@ -200,7 +201,23 @@ void handle_snapshot()
   web_server.sendContent((const char *)fb, fb_len);
 }
 
-#define STREAM_CONTENT_BOUNDARY "123456789000000000000987654321"
+// Generate an RFC 2046 (5.1.1) compliant multipart boundary: 1-70 characters
+// from DIGIT/ALPHA plus a few punctuation marks. Built from esp_random() so it
+// is unique per stream connection and effectively never collides with the
+// bytes of an encapsulated JPEG frame.
+static std::string generate_stream_boundary()
+{
+  std::string boundary;
+  boundary.reserve(32);
+  static const char hex_digits[] = "0123456789abcdef";
+  for (auto i = 0; i < 8; ++i) // 8 random words -> 32 hex chars
+  {
+    const uint32_t r = esp_random();
+    for (auto j = 0; j < 4; ++j)
+      boundary += hex_digits[(r >> (j * 4)) & 0xf];
+  }
+  return boundary;
+}
 
 void handle_stream()
 {
@@ -212,14 +229,15 @@ void handle_stream()
   }
 
   log_v("starting streaming");
+  const std::string boundary = generate_stream_boundary();
+
   // Pace frames to the configured frame interval and service the RTSP server
   // and the web config/DNS/mDNS machinery between frames, so this handler
   // does not block the rest of the firmware while the connection is open.
-  char size_buf[12];
   auto client = web_server.client();
-  client.write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" STREAM_CONTENT_BOUNDARY "\r\n");
+  client.write(("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: multipart/x-mixed-replace; boundary=" + boundary + "\r\n").c_str());
 
-  const auto frame_interval = server.get_frame_interval();
+  const auto frame_interval = rtsp_server.get_frame_interval();
   unsigned long next_frame = 0;
   while (client.connected())
   {
@@ -229,18 +247,17 @@ void handle_stream()
       camera.update();
       if (camera.data() != nullptr)
       {
-        client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");
-        client.write("Content-Type: image/jpeg\r\nContent-Length: ");
-        sprintf(size_buf, "%d\r\n\r\n", camera.size());
-        client.write(size_buf);
+        client.write(("\r\n--" + boundary + "\r\n").c_str());
+        client.write(("Content-Type: image/jpeg\r\nContent-Length: " + std::to_string(camera.size()) + "\r\n\r\n").c_str());
         client.write(camera.data(), camera.size());
       }
       next_frame = now + frame_interval;
     }
 
-    // Keep RTSP streaming and the web config/DNS/mDNS loop alive while this
-    // HTTP connection is open.
-    server.loop();
+    yield(); // Yield to the RTOS so other tasks can run while waiting for the next frame
+
+    // Keep RTSP streaming and the web config/DNS/mDNS loop alive while this HTTP connection is open.
+    rtsp_server.loop();
     iotWebConf.doLoop();
   }
 
@@ -267,41 +284,9 @@ esp_err_t initialize_camera()
   log_i("Frame duration: %d ms", param_frame_duration.value());
 
   // Set frame duration
-  server.set_frame_interval(param_frame_duration.value());
+  rtsp_server.set_frame_interval(param_frame_duration.value());
 
-  camera_config_t camera_config = {
-      .pin_pwdn = CAMERA_CONFIG_PIN_PWDN,         // GPIO pin for camera power down line
-      .pin_reset = CAMERA_CONFIG_PIN_RESET,       // GPIO pin for camera reset line
-      .pin_xclk = CAMERA_CONFIG_PIN_XCLK,         // GPIO pin for camera XCLK line
-      .pin_sccb_sda = CAMERA_CONFIG_PIN_SCCB_SDA, // GPIO pin for camera SDA line
-      .pin_sccb_scl = CAMERA_CONFIG_PIN_SCCB_SCL, // GPIO pin for camera SCL line
-      .pin_d7 = CAMERA_CONFIG_PIN_Y9,             // GPIO pin for camera D7 line
-      .pin_d6 = CAMERA_CONFIG_PIN_Y8,             // GPIO pin for camera D6 line
-      .pin_d5 = CAMERA_CONFIG_PIN_Y7,             // GPIO pin for camera D5 line
-      .pin_d4 = CAMERA_CONFIG_PIN_Y6,             // GPIO pin for camera D4 line
-      .pin_d3 = CAMERA_CONFIG_PIN_Y5,             // GPIO pin for camera D3 line
-      .pin_d2 = CAMERA_CONFIG_PIN_Y4,             // GPIO pin for camera D2 line
-      .pin_d1 = CAMERA_CONFIG_PIN_Y3,             // GPIO pin for camera D1 line
-      .pin_d0 = CAMERA_CONFIG_PIN_Y2,             // GPIO pin for camera D0 line
-      .pin_vsync = CAMERA_CONFIG_PIN_VSYNC,       // GPIO pin for camera VSYNC line
-      .pin_href = CAMERA_CONFIG_PIN_HREF,         // GPIO pin for camera HREF line
-      .pin_pclk = CAMERA_CONFIG_PIN_PCLK,         // GPIO pin for camera PCLK line
-      .xclk_freq_hz = CAMERA_CONFIG_CLK_FREQ_HZ,  // Frequency of XCLK signal, in Hz. EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
-      .ledc_timer = CAMERA_CONFIG_LEDC_TIMER,     // LEDC timer to be used for generating XCLK
-      .ledc_channel = CAMERA_CONFIG_LEDC_CHANNEL, // LEDC channel to be used for generating XCLK
-      .pixel_format = PIXFORMAT_JPEG,             // Format of the pixel data: PIXFORMAT_ + YUV422|GRAYSCALE|RGB565|JPEG
-      .frame_size = frame_size,                   // Size of the output image: FRAMESIZE_ + QVGA|CIF|VGA|SVGA|XGA|SXGA|UXGA
-      .jpeg_quality = jpeg_quality,               // Quality of JPEG output. 0-63 lower means higher quality
-      .fb_count = CAMERA_CONFIG_FB_COUNT,         // Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
-      .fb_location = CAMERA_CONFIG_FB_LOCATION,   // The location where the frame buffer will be allocated
-      .grab_mode = CAMERA_GRAB_LATEST,            // When buffers should be filled
-#if CONFIG_CAMERA_CONVERTER_ENABLED
-      conv_mode = CONV_DISABLE, // RGB<->YUV Conversion mode
-#endif
-      .sccb_i2c_port = CAMERA_CONFIG_SCCB_I2C_PORT // If pin_sccb_sda is -1, use the already configured I2C bus by number
-  };
-
-  return camera.initialize(&camera_config);
+  return camera.initialize(frame_size, jpeg_quality);
 
   // return cam.init(camera_config);
 }
@@ -343,10 +328,10 @@ void start_rtsp_server()
 {
   log_v("start_rtsp_server");
 
-  server.begin(RTSP_PORT);
+  rtsp_server.begin();
   // Add RTSP service to mDNS
   // HTTP is already set by iotWebConf
-  MDNS.addService("rtsp", "tcp", RTSP_PORT);
+  MDNS.addService("rtsp", "tcp", rtsp_server.get_rtsp_port());
 }
 
 // Runtime Wi-Fi throughput optimizations (the prebuilt Arduino core has no sdkconfig to tweak, but these esp_wifi API calls work at runtime)
@@ -516,5 +501,5 @@ void loop()
 {
   iotWebConf.doLoop();
 
-  server.loop();
+  rtsp_server.loop();
 }
