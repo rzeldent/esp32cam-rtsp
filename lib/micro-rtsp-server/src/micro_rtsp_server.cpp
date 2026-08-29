@@ -79,6 +79,10 @@ void micro_rtsp_server::loop()
         WiFiClient client;
         while ((client = accept()))
         {
+            // Capture the peer address before the client is copied into rtsp_client.
+            // Logging it makes automated probes (e.g. RTSP scanner bots) easy to spot.
+            auto peer_ip = client.remoteIP().toString();
+
             // Only advertise/stream a track when its source is attached AND actually available
             // (video: camera initialized; audio: I2S mic initialized). Both streams are optional.
             auto video_available = video_source_ != nullptr && video_source_->available();
@@ -86,7 +90,7 @@ void micro_rtsp_server::loop()
             auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_available, audio_available, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
             clients_.push_back(std::move(c));
-            log_i("New RTSP client, total: %d", clients_.size());
+            log_i("New RTSP client from %s, total: %d", peer_ip.c_str(), clients_.size());
         }
 
         // Check for idle clients

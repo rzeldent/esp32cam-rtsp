@@ -69,8 +69,8 @@ WebServer web_server;
 auto thingName = String(WIFI_SSID) + "-" + String(ESP.getEfuseMac(), 16);
 IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
-// Camera initialization result
-esp_err_t camera_init_result;
+// Camera initialization result (ESP_FAIL until the camera is initialized)
+esp_err_t camera_init_result = ESP_FAIL;
 
 void handle_root()
 {
@@ -293,6 +293,25 @@ esp_err_t initialize_camera()
 
 void update_camera_settings()
 {
+  // (Re)initialize the camera with the current configuration. This is called
+  // at startup (after the config is loaded) and whenever the config is saved,
+  // so frame size / JPEG quality / frame duration changes take effect
+  // immediately instead of only after a reboot.
+  if (camera_init_result == ESP_OK)
+    esp_camera_deinit(); // re-init applies a new frame size / quality
+
+  for (auto i = 0; i < 3; i++)
+  {
+    log_i("Initializing camera...");
+    camera_init_result = initialize_camera();
+    if (camera_init_result == ESP_OK)
+      break;
+
+    esp_camera_deinit();
+    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
+    delay(500);
+  }
+
   auto camera = esp_camera_sensor_get();
   if (camera == nullptr)
   {
@@ -412,19 +431,6 @@ void setup()
   if (CAMERA_CONFIG_FB_LOCATION == CAMERA_FB_IN_PSRAM && !psramInit())
     log_e("Failed to initialize PSRAM");
 
-  // Try to initialize the camera 3 times
-  for (auto i = 0; i < 3; i++)
-  {
-    log_i("Initializing camera...");
-    camera_init_result = initialize_camera();
-    if (camera_init_result == ESP_OK)
-      break;
-
-    esp_camera_deinit();
-    log_e("Failed to initialize camera. Error: 0x%04x. Frame size: %s, frame rate: %d ms, jpeg quality: %d", camera_init_result, param_frame_size.value(), param_frame_duration.value(), param_jpg_quality.value());
-    delay(500);
-  }
-
 #ifdef MIC_I2S_BCLK
   if (!audio.begin())
     log_e("Failed to initialize the I2S microphone");
@@ -477,6 +483,9 @@ void setup()
   // Set the time servers
   configTime(0, 0, NTP_SERVERS);
 
+  // Initialize the camera with the now-loaded configuration and apply the
+  // sensor settings. update_camera_settings() is also called on config save,
+  // so a changed frame size / quality takes effect immediately.
   update_camera_settings();
 
   // Set up required URL handlers on the web server

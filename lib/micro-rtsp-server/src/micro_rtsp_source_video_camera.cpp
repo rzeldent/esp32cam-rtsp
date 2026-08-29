@@ -160,7 +160,7 @@ bool micro_rtsp_source_video_camera::ensure_jpeg_buffer(size_t capacity)
         return true;
 
     // Prefer PSRAM (plenty for a full frame), falling back to internal RAM for boards without PSRAM.
-    uint8_t *buffer = (uint8_t *)heap_caps_malloc(capacity, MALLOC_CAP_SPIRAM);
+    auto buffer = (uint8_t *)heap_caps_malloc(capacity, MALLOC_CAP_SPIRAM);
     if (buffer == nullptr)
         buffer = (uint8_t *)heap_caps_malloc(capacity, MALLOC_CAP_8BIT);
 

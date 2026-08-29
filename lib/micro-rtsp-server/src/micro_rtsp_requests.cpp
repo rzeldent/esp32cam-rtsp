@@ -1,7 +1,6 @@
 #include <esp32-hal-log.h>
 #include <esp_random.h>
 
-#include <iomanip>
 #include <sstream>
 #include <cstdio>
 #include <ctime>
@@ -15,8 +14,7 @@
 
 namespace
 {
-    // Minimal base64 encoder (RFC 4648), used to carry the SRTP master key and
-    // salt in the "a=crypto" attribute.
+    // Minimal base64 encoder (RFC 4648), used to carry the SRTP master key and salt in the "a=crypto" attribute.
     std::string base64_encode(const uint8_t *data, size_t len)
     {
         static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -36,6 +34,35 @@ namespace
             out += (i + 2 < len) ? table[n & 0x3f] : '=';
         }
         return out;
+    }
+
+    // Build the common RTSP response head: status line, CSeq and Date header
+    // (RFC 2326 12.2). Uses std::to_string for the numeric fields instead of
+    // an ostringstream.
+    std::string rtsp_response_header(unsigned long cseq, unsigned short code, const std::string &reason)
+    {
+        auto now = time(nullptr);
+        char date[64];
+        std::strftime(date, sizeof(date), "%a, %b %d %Y %H:%M:%S GMT", std::gmtime(&now));
+        return "RTSP/1.0 " + std::to_string(code) + " " + reason + "\r\n" + "CSeq: " + std::to_string(cseq) + "\r\n" + "Date: " + date + "\r\n";
+    }
+
+    // Trim leading/trailing whitespace (including CR/LF) from a string.
+    std::string trimmed(const std::string &s)
+    {
+        auto first = s.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos)
+            return {};
+        auto last = s.find_last_not_of(" \t\r\n");
+        return s.substr(first, last - first + 1);
+    }
+
+    // Extract the method token from an RTSP request line,
+    // e.g. "DESCRIBE rtsp://... RTSP/1.0" -> "DESCRIBE".
+    std::string request_method(const std::string &request_line)
+    {
+        auto space = request_line.find(' ');
+        return request_line.substr(0, space);
     }
 } // namespace
 
@@ -61,28 +88,60 @@ micro_rtsp_requests::micro_rtsp_requests(bool video_enabled /*= true*/, bool aud
       rtcp_server_port_(0),
       client_ip_(),
       server_ip_(),
-      rtsp_port_(554), // default RTSP port, replaced by set_server_address()
-      rtsp_session_id_(0)
+      rtsp_port_(554) // default RTSP port, replaced by set_server_address()
 {
     // Create a unique session id for this client
     rtsp_session_id_ = esp_random() | 0x80000000;
 }
 
-void micro_rtsp_requests::set_server_ports(uint16_t rtp, uint16_t rtcp)
+void micro_rtsp_requests::set_server_ports(uint16_t rtp_server_port, uint16_t rtcp_server_port)
 {
-    rtp_server_port_ = rtp;
-    rtcp_server_port_ = rtcp;
+    rtp_server_port_ = rtp_server_port;
+    rtcp_server_port_ = rtcp_server_port;
 }
 
-void micro_rtsp_requests::set_client_ip(const std::string &ip)
+void micro_rtsp_requests::set_client_ip(const std::string &client_ip)
 {
-    client_ip_ = ip;
+    client_ip_ = client_ip;
 }
 
-void micro_rtsp_requests::set_server_address(const std::string &ip, uint16_t rtsp_port)
+void micro_rtsp_requests::set_server_address(const std::string &server_ip, uint16_t rtsp_port)
 {
-    server_ip_ = ip;
+    server_ip_ = server_ip;
     rtsp_port_ = rtsp_port;
+}
+
+bool micro_rtsp_requests::parse_transport(const std::string &value, bool &tcp, uint16_t &rtp_port, uint16_t &rtcp_port) 
+{
+    // RTP/AVP/TCP;unicast;interleaved=0-1
+    static const std::regex regex_tcp("RTP\\/AVP\\/TCP", std::regex_constants::icase);
+    static const std::regex regex_ports("client_port=(\\d+)-(\\d+)", std::regex_constants::icase);
+    std::smatch match;
+    tcp = std::regex_search(value, match, regex_tcp);
+    if (tcp)
+        return true; // interleaved channels are used, no client ports
+
+    if (!std::regex_search(value, match, regex_ports))
+        return false;
+
+    rtp_port = (uint16_t)std::stoul(match[1].str());
+    rtcp_port = (uint16_t)std::stoul(match[2].str());
+    return true;
+}
+
+bool micro_rtsp_requests::parse_track(const std::string &request_line, int &track)
+{
+    static const std::regex regex_track("(?:\\/track|trackID=)(\\d+)", std::regex_constants::icase);
+    std::smatch match;
+    if (std::regex_search(request_line, match, regex_track))
+    {
+        track = std::stoi(match[1].str());
+        return true;
+    }
+
+    // No track specified: default to the video track
+    track = 1;
+    return true;
 }
 
 // Build the RFC 4568 crypto attribute from the SRTP master key and salt:
@@ -92,10 +151,8 @@ std::string micro_rtsp_requests::build_crypto_attribute() const
     uint8_t key_salt[micro_rtsp_srtp::master_key_size + micro_rtsp_srtp::master_salt_size];
     memcpy(key_salt, srtp_.key(), micro_rtsp_srtp::master_key_size);
     memcpy(key_salt + micro_rtsp_srtp::master_key_size, srtp_.salt(), micro_rtsp_srtp::master_salt_size);
-
     auto b64 = base64_encode(key_salt, sizeof(key_salt));
-
-    std::string attribute = "a=crypto:1 " + crypto_suite_ + " inline:" + b64;
+    auto attribute = "a=crypto:1 " + crypto_suite_ + " inline:" + b64;
     log_v("crypto attribute: %s", attribute.c_str());
     return attribute;
 }
@@ -104,8 +161,7 @@ void micro_rtsp_requests::activate_srtp()
 {
     if (!srtp_active_)
     {
-        // The server generates its own master key/salt and advertises it in
-        // the DESCRIBE/SETUP replies; the client uses it to decrypt.
+        // The server generates its own master key/salt and advertises it in the DESCRIBE/SETUP replies; the client uses it to decrypt.
         srtp_.generate_key_salt();
         srtp_active_ = true;
         log_i("SRTP enabled for session");
@@ -115,13 +171,7 @@ void micro_rtsp_requests::activate_srtp()
 std::string micro_rtsp_requests::handle_rtsp_error(unsigned long cseq, unsigned short code, const std::string &message)
 {
     log_e("code: %d, message: %s", code, message.c_str());
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 " << code << " " << message << "\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "\r\n";
-    return oss.str();
+    return rtsp_response_header(cseq, code, message) + "\r\n";
 }
 
 // OPTIONS rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
@@ -129,15 +179,10 @@ std::string micro_rtsp_requests::handle_rtsp_error(unsigned long cseq, unsigned 
 // User-Agent: LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)
 std::string micro_rtsp_requests::handle_options(unsigned long cseq)
 {
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Content-Length: 0\r\n"
-        << "Public: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n"
-        << "\r\n";
-    return oss.str();
+    return rtsp_response_header(cseq, 200, "OK") +
+           "Content-Length: 0\r\n"
+           "Public: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n"
+           "\r\n";
 }
 
 // DESCRIBE rtsp://192.168.178.247:554/mjpeg/1 RTSP/1.0
@@ -153,52 +198,43 @@ std::string micro_rtsp_requests::handle_describe(unsigned long cseq, const std::
         return handle_rtsp_error(cseq, 400, "Invalid URL");
 
     auto host = match[1].str();
-    auto port = match[2].str().length() > 0 ? std::stoi(match[2].str()) : 554;
+    auto port = match[2].str().length() > 0 ? std::stoi(match[2].str()) : rtsp_port_;
     auto path = match[3].str();
     log_i("host: %s, port: %d, path: %s", host.c_str(), port, path.c_str());
 
     if (path != available_stream_name_ && path != available_stream_name_ + "/")
         return handle_rtsp_error(cseq, 404, "Stream Not Found");
 
-    std::ostringstream osbody;
-    osbody << "v=0\r\n"
-           << "o=- " << std::rand() << " 1 IN IP4 " << host << "\r\n"
-           << "s=\r\n"
-           << "t=0 0\r\n";               // start / stop - 0 -> unbounded and permanent session
+    std::string body = "v=0\r\n"
+                       "o=- " + std::to_string(std::rand()) + " 1 IN IP4 " + host + "\r\n"
+                       "s=\r\n"
+                       "t=0 0\r\n"; // start / stop - 0 -> unbounded and permanent session
     if (video_enabled_)
-        osbody << "m=video 0 RTP/AVP 26\r\n" // JPEG video track
-               << "c=IN IP4 0.0.0.0\r\n"
-               << "a=control:track1\r\n";
+        body += "m=video 0 RTP/AVP 26\r\n" // JPEG video track
+                "c=IN IP4 0.0.0.0\r\n" 
+                "a=control:track1\r\n";
     if (srtp_enabled_)
     {
         activate_srtp();
-        osbody << build_crypto_attribute() << "\r\n";
+        body += build_crypto_attribute() + "\r\n";
     }
     if (audio_enabled_)
-        osbody << "m=audio 0 RTP/AVP 8\r\n" // G.711 a-law audio track
-               << "c=IN IP4 0.0.0.0\r\n"
-               << "a=rtpmap:8 PCMA/8000/1\r\n"
-               << "a=control:track2\r\n";
-    auto body = osbody.str();
+        body += "m=audio 0 RTP/AVP 8\r\n" // G.711 a-law audio track
+                "c=IN IP4 0.0.0.0\r\n" 
+                "a=rtpmap:8 PCMA/8000/1\r\n" 
+                "a=control:track2\r\n";
 
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Content-Base: rtsp://" << host << ":" << port << path << "/" << "\r\n"
-        << "Content-Type: application/sdp\r\n"
-        << "Content-Length: " << body.size() << "\r\n"
-        << "\r\n"
-        << body;
-    return oss.str();
+    return rtsp_response_header(cseq, 200, "OK") + 
+        "Content-Base: rtsp://" + host + ":" + std::to_string(port) + path + "/\r\n" 
+        "Content-Type: application/sdp\r\n" 
+        "Content-Length: " + std::to_string(body.size()) + "\r\n" 
+        "\r\n" + body;
 }
 
 // SETUP rtsp://192.168.178.247:554/mjpeg/1/track1 RTSP/1.0
 // CSeq: 4
 // Transport: RTP/AVP;unicast;client_port=9058-9059
-std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::string &request_line,
-                                              const std::map<std::string, std::string> &headers)
+std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::string &request_line, const std::map<std::string, std::string> &headers)
 {
     int track = 1;
     parse_track(request_line, track);
@@ -226,13 +262,13 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::str
     else
         video_setup_ = true;
 
-    std::ostringstream ostransport;
+    std::string transport;
     if (tcp)
     {
         // Both tracks are multiplexed over the RTSP TCP connection using
         // interleaved channels (0/1 = video, 2/3 = audio).
         const int channel = (track == 2) ? 2 : 0;
-        ostransport << "RTP/AVP/TCP;unicast;interleaved=" << channel << "-" << channel + 1;
+        transport = "RTP/AVP/TCP;unicast;interleaved=" + std::to_string(channel) + "-" + std::to_string(channel + 1);
     }
     else
     {
@@ -246,37 +282,29 @@ std::string micro_rtsp_requests::handle_setup(unsigned long cseq, const std::str
             video_client_rtp_port_ = rtp_port;
             video_client_rtcp_port_ = rtcp_port;
         }
-        ostransport << "RTP/AVP;unicast;destination=" << client_ip_
-                    << ";source=" << server_ip_
-                    << ";client_port=" << rtp_port << "-" << rtcp_port
-                    << ";server_port=" << rtp_server_port_ << "-" << rtcp_server_port_;
+        transport = "RTP/AVP;unicast;destination=" + client_ip_ + ";source=" + server_ip_ + ";client_port=" + std::to_string(rtp_port) + "-" + std::to_string(rtcp_port) + ";server_port=" + std::to_string(rtp_server_port_) + "-" + std::to_string(rtcp_server_port_);
     }
 
     log_i("tcp_transport: %d, rtp_port: %d, rtcp_port: %d", tcp, rtp_port, rtcp_port);
 
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Transport: " << ostransport.str() << "\r\n"
-        << "Session: " << rtsp_session_id_ << "\r\n";
+    std::string response = rtsp_response_header(cseq, 200, "OK") +
+        "Transport: " + transport + "\r\n"
+        "Session: " + std::to_string(rtsp_session_id_) + "\r\n";
 
     // When SRTP is used (server configured, or the client offered a=crypto),
     // answer with our own crypto attribute in the message body (RFC 4568).
     if (srtp_enabled_ || srtp_requested_)
     {
         activate_srtp();
-        auto crypto = build_crypto_attribute() + "\r\n";
-        oss << "Content-Type: application/sdp\r\n"
-            << "Content-Length: " << crypto.size() << "\r\n"
-            << "\r\n"
-            << crypto;
+        auto crypto = build_crypto_attribute() + "\r\n"
+            "Content-Type: application/sdp\r\n";
+        response += "Content-Length: " + std::to_string(crypto.size()) + "\r\n" 
+            "\r\n" + crypto;
     }
     else
-        oss << "\r\n";
+        response += "\r\n";
 
-    return oss.str();
+    return response;
 }
 
 std::string micro_rtsp_requests::handle_play(unsigned long cseq)
@@ -286,79 +314,29 @@ std::string micro_rtsp_requests::handle_play(unsigned long cseq)
 
     stream_active_ = true;
 
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Range: npt=0.000-\r\n"
-        << "Session: " << rtsp_session_id_ << "\r\n"
-        << "RTP-Info: url=rtsp://" << server_ip_ << ":" << rtsp_port_ << available_stream_name_ << "/track1";
+    std::string response = rtsp_response_header(cseq, 200, "OK") +
+        "Range: npt=0.000-\r\n"
+        "Session: " + std::to_string(rtsp_session_id_) + "\r\n"
+        "RTP-Info: url=rtsp://" + server_ip_ + ":" + std::to_string(rtsp_port_) + available_stream_name_ + "/track1";
     if (audio_setup_)
-        oss << ",url=rtsp://" << server_ip_ << ":" << rtsp_port_ << available_stream_name_ << "/track2";
-    oss << "\r\n"
-        << "\r\n";
-    return oss.str();
+        response += ",url=rtsp://" + server_ip_ + ":" + std::to_string(rtsp_port_) + available_stream_name_ + "/track2";
+    
+    response += "\r\n\r\n";
+    return response;
 }
 
 std::string micro_rtsp_requests::handle_pause(unsigned long cseq)
 {
     stream_active_ = false;
-
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "Session: " << rtsp_session_id_ << "\r\n"
-        << "\r\n";
-    return oss.str();
+    return rtsp_response_header(cseq, 200, "OK") + 
+        "Session: " + std::to_string(rtsp_session_id_) + "\r\n" 
+         "\r\n";
 }
 
 std::string micro_rtsp_requests::handle_teardown(unsigned long cseq)
 {
     stream_stopped_ = true;
-
-    auto now = time(nullptr);
-    std::ostringstream oss;
-    oss << "RTSP/1.0 200 OK\r\n"
-        << "CSeq: " << cseq << "\r\n"
-        << std::put_time(std::gmtime(&now), "Date: %a, %b %d %Y %H:%M:%S GMT") << "\r\n"
-        << "\r\n";
-    return oss.str();
-}
-
-bool micro_rtsp_requests::parse_transport(const std::string &value, bool &tcp, uint16_t &rtp_port, uint16_t &rtcp_port) const
-{
-    // RTP/AVP/TCP;unicast;interleaved=0-1
-    static const std::regex regex_tcp("RTP\\/AVP\\/TCP", std::regex_constants::icase);
-    static const std::regex regex_ports("client_port=(\\d+)-(\\d+)", std::regex_constants::icase);
-    std::smatch match;
-
-    tcp = std::regex_search(value, match, regex_tcp);
-    if (tcp)
-        return true; // interleaved channels are used, no client ports
-
-    if (!std::regex_search(value, match, regex_ports))
-        return false;
-
-    rtp_port = (uint16_t)std::stoul(match[1].str());
-    rtcp_port = (uint16_t)std::stoul(match[2].str());
-    return true;
-}
-
-bool micro_rtsp_requests::parse_track(const std::string &request_line, int &track) const
-{
-    static const std::regex regex_track("(?:\\/track|trackID=)(\\d+)", std::regex_constants::icase);
-    std::smatch match;
-    if (std::regex_search(request_line, match, regex_track))
-    {
-        track = std::stoi(match[1].str());
-        return true;
-    }
-    // No track specified: default to the video track
-    track = 1;
-    return true;
+    return rtsp_response_header(cseq, 200, "OK") + "\r\n";
 }
 
 // Parse a request e.g.
@@ -369,56 +347,37 @@ std::string micro_rtsp_requests::process_request(const std::string &request)
 {
     log_v("request: %s", request.c_str());
 
-    std::stringstream ss(request);
-    // Get the request line
+    std::istringstream ss(request);
+
+    // Request line
     std::string request_line;
     if (!std::getline(ss, request_line))
         return handle_rtsp_error(0, 400, "No Request Found");
-    // Remove the carriage return (CRLF line ending)
-    if (!request_line.empty() && request_line.back() == '\r')
-        request_line.pop_back();
+    request_line = trimmed(request_line);
 
-    // Create a map with headers and capture the optional message body
+    // Headers (key: value), then an optional body after an empty line
     std::map<std::string, std::string> headers;
     std::string body;
-    std::string line;
     bool in_body = false;
+    std::string line;
     while (std::getline(ss, line))
     {
-        // Trim leading/trailing whitespace and carriage return
-        auto trim = [](std::string &s)
-        {
-            auto first = s.find_first_not_of(" \t\r\n");
-            if (first == std::string::npos)
-            {
-                s.clear();
-                return;
-            }
-            auto last = s.find_last_not_of(" \t\r\n");
-            s = s.substr(first, last - first + 1);
-        };
-
-        trim(line);
+        line = trimmed(line);
         if (line.empty())
         {
             in_body = true; // end of the header section
             continue;
         }
 
-        if (!in_body)
+        if (in_body)
         {
-            std::size_t pos;
-            if ((pos = line.find(':')) != std::string::npos)
-            {
-                auto key = line.substr(0, pos);
-                auto value = line.substr(pos + 1);
-                trim(key);
-                trim(value);
-                headers[key] = value;
-            }
-        }
-        else
             body += line + "\r\n";
+            continue;
+        }
+
+        auto colon = line.find(':');
+        if (colon != std::string::npos)
+            headers[trimmed(line.substr(0, colon))] = trimmed(line.substr(colon + 1));
     }
 
     // RFC 4568: a client may offer SRTP with an "a=crypto" attribute in the
@@ -435,24 +394,25 @@ std::string micro_rtsp_requests::process_request(const std::string &request)
     if (!body.empty())
         log_i("body: %s", body.c_str());
 
-    // Check for CSeq
+    // CSeq is required for every request (RFC 2326 12.17)
     const auto cseq_it = headers.find("CSeq");
     if (cseq_it == headers.end())
         return handle_rtsp_error(0, 400, "No Sequence Found");
-
     auto cseq = std::stoul(cseq_it->second);
 
-    if (request_line.rfind("OPTIONS", 0) == 0)
+    // Dispatch on the method token of the request line
+    const auto method = request_method(request_line);
+    if (method == "OPTIONS")
         return handle_options(cseq);
-    if (request_line.rfind("DESCRIBE", 0) == 0)
+    if (method == "DESCRIBE")
         return handle_describe(cseq, request_line);
-    if (request_line.rfind("SETUP", 0) == 0)
+    if (method == "SETUP")
         return handle_setup(cseq, request_line, headers);
-    if (request_line.rfind("PLAY", 0) == 0)
+    if (method == "PLAY")
         return handle_play(cseq);
-    if (request_line.rfind("PAUSE", 0) == 0)
+    if (method == "PAUSE")
         return handle_pause(cseq);
-    if (request_line.rfind("TEARDOWN", 0) == 0)
+    if (method == "TEARDOWN")
         return handle_teardown(cseq);
 
     return handle_rtsp_error(cseq, 400, "Unknown Command or malformed request");

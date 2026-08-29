@@ -40,36 +40,36 @@ public:
     unsigned long session_id() const { return rtsp_session_id_; }
 
     // UDP port numbers of the server, reported in the SETUP reply.
-    void set_server_ports(uint16_t rtp, uint16_t rtcp);
+    void set_server_ports(uint16_t rtp_server_port, uint16_t rtcp_server_port);
 
     // Addresses reported in the SETUP Transport header (source/destination)
     // and the PLAY RTP-Info URL. Set by the server when the client connects.
-    void set_client_ip(const std::string &ip);
-    void set_server_address(const std::string &ip, uint16_t rtsp_port);
+    void set_client_ip(const std::string &client_ip);
+    void set_server_address(const std::string &server_ip, uint16_t rtsp_port);
 
 private:
     static const std::string available_stream_name_;
     static const std::string crypto_suite_; // AES_CM_128_HMAC_SHA1_80
 
+    // Parse a Transport header into transport type and client ports.
+    static bool parse_transport(const std::string &value, bool &tcp, uint16_t &rtp_port, uint16_t &rtcp_port) ;
+    // Extract the track number (1 = video, 2 = audio) from the SETUP request line.
+    static bool parse_track(const std::string &request_line, int &track);
+
+    // Build the "a=crypto" attribute (RFC 4568) for the given master key/salt.
+    std::string build_crypto_attribute() const;
+    // Enable SRTP for this session (generates the master key/salt once).
+    void activate_srtp();
+
     static std::string handle_rtsp_error(unsigned long cseq, unsigned short code, const std::string &message);
     static std::string handle_options(unsigned long cseq);
-
     std::string handle_describe(unsigned long cseq, const std::string &request_line);
     std::string handle_setup(unsigned long cseq, const std::string &request_line, const std::map<std::string, std::string> &headers);
     std::string handle_play(unsigned long cseq);
     std::string handle_pause(unsigned long cseq);
     std::string handle_teardown(unsigned long cseq);
 
-    // Parse a Transport header into transport type and client ports.
-    bool parse_transport(const std::string &value, bool &tcp, uint16_t &rtp_port, uint16_t &rtcp_port) const;
-    // Extract the track number (1 = video, 2 = audio) from the SETUP request line.
-    bool parse_track(const std::string &request_line, int &track) const;
 
-    // Build the "a=crypto" attribute (RFC 4568) for the given master key/salt.
-    std::string build_crypto_attribute() const;
-
-    // Enable SRTP for this session (generates the master key/salt once).
-    void activate_srtp();
 
     bool video_enabled_;
     bool audio_enabled_;

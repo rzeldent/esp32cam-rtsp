@@ -8,7 +8,6 @@
 
 #include <cstring>
 #include <errno.h>
-#include <fcntl.h>
 #include <lwip/sockets.h>
 
 micro_rtsp_udp::micro_rtsp_udp()
@@ -45,10 +44,15 @@ bool micro_rtsp_udp::begin(uint16_t port)
         return false;
     }
 
-    // Non-blocking socket: when the Wi-Fi TX queue is momentarily full, sendto()
-    // returns ERR_MEM immediately so the loop task is never stalled. RTP drops
-    // are handled by the caller (pacing + drop-on-failure).
-    fcntl(sock, F_SETFL, O_NONBLOCK);
+    // Blocking socket with a bounded send timeout. The non-blocking socket
+    // made every sendto() fail with ERR_MEM (lwIP reports ERR_MEM immediately
+    // instead of queueing), so we go back to blocking: sendto() waits until
+    // the packet is handed to the Wi-Fi driver and only times out if the TX
+    // path is genuinely jammed, instead of stalling the loop forever.
+    // RTP drops are still handled by the caller (pacing + drop-on-failure).
+    // Note: lwIP SO_SNDTIMEO takes the timeout in milliseconds (not a timeval).
+    const uint32_t send_timeout_ms = 100;
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &send_timeout_ms, sizeof(send_timeout_ms));
     sock_ = sock;
     return true;
 }
