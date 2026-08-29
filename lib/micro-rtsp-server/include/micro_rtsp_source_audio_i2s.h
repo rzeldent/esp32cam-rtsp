@@ -20,6 +20,9 @@ public:
     // Initialize the I2S peripheral. Call once before the server starts.
     bool begin();
 
+    // Audio is only streamed when the I2S microphone initialized successfully.
+    virtual bool available() const override { return initialized_; }
+
     virtual bool update();
 
     virtual const uint8_t *data() const { return alaw_buffer_; }

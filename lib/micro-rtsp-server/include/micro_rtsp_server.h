@@ -50,11 +50,8 @@ public:
 		micro_rtsp_streamer streamer;
 		std::string request_buffer;
 
-		// Per-frame send progress: the next fragment offset within the current
-		// frame and the built-but-not-yet-sent fragment (retried on failure).
+		// Per-frame send progress: the next fragment offset within the current frame.
 		uint8_t *video_frame_offset_;
-		uint8_t *pending_packet_;
-		size_t pending_packet_size_;
 	};
 
 private:
@@ -90,7 +87,6 @@ private:
 	uint32_t frame_timestamp_;		   // RTP timestamp (90 kHz) for this frame
 	unsigned fragment_send_interval_;  // ms between two fragments
 	unsigned long next_fragment_send_; // when to send the next fragment
-	bool fragment_retry_pending_;	   // a fragment failed to send; retry soon
 
 	// Cached JPEG header (quantization tables + scan data start offset),
 	// reused across frames so the full JPEG parse only happens once.

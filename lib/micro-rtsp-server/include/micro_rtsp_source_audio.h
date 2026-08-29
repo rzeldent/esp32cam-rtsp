@@ -14,6 +14,12 @@ public:
     // Capture the next chunk of audio. Returns true when new samples are available (data()/size() are valid).
     virtual bool update() = 0;
 
+    // True when the audio source is actually usable (e.g. the hardware
+    // initialized successfully). The RTSP server only advertises and streams
+    // audio when this is true, so a device without a working microphone is
+    // served video-only.
+    virtual bool available() const { return true; }
+
     // G.711 a-law encoded samples (one byte per sample).
     virtual const uint8_t *data() const = 0;
     virtual size_t size() const = 0;

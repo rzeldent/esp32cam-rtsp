@@ -16,7 +16,10 @@ public:
     esp_err_t initialize(camera_config_t *camera_config);
     esp_err_t deinitialize();
 
-    bool available() const { return jpeg_size_ > 0; }
+    // The camera is only available when the driver initialized successfully.
+    // Per-frame availability is checked separately via data()/size() (see
+    // micro_rtsp_server::start_sending_frame()).
+    bool available() const override { return init_result_ == ESP_OK; }
 
     virtual void update();
 

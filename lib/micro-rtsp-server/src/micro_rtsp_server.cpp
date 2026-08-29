@@ -18,9 +18,6 @@
 #define AUDIO_UDP_PORT 6972
 // Poll the audio source every 20 milliseconds (160 samples at 8 kHz)
 #define AUDIO_UPDATE_INTERVAL 20
-// Retry a failed RTP fragment after this many milliseconds instead of waiting for the next paced slot
-// So a transient Wi-Fi TX failure (errno 12) does not stall the frame for a full fragment interval.
-#define FRAGMENT_RETRY_INTERVAL 2
 
 micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video &video_source, micro_rtsp_source_audio *audio_source /*= nullptr*/)
     : video_source_(video_source),
@@ -40,8 +37,7 @@ micro_rtsp_server::micro_rtsp_server(micro_rtsp_source_video &video_source, micr
       quant_chr_(nullptr),
       frame_timestamp_(0),
       fragment_send_interval_(0),
-      next_fragment_send_(0),
-      fragment_retry_pending_(false)
+      next_fragment_send_(0)
 {
 }
 
@@ -84,7 +80,9 @@ void micro_rtsp_server::loop()
         WiFiClient client;
         while ((client = accept()))
         {
-            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_source_, audio_source_ != nullptr, srtp_enabled_, rtsp_port_));
+            // Only advertise/stream audio when an audio source is attached AND it is actually available (e.g. the I2S mic initialized).
+            auto audio_available = audio_source_ != nullptr && audio_source_->available();
+            auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_source_, audio_available, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
             clients_.push_back(std::move(c));
             log_i("New RTSP client, total: %d", clients_.size());
@@ -104,14 +102,14 @@ void micro_rtsp_server::loop()
         }
     }
 
-    // Send the next fragment of the current frame, paced across the frame interval so the Wi-Fi TX path is never burst-saturated
-    // When a send fails (transient Wi-Fi TX backpressure, e.g. errno 12) the fragment is
-    // retried after a short delay instead of waiting for the next paced slot,
-    // so a single dropped attempt does not stall the frame.
+    // Send the next fragment of the current frame, paced across the frame
+    // interval so the Wi-Fi TX path is never burst-saturated. A fragment that
+    // fails to send is dropped (see send_next_fragment); the next one is sent
+    // at the next paced slot.
     if (streaming_frame_ && next_fragment_send_ <= now)
     {
         if (send_next_fragment())
-            next_fragment_send_ = now + (fragment_retry_pending_ ? (unsigned long)FRAGMENT_RETRY_INTERVAL : fragment_send_interval_);
+            next_fragment_send_ = now + fragment_send_interval_;
         else
             streaming_frame_ = false; // frame fully sent
     }
@@ -124,7 +122,7 @@ void micro_rtsp_server::loop()
         start_sending_frame();
     }
 
-    if (audio_source_ != nullptr && next_audio_update_ < now)
+    if (audio_source_ != nullptr && audio_source_->available() && next_audio_update_ < now)
     {
         next_audio_update_ = now + AUDIO_UPDATE_INTERVAL;
         send_audio_chunk();
@@ -152,6 +150,11 @@ bool micro_rtsp_server::send_packet(rtsp_client &client, micro_rtsp_udp &udp, co
 
 bool micro_rtsp_server::start_sending_frame()
 {
+    // Do not capture or stream video when the video source is unavailable
+    // (e.g. the camera failed to initialize).
+    if (!video_source_.available())
+        return false;
+
     // Nothing to do when no client is actively streaming video
     bool any_active = false;
     for (auto &client : clients_)
@@ -188,11 +191,7 @@ bool micro_rtsp_server::start_sending_frame()
 
     // Reset per-client send progress for the new frame.
     for (auto &client : clients_)
-    {
         client->video_frame_offset_ = nullptr;
-        client->pending_packet_ = nullptr;
-        client->pending_packet_size_ = 0;
-    }
 
     // RTP timestamp for the frame, using a 90 kHz clock (RFC 3551)
     frame_timestamp_ = millis() * 90;
@@ -210,11 +209,12 @@ bool micro_rtsp_server::start_sending_frame()
 bool micro_rtsp_server::send_next_fragment()
 {
     bool frame_done = true;
-    fragment_retry_pending_ = false;
 
-    // Each client progresses through the frame independently so a fragment
-    // that fails to send (Wi-Fi TX backpressure, e.g. ENOMEM/ENOBUFS) is
-    // retried on the next tick instead of being silently dropped.
+    // Send one fragment per client per tick. A fragment that fails to send
+    // (Wi-Fi TX backpressure, e.g. ERR_MEM) is simply dropped: RTP tolerates
+    // lost packets, and retrying into a saturated TX queue would only keep it
+    // busy and stall the frame. The next fragment is sent at the next paced
+    // slot.
     for (auto &client : clients_)
     {
         if (!client->active() || !client->video_ready())
@@ -224,8 +224,7 @@ bool micro_rtsp_server::send_next_fragment()
         if (client->video_frame_offset_ == nullptr)
             client->video_frame_offset_ = frame_data_start_;
 
-        // Build the next fragment if nothing is pending for this client.
-        if (client->pending_packet_ == nullptr && client->video_frame_offset_ < frame_scan_end_)
+        if (client->video_frame_offset_ < frame_scan_end_)
         {
             auto offset = client->video_frame_offset_;
             size_t packet_size = 0;
@@ -237,22 +236,10 @@ bool micro_rtsp_server::send_next_fragment()
             }
 
             client->video_frame_offset_ = offset; // advanced by create_jpg_packet
-            client->pending_packet_ = packet;     // points into the streamer's fixed buffer
-            client->pending_packet_size_ = packet_size;
+            send_packet(*client, rtp_udp_, packet, packet_size, client->video_rtp_port());
         }
 
-        // Send the pending fragment; keep it for a retry when the send fails.
-        if (client->pending_packet_ != nullptr && send_packet(*client, rtp_udp_, client->pending_packet_, client->pending_packet_size_, client->video_rtp_port()))
-        {
-            client->pending_packet_ = nullptr;
-            client->pending_packet_size_ = 0;
-        }
-
-        // A still-pending packet means the send failed this tick (Wi-Fi TX backpressure); request a fast retry instead of the full paced slot.
-        if (client->pending_packet_ != nullptr)
-            fragment_retry_pending_ = true;
-
-        if (client->pending_packet_ != nullptr || client->video_frame_offset_ < frame_scan_end_)
+        if (client->video_frame_offset_ < frame_scan_end_)
             frame_done = false;
     }
 
@@ -261,7 +248,7 @@ bool micro_rtsp_server::send_next_fragment()
 
 void micro_rtsp_server::send_audio_chunk()
 {
-    if (audio_source_ == nullptr)
+    if (audio_source_ == nullptr || !audio_source_->available())
         return;
 
     auto any_audio = false;
@@ -302,7 +289,7 @@ void micro_rtsp_server::send_audio_chunk()
 }
 
 micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, micro_rtsp_source_video &source, bool audio_enabled, bool srtp_enabled, uint16_t rtsp_port)
-    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source), video_frame_offset_(nullptr), pending_packet_(nullptr), pending_packet_size_(0)
+    : WiFiClient(wifi_client), micro_rtsp_requests(audio_enabled, srtp_enabled), streamer(source), video_frame_offset_(nullptr)
 {
     // Disable Nagle's algorithm so interleaved RTP/RTCP packets (RTP/AVP/TCP) are sent immediately instead of being coalesced/delayed.
     WiFiClient::setNoDelay(true);
