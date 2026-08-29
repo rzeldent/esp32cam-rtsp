@@ -231,6 +231,12 @@ bool micro_rtsp_server::send_next_fragment()
 
         if (client->video_frame_offset_ < frame_scan_end_)
         {
+            // The first fragment of a frame carries the quantization tables;
+            // losing it corrupts the whole frame, so it is retried at the
+            // next paced slot instead of being dropped. Mid-frame fragments
+            // are still dropped on failure (RTP tolerates lost packets).
+            const bool is_frame_start = (client->video_frame_offset_ == frame_data_start_);
+
             auto offset = client->video_frame_offset_;
             size_t packet_size = 0;
             auto packet = client->streamer.create_jpg_packet(frame_data_start_, frame_scan_end_, &offset, frame_timestamp_, (uint16_t)video_source_->width(), (uint16_t)video_source_->height(), quant_lum_, quant_chr_, packet_size);
@@ -240,8 +246,13 @@ bool micro_rtsp_server::send_next_fragment()
                 return false;
             }
 
-            client->video_frame_offset_ = offset; // advanced by create_jpg_packet
-            send_packet(*client, rtp_udp_, packet, packet_size, client->video_rtp_port());
+            const bool sent = send_packet(*client, rtp_udp_, packet, packet_size, client->video_rtp_port());
+            if (sent)
+                client->video_frame_offset_ = offset; // advanced by create_jpg_packet
+            else if (is_frame_start)
+                client->video_frame_offset_ = frame_data_start_; // retry the frame-start fragment next slot
+            else
+                client->video_frame_offset_ = offset; // mid-frame drop: advance past the lost fragment
         }
 
         if (client->video_frame_offset_ < frame_scan_end_)
