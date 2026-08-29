@@ -239,6 +239,8 @@
     <div class="flex-table">
         <div class="row">RTSP camera stream:</div>
         <div><a href="rtsp://{{IPv4}}:{{RtspPort}}/mjpeg/1">rtsp://{{IPv4}}:{{RtspPort}}/mjpeg/1</a></div>
+        <div class="row">RTSP authentication:</div>
+        <div>{{#AuthRequired}}Required{{/AuthRequired}}{{^AuthRequired}}Disabled{{/AuthRequired}}</div>
         <div class="row">JPEG Motion stream:</div>
         <div><a href="http://{{IPv4}}/stream" target="_blank" rel="noopener">http://{{IPv4}}/stream</a></div>
         <div class="row">Snapshot of the camera:</div>

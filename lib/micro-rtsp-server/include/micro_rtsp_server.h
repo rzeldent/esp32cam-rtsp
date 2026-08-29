@@ -36,6 +36,10 @@ public:
 	// A client that offers its own "a=crypto" enables SRTP for that session as well.
 	void set_srtp(bool enabled) { srtp_enabled_ = enabled; }
 
+	// Enable RTSP Basic authentication (RFC 2617) for all clients.
+	// An empty username disables authentication.
+	void set_credentials(const std::string &username, const std::string &password) { username_ = username; password_ = password; }
+
 	void loop();
 
 	size_t clients() const { return clients_.size(); }
@@ -47,6 +51,11 @@ public:
 		~rtsp_client();
 
 		void handle_request();
+
+		// Returns true when the RTSP control connection has been closed by the peer
+		// (clean FIN or reset). WiFiClient::connected() can stay true after a clean
+		// FIN (socket in CLOSE_WAIT), so this probes the socket for EOF.
+		bool peer_closed();
 
 		// Buffers an incoming chunk until a complete request is available.
 		void append_request_data(const uint8_t *data, size_t size);
@@ -70,6 +79,11 @@ private:
 	micro_rtsp_source_video *video_source_;
 	micro_rtsp_source_audio *audio_source_;
 	bool srtp_enabled_;
+
+	// RTSP Basic auth credentials (RFC 2617); empty username disables auth.
+	std::string username_;
+	std::string password_;
+
 	unsigned frame_interval_;
 	unsigned long next_frame_update_;
 	unsigned long next_audio_update_;

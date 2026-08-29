@@ -36,6 +36,32 @@ namespace
         return out;
     }
 
+    // Minimal base64 decoder (RFC 4648), used to verify the RTSP Basic
+    // authorization header. Returns an empty string on invalid input.
+    std::string base64_decode(const std::string &in)
+    {
+        static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string out;
+        int buffer = 0;
+        int bits = 0;
+        for (char c : in)
+        {
+            if (c == '=' || c == '\r' || c == '\n' || c == ' ')
+                continue;
+            const char *p = strchr(table, c);
+            if (p == nullptr)
+                return {};
+            buffer = (buffer << 6) | (int)(p - table);
+            bits += 6;
+            if (bits >= 8)
+            {
+                bits -= 8;
+                out.push_back((char)((buffer >> bits) & 0xff));
+            }
+        }
+        return out;
+    }
+
     // Build the common RTSP response head: status line, CSeq and Date header
     // (RFC 2326 12.2). Uses std::to_string for the numeric fields instead of
     // an ostringstream.
@@ -109,6 +135,33 @@ void micro_rtsp_requests::set_server_address(const std::string &server_ip, uint1
 {
     server_ip_ = server_ip;
     rtsp_port_ = rtsp_port;
+}
+
+void micro_rtsp_requests::set_credentials(const std::string &username, const std::string &password)
+{
+    username_ = username;
+    password_ = password;
+}
+
+// Verifies the "Authorization: Basic <base64(user:pass)>" header (RFC 2617)
+// against the configured credentials.
+bool micro_rtsp_requests::check_authorization(const std::map<std::string, std::string> &headers) const
+{
+    auto it = headers.find("Authorization");
+    if (it == headers.end())
+        return false;
+
+    const auto &value = it->second;
+    if (value.compare(0, 6, "Basic ") != 0)
+        return false;
+
+    auto expected = username_ + ":" + password_;
+    return base64_decode(value.substr(6)) == expected;
+}
+
+std::string micro_rtsp_requests::handle_unauthorized(unsigned long cseq)
+{
+    return rtsp_response_header(cseq, 401, "Unauthorized") + "WWW-Authenticate: Basic realm=\"ESP32CAM-RTSP\"\r\n" + "\r\n";
 }
 
 bool micro_rtsp_requests::parse_transport(const std::string &value, bool &tcp, uint16_t &rtp_port, uint16_t &rtcp_port) 
@@ -335,6 +388,10 @@ std::string micro_rtsp_requests::handle_pause(unsigned long cseq)
 
 std::string micro_rtsp_requests::handle_teardown(unsigned long cseq)
 {
+    // Stop streaming immediately (not just at the next idle-client sweep):
+    // send_next_fragment()/send_audio_chunk() skip clients where active() is
+    // false, so no further RTP is sent to this client once TEARDOWN is handled.
+    stream_active_ = false;
     stream_stopped_ = true;
     return rtsp_response_header(cseq, 200, "OK") + "\r\n";
 }
@@ -400,8 +457,13 @@ std::string micro_rtsp_requests::process_request(const std::string &request)
         return handle_rtsp_error(0, 400, "No Sequence Found");
     auto cseq = std::stoul(cseq_it->second);
 
-    // Dispatch on the method token of the request line
+    // RTSP Basic authentication (RFC 2617). OPTIONS stays open so clients can
+    // discover the endpoint; every other request must present credentials when
+    // a username is configured.
     const auto method = request_method(request_line);
+    if (!username_.empty() && method != "OPTIONS" && !check_authorization(headers))
+        return handle_unauthorized(cseq);
+
     if (method == "OPTIONS")
         return handle_options(cseq);
     if (method == "DESCRIBE")

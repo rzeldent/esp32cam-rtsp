@@ -7,6 +7,9 @@
 
 #include <WiFi.h>
 
+#include <errno.h>
+#include <lwip/sockets.h>
+
 #include <micro_rtsp_server.h>
 #include <micro_rtsp_structs.h>
 
@@ -89,13 +92,30 @@ void micro_rtsp_server::loop()
             auto audio_available = audio_source_ != nullptr && audio_source_->available();
             auto c = std::unique_ptr<rtsp_client>(new rtsp_client(client, video_available, audio_available, srtp_enabled_, rtsp_port_));
             c->set_server_ports(rtp_udp_port_, rtp_udp_port_ + 1);
+            if (!username_.empty())
+                c->set_credentials(username_, password_);
             clients_.push_back(std::move(c));
             log_i("New RTSP client from %s, total: %d", peer_ip.c_str(), clients_.size());
         }
 
-        // Check for idle clients
-        clients_.remove_if([](std::unique_ptr<rtsp_client> &c)
-                           { return !c->connected() || c->stopped(); });
+        // Check for idle clients. A client is removed when it sent TEARDOWN or
+        // when its connection is gone. The latter also covers a clean FIN that
+        // WiFiClient::connected() misses (the socket sits in CLOSE_WAIT), which
+        // is what happens when a player such as VLC crashes: without this check
+        // RTP would keep being sent to the dead client.
+        for (auto it = clients_.begin(); it != clients_.end();)
+        {
+            auto &c = *it;
+            const bool teardown = c->stopped();
+            const bool lost = !c->connected() || c->peer_closed();
+            if (teardown || lost)
+            {
+                log_i("RTSP client disconnected (%s): %s, total: %u", lost ? "connection lost" : "teardown", c->remoteIP().toString().c_str(), (unsigned)clients_.size() - 1);
+                it = clients_.erase(it);
+            }
+            else
+                ++it;
+        }
 
         for (auto &client : clients_)
         {
@@ -324,6 +344,26 @@ micro_rtsp_server::rtsp_client::rtsp_client(const WiFiClient &wifi_client, bool 
 micro_rtsp_server::rtsp_client::~rtsp_client()
 {
     stop();
+}
+
+bool micro_rtsp_server::rtsp_client::peer_closed()
+{
+    // Data pending means the peer is still alive.
+    if (available() > 0)
+        return false;
+
+    // WiFiClient::connected() can remain true after a clean FIN (the socket is
+    // then in CLOSE_WAIT and a zero-length recv() leaves errno unchanged,
+    // typically EWOULDBLOCK), so probe for EOF directly. A non-blocking 1-byte
+    // MSG_PEEK recv() returns 0 when the peer has closed and -1/EWOULDBLOCK when
+    // the connection is open but idle. Peeking does not consume any data.
+    char b;
+    const int res = recv(fd(), &b, 1, MSG_PEEK | MSG_DONTWAIT);
+    if (res == 0)
+        return true;             // EOF: peer closed
+    if (res < 0 && errno == EWOULDBLOCK)
+        return false;            // open, no data
+    return !connected();         // other error: fall back to connected()
 }
 
 void micro_rtsp_server::rtsp_client::append_request_data(const uint8_t *data, size_t size)

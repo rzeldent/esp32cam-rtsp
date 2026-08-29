@@ -49,6 +49,10 @@ auto param_vflip = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("vm").lab
 auto param_dcw = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("dcw").label("Downsize enable").defaultValue(DEFAULT_DCW).build();
 auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").label("Colorbar").defaultValue(DEFAULT_COLORBAR).build();
 
+auto param_group_auth = iotwebconf::ParameterGroup("auth", "Authentication settings");
+auto param_auth_user = iotwebconf::Builder<iotwebconf::TextTParameter<16>>("au").label("Username").defaultValue("").build();
+auto param_auth_pass = iotwebconf::Builder<iotwebconf::PasswordTParameter<32>>("ap").label("Password").defaultValue("").build();
+
 // DNS Server
 DNSServer dnsServer;
 
@@ -152,7 +156,8 @@ void handle_root()
       {"Dcw", String(param_dcw.value())},
       {"ColorBar", String(param_colorbar.value())},
       // RTSP
-      {"RtspPort", String(rtsp_server.get_rtsp_port())}};
+      {"RtspPort", String(rtsp_server.get_rtsp_port())},
+      {"AuthRequired", String(param_auth_user.value()[0] != '\0')}};
 
   web_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   auto html = moustache_render(index_html_min_start, substitutions);
@@ -255,10 +260,8 @@ void handle_stream()
     }
 
     yield(); // Yield to the RTOS so other tasks can run while waiting for the next frame
-
     // Keep RTSP streaming and the web config/DNS/mDNS loop alive while this HTTP connection is open.
-    rtsp_server.loop();
-    iotWebConf.doLoop();
+    loop();
   }
 
   log_v("client disconnected");
@@ -389,6 +392,27 @@ void on_config_saved()
 {
   log_v("on_config_saved");
   update_camera_settings();
+  // Apply the RTSP authentication credentials immediately, so a changed
+  // username/password takes effect for new clients without a reboot.
+  // Existing sessions keep their previous credentials; only new connections
+  // are affected.
+  rtsp_server.set_credentials(param_auth_user.value(), param_auth_pass.value());
+}
+
+bool is_authenticated()
+{
+  return true;
+  // If no username is configured, authentication is disabled.
+  if (param_auth_user.value()[0] == '\0')
+    return true;
+
+  // If the client has already authenticated, return true.
+  if (web_server.authenticate(param_auth_user.value(), param_auth_pass.value()))
+    return true;
+
+  // Otherwise, request authentication.
+  web_server.requestAuthentication(BASIC_AUTH, "ESP32CAM-RTSP");
+  return false;
 }
 
 void setup()
@@ -472,6 +496,11 @@ void setup()
   param_group_camera.addItem(&param_colorbar);
   iotWebConf.addParameterGroup(&param_group_camera);
 
+  // RTSP Basic authentication credentials (RFC 2617), also used to protect /config.
+  param_group_auth.addItem(&param_auth_user);
+  param_group_auth.addItem(&param_auth_pass);
+  iotWebConf.addParameterGroup(&param_group_auth);
+
   iotWebConf.getApTimeoutParameter()->visible = true;
   iotWebConf.setConfigSavedCallback(on_config_saved);
   iotWebConf.setWifiConnectionCallback(on_connected);
@@ -488,20 +517,40 @@ void setup()
   // so a changed frame size / quality takes effect immediately.
   update_camera_settings();
 
+  // Apply RTSP Basic authentication credentials (RFC 2617); empty username disables it.
+  rtsp_server.set_credentials(param_auth_user.value(), param_auth_pass.value());
+
   // Set up required URL handlers on the web server
   web_server.on("/", HTTP_GET, handle_root);
-  web_server.on("/config", []
-                { iotWebConf.handleConfig(); });
+  web_server.on("/config", []()
+                {
+                  // IotWebConf handles the captive portal and config page, including authentication!
+                  // username: admin, password: AP password you set in the config portal
+                  // Registered without a method so BOTH GET (open the page) and
+                  // POST (form submit -> iotSave) are handled.
+                    iotWebConf.handleConfig(); });
   // Camera snapshot
-  web_server.on("/snapshot", HTTP_GET, handle_snapshot);
+  web_server.on("/snapshot", HTTP_GET, []()
+                {
+                  if (is_authenticated())
+                    handle_snapshot(); });
   // Camera stream
-  web_server.on("/stream", HTTP_GET, handle_stream);
+  web_server.on("/stream", HTTP_GET, []()
+                {
+                  if (is_authenticated())
+                    handle_stream(); });
 #ifdef FLASH_LED_GPIO
   // Flash led
-  web_server.on("/flash", HTTP_GET, handle_flash);
+  web_server.on("/flash", HTTP_GET, []()
+                {
+                  if (is_authenticated())
+                    handle_flash(); });
 #endif
   // ESP restart
-  web_server.on("/restart", HTTP_GET, handle_restart);
+  web_server.on("/restart", HTTP_GET, []()
+                {
+                  if (is_authenticated())
+                    handle_restart(); });
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 }
@@ -509,6 +558,5 @@ void setup()
 void loop()
 {
   iotWebConf.doLoop();
-
   rtsp_server.loop();
 }

@@ -22,6 +22,7 @@ Flashing this software on a ESP32CAM module will make it a **RTSP streaming came
 - [Setting up the ESP32CAM-RTSP](#setting-up-the-esp32cam-rtsp)
 - [Connecting to the configuration](#connecting-to-the-configuration)
 - [Connecting to the RTSP stream](#connecting-to-the-rtsp-stream)
+- [RTSP authentication](#rtsp-authentication)
 - [Connecting to the JPEG motion server](#connecting-to-the-jpeg-motion-server)
 - [Connecting to the image server](#connecting-to-the-image-server)
 - [API](#api)
@@ -40,6 +41,8 @@ Supported protocols
   Boards with an onboard microphone (e.g. the Seeed Studio XIAO ESP32S3 SENSE) can additionally stream
   G.711 a-law audio (RTP payload 8).
   The URL is rtsp://&lt;ip address&gt;:554/mjpeg/1
+  Authentication is optional; when enabled, clients must provide credentials
+  (see [RTSP authentication](#rtsp-authentication)).
 
 - HTTP Motion JPEG
   The HTTP JPEG streamer makes it possible to watch the camera stream directly in your browser.
@@ -261,7 +264,8 @@ The device announces itself on the local network via mDNS as `esp32cam-rtsp-<mac
 In case changes have been made to the configuration, this is shown and the possibility to restart is given.
 
 Clicking on the ```change configuration``` button will open the configuration. It is possible that a password dialog is shown before entering.
-If this happens, enter 'admin' as the user and the configured Access Point password as the password.
+If this happens, enter the RTSP username and password configured under ```RTSP settings```
+(see [RTSP authentication](#rtsp-authentication)).
 
 ## Connecting to the RTSP stream
 
@@ -335,6 +339,37 @@ RTP/RTSP/TCP transports, and (optionally) an audio track. The video frames are c
 `esp32-camera`, decoded with the `micro-jpg` library to locate the JPEG quantization tables, and
 packetized into RFC 2435 (JPEG over RTP) packets.
 
+## RTSP authentication
+
+The RTSP server supports **HTTP Basic authentication** (RFC 2617). When enabled, clients must
+present the configured credentials before they can describe, set up or play the stream.
+
+Authentication is **disabled by default**. To enable it, open the configuration page and set a
+**username** and **password** under the **RTSP settings** group, then apply the configuration and
+reboot.
+
+When authentication is enabled:
+
+- RTSP players such as [VLC](https://www.videolan.org/vlc/) prompt for the username and password
+  when connecting to the stream:
+
+  ```sh
+  vlc rtsp://esp32cam-rtsp-<mac>.local:554/mjpeg/1
+  ```
+
+- The credentials can also be embedded in the URL:
+
+  ```sh
+  vlc rtsp://<username>:<password>@esp32cam-rtsp-<mac>.local:554/mjpeg/1
+  ```
+
+- `OPTIONS` requests remain open (unauthenticated) so clients and monitoring tools can still
+  probe the endpoint without credentials.
+
+The **same credentials** protect the configuration page at
+`http://esp32cam-rtsp-<mac>.local/config` (HTTP Basic authentication, realm `ESP32CAM-RTSP`).
+The `/snapshot` and `/stream` pages are not password protected.
+
 ## Connecting to the JPEG motion server
 
 The JPEG motion server is available in a web browser at `http://esp32cam-rtsp-<mac>.local/stream` (replace `<mac>` with the device's MAC address).
@@ -350,12 +385,15 @@ The image server is available in a web browser at `http://esp32cam-rtsp-<mac>.lo
 
 There is a minimal API to perform tasks via HTTP requests. Some endpoints require **HTTP Basic Authentication**.
 
-| Credential | Value                            |
-|------------|----------------------------------|
-| Username   | `admin`                          |
-| Password   | Your configured AP password      |
+| Credential | Value                        |
+|------------|------------------------------|
+| Username   | Your configured RTSP username |
+| Password   | Your configured RTSP password |
 
-> Authentication is cached in the browser session, so you only need to enter it once.
+> Set the credentials under ```RTSP settings``` on the configuration page
+> (see [RTSP authentication](#rtsp-authentication)). When no RTSP username is set,
+> authentication is disabled. The credentials are cached in the browser session,
+> so you only need to enter them once.
 
 The available endpoints are:
 

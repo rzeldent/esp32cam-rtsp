@@ -47,6 +47,10 @@ public:
     void set_client_ip(const std::string &client_ip);
     void set_server_address(const std::string &server_ip, uint16_t rtsp_port);
 
+    // Enable RTSP Basic authentication (RFC 2617). When username is non-empty,
+    // every request except OPTIONS must present valid credentials.
+    void set_credentials(const std::string &username, const std::string &password);
+
 private:
     static const std::string available_stream_name_;
     static const std::string crypto_suite_; // AES_CM_128_HMAC_SHA1_80
@@ -68,6 +72,11 @@ private:
     std::string handle_play(unsigned long cseq);
     std::string handle_pause(unsigned long cseq);
     std::string handle_teardown(unsigned long cseq);
+    std::string handle_unauthorized(unsigned long cseq);
+
+    // Verifies the "Authorization: Basic ..." header (RFC 2617) against the
+    // configured credentials.
+    bool check_authorization(const std::map<std::string, std::string> &headers) const;
 
 
 
@@ -98,6 +107,10 @@ private:
     std::string client_ip_;
     std::string server_ip_;
     uint16_t rtsp_port_;
+
+    // RTSP Basic authentication credentials (RFC 2617); empty username = no auth.
+    std::string username_;
+    std::string password_;
 
     unsigned long rtsp_session_id_;
 };
