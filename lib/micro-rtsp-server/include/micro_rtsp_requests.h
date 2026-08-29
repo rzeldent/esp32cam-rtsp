@@ -55,8 +55,7 @@ private:
     static std::string handle_options(unsigned long cseq);
 
     std::string handle_describe(unsigned long cseq, const std::string &request_line);
-    std::string handle_setup(unsigned long cseq, const std::string &request_line,
-                             const std::map<std::string, std::string> &headers);
+    std::string handle_setup(unsigned long cseq, const std::string &request_line, const std::map<std::string, std::string> &headers);
     std::string handle_play(unsigned long cseq);
     std::string handle_pause(unsigned long cseq);
     std::string handle_teardown(unsigned long cseq);

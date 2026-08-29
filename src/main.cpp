@@ -14,9 +14,9 @@
 #include <moustache.h>
 #include <settings.h>
 
-#include <micro_rtsp_camera.h>
 #include <micro_rtsp_server.h>
-#include <micro_rtsp_audio_i2s.h>
+#include <micro_rtsp_source_video_camera.h>
+#include <micro_rtsp_source_audio_i2s.h>
 
 // HTML files
 extern const char index_html_min_start[] asm("_binary_html_index_min_html_start");
@@ -52,7 +52,7 @@ auto param_colorbar = iotwebconf::Builder<iotwebconf::CheckboxTParameter>("cb").
 // DNS Server
 DNSServer dnsServer;
 
-micro_rtsp_camera camera;
+micro_rtsp_source_video_camera camera;
 #ifdef MIC_I2S_BCLK
 // Optional audio: capture from the onboard I2S MEMS microphone and stream it
 // as G.711 a-law together with the video (see boards/*.json for the pins).
@@ -184,7 +184,7 @@ void handle_snapshot()
   // Remove old images stored in the frame buffer
   auto frame_buffers = CAMERA_CONFIG_FB_COUNT;
   while (frame_buffers--)
-    camera.update_frame();
+    camera.update();
 
   auto fb_len = camera.size();
   auto fb = camera.data();
@@ -226,7 +226,7 @@ void handle_stream()
     auto now = millis();
     if (now >= next_frame)
     {
-      camera.update_frame();
+      camera.update();
       if (camera.data() != nullptr)
       {
         client.write("\r\n--" STREAM_CONTENT_BOUNDARY "\r\n");

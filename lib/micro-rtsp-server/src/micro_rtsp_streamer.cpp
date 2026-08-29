@@ -18,16 +18,6 @@ micro_rtsp_streamer::micro_rtsp_streamer(const micro_rtsp_source_video &source)
     audio_sequence_number_ = 0;
 }
 
-void micro_rtsp_streamer::set_srtp(micro_rtsp_srtp *srtp)
-{
-    srtp_ = srtp;
-}
-
-micro_rtsp_srtp *micro_rtsp_streamer::srtp() const
-{
-    return srtp_;
-}
-
 uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const uint8_t *jpg_scan_end, uint8_t **jpg_offset, const uint32_t timestamp, const uint8_t *quant_lum, const uint8_t *quant_chr, size_t &packet_size)
 {
     log_v("jpg_scan:%p, jpg_scan_end:%p, jpg_offset:%p, timestamp:%u", jpg_scan, jpg_scan_end, (const void *)*jpg_offset, timestamp);
@@ -55,9 +45,8 @@ uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const u
     // Build the packet in the streamer's fixed buffer: no per-packet heap
     // allocation, avoiding malloc/free churn (and heap fragmentation) while
     // streaming a frame.
-    auto packet = packet_buffer_;
-    memset(packet, 0, buffer_size);
-    auto p = packet;
+    memset(packet_buffer_, 0, buffer_size);
+    auto p = packet_buffer_;
 
     // ---- RTP over TCP framing header ($, channel; length is set at the end,
     //      after optional SRTP protection has grown the RTP packet) ----
@@ -109,27 +98,27 @@ uint8_t *micro_rtsp_streamer::create_jpg_packet(const uint8_t *jpg_scan, const u
 
     // ---- Optional SRTP protection (encrypts the payload, appends a tag) ----
     if (srtp_)
-        srtp_->protect_rtp(packet + rtp_over_tcp_hdr_size, rtp_len);
+        srtp_->protect_rtp(packet_buffer_ + rtp_over_tcp_hdr_size, rtp_len);
 
     // Total size of the buffer handed to the caller (4 byte '$' header +
     // the possibly protected RTP packet)
     packet_size = rtp_over_tcp_hdr_size + rtp_len;
 
     // RTP over TCP framing header: length of the (possibly protected) RTP packet
-    packet[2] = (uint8_t)(rtp_len >> 8);
-    packet[3] = (uint8_t)(rtp_len & 0xff);
+    packet_buffer_[2] = (uint8_t)(rtp_len >> 8);
+    packet_buffer_[3] = (uint8_t)(rtp_len & 0xff);
 
     // Advance the scan offset and RTP sequence number
     *jpg_offset += jpg_bytes;
     video_sequence_number_++;
 
     log_v("packet_size:%u, fragment_offset:%u, is_first:%u, is_last:%u, srtp:%u", packet_size, fragment_offset, is_first_fragment, is_last_fragment, srtp_ != nullptr);
-    return packet;
+    return packet_buffer_;
 }
 
 uint8_t *micro_rtsp_streamer::create_audio_packet(const uint8_t *data, size_t len, bool marker, size_t &packet_size)
 {
-    const size_t header_size = rtp_over_tcp_hdr_size + rtp_hdr_size;
+    constexpr size_t header_size = rtp_over_tcp_hdr_size + rtp_hdr_size;
     // Length of the RTP packet (without the 4 byte '$' header), before SRTP
     size_t rtp_len = header_size - rtp_over_tcp_hdr_size + len;
     // Reserve room for the SRTP authentication tag when enabled
@@ -142,9 +131,8 @@ uint8_t *micro_rtsp_streamer::create_audio_packet(const uint8_t *data, size_t le
     }
 
     // Build the packet in the streamer's fixed buffer (see create_jpg_packet).
-    auto packet = packet_buffer_;
-    memset(packet, 0, buffer_size);
-    auto p = packet;
+    memset(packet_buffer_, 0, buffer_size);
+    auto p = packet_buffer_;
 
     // ---- RTP over TCP framing header ($, channel; length set at the end) ----
     *p++ = '$';
@@ -170,18 +158,18 @@ uint8_t *micro_rtsp_streamer::create_audio_packet(const uint8_t *data, size_t le
 
     // ---- Optional SRTP protection (encrypts the payload, appends a tag) ----
     if (srtp_)
-        srtp_->protect_rtp(packet + rtp_over_tcp_hdr_size, rtp_len);
+        srtp_->protect_rtp(packet_buffer_ + rtp_over_tcp_hdr_size, rtp_len);
 
     // Total size of the buffer handed to the caller (4 byte '$' header +
     // the possibly protected RTP packet)
     packet_size = rtp_over_tcp_hdr_size + rtp_len;
 
     // RTP over TCP framing header: length of the (possibly protected) RTP packet
-    packet[2] = (uint8_t)(rtp_len >> 8);
-    packet[3] = (uint8_t)(rtp_len & 0xff);
+    packet_buffer_[2] = (uint8_t)(rtp_len >> 8);
+    packet_buffer_[3] = (uint8_t)(rtp_len & 0xff);
 
     audio_sequence_number_++;
     audio_timestamp_ += (uint32_t)len; // one byte == one 8 kHz sample
 
-    return packet;
+    return packet_buffer_;
 }

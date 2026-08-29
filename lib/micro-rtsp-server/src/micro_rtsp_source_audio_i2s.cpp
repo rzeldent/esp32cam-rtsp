@@ -1,18 +1,18 @@
 #include <esp32-hal-log.h>
 #include <driver/i2s.h>
 
-#include "micro_rtsp_audio_i2s.h"
+#include "micro_rtsp_source_audio_i2s.h"
 
 // Captures 16 kHz mono 16-bit PCM and downsamples it to 8 kHz before encoding to G.711 a-law (one byte per sample).
 static constexpr uint32_t i2s_sample_rate = 16000;
 static constexpr uint32_t output_sample_rate = 8000;
 
-micro_rtsp_audio_i2s::micro_rtsp_audio_i2s(int8_t bclk_pin, int8_t ws_pin, int8_t data_pin)
+micro_rtsp_source_audio_i2s::micro_rtsp_source_audio_i2s(int8_t bclk_pin, int8_t ws_pin, int8_t data_pin)
     : bclk_pin_(bclk_pin), ws_pin_(ws_pin), data_pin_(data_pin), initialized_(false), alaw_size_(0)
 {
 }
 
-micro_rtsp_audio_i2s::~micro_rtsp_audio_i2s()
+micro_rtsp_source_audio_i2s::~micro_rtsp_source_audio_i2s()
 {
     if (initialized_)
     {
@@ -21,7 +21,7 @@ micro_rtsp_audio_i2s::~micro_rtsp_audio_i2s()
     }
 }
 
-bool micro_rtsp_audio_i2s::begin()
+bool micro_rtsp_source_audio_i2s::begin()
 {
     if (initialized_)
         return true;
@@ -65,7 +65,7 @@ bool micro_rtsp_audio_i2s::begin()
     return true;
 }
 
-bool micro_rtsp_audio_i2s::update_audio()
+bool micro_rtsp_source_audio_i2s::update()
 {
     if (!initialized_)
         return false;
@@ -91,28 +91,8 @@ bool micro_rtsp_audio_i2s::update_audio()
     return alaw_size_ > 0;
 }
 
-const uint8_t *micro_rtsp_audio_i2s::data() const
-{
-    return alaw_buffer_;
-}
-
-size_t micro_rtsp_audio_i2s::size() const
-{
-    return alaw_size_;
-}
-
-uint32_t micro_rtsp_audio_i2s::sample_rate() const
-{
-    return 8000;
-}
-
-uint8_t micro_rtsp_audio_i2s::channels() const
-{
-    return 1;
-}
-
 // G.711 a-law encoder (ITU-T G.711), 16 bit PCM in -> 8 bit a-law out.
-uint8_t micro_rtsp_audio_i2s::linear_to_alaw(int16_t pcm)
+uint8_t micro_rtsp_source_audio_i2s::linear_to_alaw(int16_t pcm)
 {
     uint8_t sign = (pcm >> 8) & 0x80;
     if (sign != 0)

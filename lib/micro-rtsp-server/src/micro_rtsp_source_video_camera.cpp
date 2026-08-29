@@ -3,10 +3,10 @@
 #include <cstring>
 #include <esp_heap_caps.h>
 
-#include "micro_rtsp_camera.h"
+#include "micro_rtsp_source_video_camera.h"
 
 // Map of sensor PID to model name (see camera_pid_t in sensor.h).
-const std::map<uint16_t, const char *> micro_rtsp_camera::sensor_names_ = {
+const std::map<uint16_t, const char *> micro_rtsp_source_video_camera::sensor_names_ = {
     {OV9650_PID, "OmniVision OV9650"},
     {OV7725_PID, "OmniVision OV7725"},
     {OV2640_PID, "OmniVision OV2640"},
@@ -24,7 +24,7 @@ const std::map<uint16_t, const char *> micro_rtsp_camera::sensor_names_ = {
     {SC031GS_PID, "SmartSens SC031GS"},
 };
 
-micro_rtsp_camera::micro_rtsp_camera()
+micro_rtsp_source_video_camera::micro_rtsp_source_video_camera()
     : init_result_(ESP_FAIL),
       fb_(nullptr),
       jpeg_buffer_(nullptr),
@@ -35,12 +35,12 @@ micro_rtsp_camera::micro_rtsp_camera()
 {
 }
 
-micro_rtsp_camera::~micro_rtsp_camera()
+micro_rtsp_source_video_camera::~micro_rtsp_source_video_camera()
 {
     deinitialize();
 }
 
-esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
+esp_err_t micro_rtsp_source_video_camera::initialize(camera_config_t *camera_config)
 {
     log_v("camera_config={.pin_pwdn:%u,.pin_reset:%u,.pin_xclk:%u,.pin_sccb_sda:%u,.pin_sccb_scl:%u,.pin_d7:%u,.pin_d6:%u,.pin_d5:%u,.pin_d4:%u,.pin_d3:%u,.pin_d2:%u,.pin_d1:%u,.pin_d0:%u,.pin_vsync:%u,.pin_href:%u,.pin_pclk:%u,.xclk_freq_hz:%d,.ledc_timer:%u,ledc_channel:%u,.pixel_format:%d,.frame_size:%d,.jpeg_quality:%d,.fb_count:%d,.fb_location%d,.grab_mode:%d,sccb_i2c_port:%d}", camera_config->pin_pwdn, camera_config->pin_reset, camera_config->pin_xclk, camera_config->pin_sccb_sda, camera_config->pin_sccb_scl, camera_config->pin_d7, camera_config->pin_d6, camera_config->pin_d5, camera_config->pin_d4, camera_config->pin_d3, camera_config->pin_d2, camera_config->pin_d1, camera_config->pin_d0, camera_config->pin_vsync, camera_config->pin_href, camera_config->pin_pclk, camera_config->xclk_freq_hz, camera_config->ledc_timer, camera_config->ledc_channel, camera_config->pixel_format, camera_config->frame_size, camera_config->jpeg_quality, camera_config->fb_count, camera_config->fb_location, camera_config->grab_mode, camera_config->sccb_i2c_port);
 
@@ -51,7 +51,7 @@ esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
         auto it = sensor_names_.find(sensor->id.PID);
         const char *model = (it != sensor_names_.end()) ? it->second : "Unknown";
         log_i("Found camera sensor: model=%s, PID=0x%04x, MID=0x%04x, VER=0x%02x", model, sensor->id.PID, (sensor->id.MIDH << 8) | sensor->id.MIDL, sensor->id.VER);
-        update_frame();
+        update();
     }
     else
         log_e("Camera initialization failed: 0x%02x", init_result_);
@@ -59,7 +59,7 @@ esp_err_t micro_rtsp_camera::initialize(camera_config_t *camera_config)
     return init_result_;
 }
 
-esp_err_t micro_rtsp_camera::deinitialize()
+esp_err_t micro_rtsp_source_video_camera::deinitialize()
 {
     if (fb_)
     {
@@ -72,7 +72,7 @@ esp_err_t micro_rtsp_camera::deinitialize()
     return init_result_ == ESP_OK ? esp_camera_deinit() : ESP_OK;
 }
 
-void micro_rtsp_camera::update_frame()
+void micro_rtsp_source_video_camera::update()
 {
     // Return any previous framebuffer (defensive; it is normally already
     // returned right after the copy in copy_frame_from_camera()).
@@ -94,7 +94,7 @@ void micro_rtsp_camera::update_frame()
     copy_frame_from_camera();
 }
 
-bool micro_rtsp_camera::copy_frame_from_camera()
+bool micro_rtsp_source_video_camera::copy_frame_from_camera()
 {
     if (fb_ == nullptr)
         return false;
@@ -121,7 +121,7 @@ bool micro_rtsp_camera::copy_frame_from_camera()
     return true;
 }
 
-bool micro_rtsp_camera::ensure_jpeg_buffer(size_t capacity)
+bool micro_rtsp_source_video_camera::ensure_jpeg_buffer(size_t capacity)
 {
     if (jpeg_buffer_ != nullptr && jpeg_buffer_capacity_ >= capacity)
         return true;
@@ -140,7 +140,7 @@ bool micro_rtsp_camera::ensure_jpeg_buffer(size_t capacity)
     return true;
 }
 
-void micro_rtsp_camera::free_jpeg_buffer()
+void micro_rtsp_source_video_camera::free_jpeg_buffer()
 {
     if (jpeg_buffer_ != nullptr)
     {

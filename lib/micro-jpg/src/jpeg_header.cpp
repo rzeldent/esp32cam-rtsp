@@ -4,9 +4,9 @@
 
 #include <jpg.h>
 
-#include "micro_rtsp_jpeg_header.h"
+#include "jpeg_header.h"
 
-micro_rtsp_jpeg_header::micro_rtsp_jpeg_header()
+jpeg_header::jpeg_header()
     : valid_(false),
       scan_start_offset_(0),
       scan_start_(nullptr),
@@ -14,7 +14,7 @@ micro_rtsp_jpeg_header::micro_rtsp_jpeg_header()
 {
 }
 
-bool micro_rtsp_jpeg_header::prepare(const uint8_t *data, size_t size)
+bool jpeg_header::prepare(const uint8_t *data, size_t size)
 {
     // The header (quantization tables and scan data start) is constant for a fixed quality / frame size.
     // Reuse it when the cached copy matches.
@@ -41,8 +41,8 @@ bool micro_rtsp_jpeg_header::prepare(const uint8_t *data, size_t size)
         return false;
     }
 
-    memcpy(quant_lum_, jpg.quantization_table_luminance_->data, jpeg_qtable_size);
-    memcpy(quant_chr_, jpg.quantization_table_chrominance_->data, jpeg_qtable_size);
+    memcpy(quant_lum_, jpg.quantization_table_luminance_->data, jpeg_quantization_table_length);
+    memcpy(quant_chr_, jpg.quantization_table_chrominance_->data, jpeg_quantization_table_length);
     scan_start_offset_ = (size_t)(jpg.jpeg_data_start - data);
     valid_ = true;
 
@@ -50,24 +50,4 @@ bool micro_rtsp_jpeg_header::prepare(const uint8_t *data, size_t size)
     scan_end_ = jpg.jpeg_data_end;
 
     return true;
-}
-
-const uint8_t *micro_rtsp_jpeg_header::scan_start() const
-{
-    return scan_start_;
-}
-
-const uint8_t *micro_rtsp_jpeg_header::scan_end() const
-{
-    return scan_end_;
-}
-
-const uint8_t *micro_rtsp_jpeg_header::luminance() const
-{
-    return quant_lum_;
-}
-
-const uint8_t *micro_rtsp_jpeg_header::chrominance() const
-{
-    return quant_chr_;
 }

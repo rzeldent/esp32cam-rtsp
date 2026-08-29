@@ -71,26 +71,6 @@ void micro_rtsp_server::end()
     clients_.clear();
 }
 
-unsigned micro_rtsp_server::get_frame_interval() const
-{
-    return frame_interval_;
-}
-
-unsigned micro_rtsp_server::set_frame_interval(unsigned value)
-{
-    return frame_interval_ = value;
-}
-
-void micro_rtsp_server::set_srtp(bool enabled)
-{
-    srtp_enabled_ = enabled;
-}
-
-size_t micro_rtsp_server::clients() const
-{
-    return clients_.size();
-}
-
 void micro_rtsp_server::loop()
 {
     auto now = millis();
@@ -188,7 +168,7 @@ bool micro_rtsp_server::start_sending_frame()
 
     // Get the next JPEG frame from the camera. The framebuffer is kept until the whole frame has been transmitted (see send_next_fragment),
     // so the scan/quantization pointers below stay valid across loop() passes.
-    video_source_.update_frame();
+    video_source_.update();
     if (video_source_.data() == nullptr || video_source_.size() == 0)
         return false;
 
@@ -298,7 +278,7 @@ void micro_rtsp_server::send_audio_chunk()
         return;
 
     // Capture the next chunk of (a-law encoded) samples
-    if (!audio_source_->update_audio())
+    if (!audio_source_->update())
         return;
 
     const uint8_t *data = audio_source_->data();

@@ -17,8 +17,8 @@ public:
     explicit micro_rtsp_streamer(const micro_rtsp_source_video &source);
 
     // Enable SRTP (RFC 3711) protection of the generated RTP packets. When set, every packet is encrypted and carries an authentication tag.
-    void set_srtp(micro_rtsp_srtp *srtp);
-    micro_rtsp_srtp *srtp() const ;
+    void set_srtp(micro_rtsp_srtp *srtp) { srtp_ = srtp; }
+    micro_rtsp_srtp *srtp() const { return srtp_; }
 
     // Create a single RTP/JPEG packet for the current JPEG fragment.
     //   jpg_scan     - pointer to the first byte of the JPEG scan data

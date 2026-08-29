@@ -133,19 +133,19 @@ const char *jpg_section_t::flag_name(const jpg_section_flag flag)
     case JPG6:
         return "JPG6"; // JPEG Extension 6
     case JPG7:
-        return "JPG7"; // 	SOF48	JPEG Extension 7 JPEG-LS	Lossless JPEG
+        return "JPG7"; // SOF48	JPEG Extension 7 JPEG-LS	Lossless JPEG
     case JPG8:
-        return "JPG8"; // LSE	JPEG Extension 8 JPEG-LS Extension	Lossless JPEG Extension Parameters
+        return "JPG8"; // LSE JPEG Extension 8 JPEG-LS Extension	Lossless JPEG Extension Parameters
     case JPG9:
         return "JPG9"; // JPEG Extension 9	(Not common)
     case JPG10:
-        return "JPG10"; // 	JPEG Extension 10	(Not common)
+        return "JPG10"; // JPEG Extension 10	(Not common)
     case JPG11:
-        return "JPG11"; // 	JPEG Extension 11	(Not common)
+        return "JPG11"; // JPEG Extension 11	(Not common)
     case JPG12:
-        return "JPG12"; // 	JPEG Extension 12	(Not common)
+        return "JPG12"; // JPEG Extension 12	(Not common)
     case JPG13:
-        return "JPG13"; // 	JPEG Extension 13	(Not common)
+        return "JPG13"; // JPEG Extension 13	(Not common)
     case COM:
         return "COM"; // Comment
     }

@@ -7,18 +7,18 @@
 // Video source that captures JPEG frames using the esp32-camera driver.
 // Each frame is copied out of the camera framebuffer and the framebuffer is returned immediately,
 //  so the camera keeps capturing while the copied frame is streamed (decoupling capture from transmission).
-class micro_rtsp_camera : public micro_rtsp_source_video
+class micro_rtsp_source_video_camera : public micro_rtsp_source_video
 {
 public:
-    micro_rtsp_camera();
-    virtual ~micro_rtsp_camera();
+    micro_rtsp_source_video_camera();
+    virtual ~micro_rtsp_source_video_camera();
 
     esp_err_t initialize(camera_config_t *camera_config);
     esp_err_t deinitialize();
 
     bool available() const { return jpeg_size_ > 0; }
 
-    virtual void update_frame();
+    virtual void update();
 
     virtual uint8_t *data() const { return jpeg_size_ > 0 ? jpeg_buffer_ : nullptr; }
     virtual size_t width() const { return frame_width_; }

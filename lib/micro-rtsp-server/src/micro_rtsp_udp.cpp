@@ -31,11 +31,12 @@ bool micro_rtsp_udp::begin(uint16_t port)
         return false;
     }
 
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port = htons(port);
+    sockaddr_in addr = {
+        .sin_len = sizeof(addr),
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+        .sin_addr = {
+            .s_addr = htonl(INADDR_ANY)}};
     if (bind(sock, (sockaddr *)&addr, sizeof(addr)) < 0)
     {
         log_e("could not bind UDP socket to port %u: %d", port, errno);
@@ -63,11 +64,12 @@ bool micro_rtsp_udp::send(const IPAddress &dest, uint16_t port, const uint8_t *d
     if (sock_ < 0)
         return false;
 
-    sockaddr_in dst;
-    memset(&dst, 0, sizeof(dst));
-    dst.sin_family = AF_INET;
-    dst.sin_addr.s_addr = (uint32_t)dest;
-    dst.sin_port = htons(port);
+    sockaddr_in dst = {
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+        .sin_addr = { 
+            .s_addr = (uint32_t)dest }
+    };
     const int sent = sendto(sock_, data, len, 0, (sockaddr *)&dst, sizeof(dst));
     if (sent < 0)
     {

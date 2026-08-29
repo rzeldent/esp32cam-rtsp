@@ -9,7 +9,7 @@
 
 #include "micro_rtsp_source_audio.h"
 #include "micro_rtsp_source_video.h"
-#include "micro_rtsp_jpeg_header.h"
+#include <jpeg_header.h>
 #include "micro_rtsp_requests.h"
 #include "micro_rtsp_srtp.h"
 #include "micro_rtsp_streamer.h"
@@ -25,16 +25,16 @@ public:
 	void begin(unsigned short port = 554);
 	void end();
 
-	unsigned get_frame_interval() const;
-	unsigned set_frame_interval(unsigned value);
+	unsigned get_frame_interval() const { return frame_interval_; }
+	unsigned set_frame_interval(unsigned value) { return frame_interval_ = value; }
 
 	// Enable Secure RTP (RFC 3711) for all clients. The server advertises its SRTP master key/salt through "a=crypto" (RFC 4568) in the DESCRIBE and SETUP replies and encrypts the outgoing RTP streams
 	// A client that offers its own "a=crypto" enables SRTP for that session as well.
-	void set_srtp(bool enabled);
+	void set_srtp(bool enabled) { srtp_enabled_ = enabled; }
 
 	void loop();
 
-	size_t clients() const;
+	size_t clients() const { return clients_.size(); }
 
 	class rtsp_client : public WiFiClient, public micro_rtsp_requests
 	{
@@ -94,5 +94,5 @@ private:
 
 	// Cached JPEG header (quantization tables + scan data start offset),
 	// reused across frames so the full JPEG parse only happens once.
-	micro_rtsp_jpeg_header jpeg_header_;
+	jpeg_header jpeg_header_;
 };

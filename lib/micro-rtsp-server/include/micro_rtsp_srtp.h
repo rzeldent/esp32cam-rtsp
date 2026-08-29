@@ -34,11 +34,11 @@ public:
     // derive the session keys.
     bool set_key_salt(const uint8_t *key, const uint8_t *salt);
 
-    bool enabled() const;
-    size_t tag_size() const;
+    bool enabled() const { return enabled_; }
+    size_t tag_size() const { return auth_tag_size; }
 
-    const uint8_t *key() const;
-    const uint8_t *salt() const;
+    const uint8_t *key() const { return master_key_; }
+    const uint8_t *salt() const { return master_salt_; }
 
     // Encrypt the payload of an RTP packet in place and append the
     // authentication tag. "packet" points at the RTP packet (12 byte header

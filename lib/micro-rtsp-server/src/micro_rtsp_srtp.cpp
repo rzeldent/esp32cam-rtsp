@@ -59,26 +59,6 @@ bool micro_rtsp_srtp::set_key_salt(const uint8_t *key, const uint8_t *salt)
     return true;
 }
 
-bool micro_rtsp_srtp::enabled() const
-{
-    return enabled_;
-}
-
-size_t micro_rtsp_srtp::tag_size() const
-{
-    return auth_tag_size;
-}
-
-const uint8_t *micro_rtsp_srtp::key() const
-{
-    return master_key_;
-}
-
-const uint8_t *micro_rtsp_srtp::salt() const
-{
-    return master_salt_;
-}
-
 // RFC 3711 section 4.3.3: session key = AES-CM PRF(master_key, x) where x = master_salt XOR (label || 0...0) and the counter block is (x * 2^16),
 // i.e. a 16 byte block holding the (right aligned) master salt with the label in byte 7 and two trailing zero bytes. The keystream block counter is written into the two trailing bytes (14-15).
 void micro_rtsp_srtp::derive_key(uint8_t label, uint8_t *out, size_t outlen)
@@ -207,12 +187,7 @@ void micro_rtsp_srtp::protect_rtp(uint8_t *packet, size_t &len)
     mbedtls_md_setup(&md, mbedtls_md_info_from_type(MBEDTLS_MD_SHA1), 1);
     mbedtls_md_hmac_starts(&md, rtp_auth_, sizeof(rtp_auth_));
     mbedtls_md_hmac_update(&md, packet, len);
-    uint8_t roc_buf[4] =
-        {
-            (uint8_t)(state->roc >> 24),
-            (uint8_t)(state->roc >> 16),
-            (uint8_t)(state->roc >> 8),
-            (uint8_t)(state->roc & 0xff)};
+    uint8_t roc_buf[4] = {(uint8_t)(state->roc >> 24), (uint8_t)(state->roc >> 16), (uint8_t)(state->roc >> 8), (uint8_t)(state->roc & 0xff)};
     mbedtls_md_hmac_update(&md, roc_buf, sizeof(roc_buf));
     mbedtls_md_hmac_finish(&md, hmac);
     mbedtls_md_free(&md);
