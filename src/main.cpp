@@ -288,10 +288,8 @@ esp_err_t initialize_camera()
 
   // Set frame duration
   rtsp_server.set_frame_interval(param_frame_duration.value());
-
+  // initialize the camera with the current configuration
   return camera.initialize(frame_size, jpeg_quality);
-
-  // return cam.init(camera_config);
 }
 
 void update_camera_settings()
@@ -380,7 +378,6 @@ void on_config_saved()
 
 bool is_authenticated()
 {
-  return true;
   // If no username is configured, authentication is disabled.
   if (param_auth_user.value()[0] == '\0')
     return true;
