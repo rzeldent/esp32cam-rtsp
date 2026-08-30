@@ -54,8 +54,7 @@ Supported protocols
   The URL is http://&lt;ip address&gt;/snapshot
 
 - Over-the-air (OTA) firmware update
-  The firmware can be updated over WiFi through the web interface
-  (http://&lt;ip address&gt;/) or from PlatformIO / the Arduino IDE (espota).
+  The firmware can be updated over WiFi from PlatformIO or the Arduino IDE (espota).
   See [Updating the firmware (OTA)](#updating-the-firmware-ota).
 
 This software supports the following ESP32-CAM (and alike) modules:
@@ -465,19 +464,6 @@ connected to a USB programmer for every update.
 > time** you install a build that supports OTA you must flash it over USB so the new partition table
 > is written. After that, updates can be done over WiFi.
 
-Two methods are supported:
-
-### Web updater
-
-1. Open the device's web page: `http://esp32cam-rtsp-<mac>.local/` (or its IP address).
-2. In the **Firmware update (OTA)** section choose the compiled firmware image
-   `.pio/build/<env>/firmware.bin` (for example `.pio/build/esp32cam_ai_thinker/firmware.bin`).
-3. Click **Update firmware**. The RTSP server and camera are stopped during the upload and the device
-   restarts automatically when the update succeeds.
-
-The web updater is protected by the same HTTP Basic credentials as the RTSP stream when
-authentication is enabled (see [RTSP authentication](#rtsp-authentication)).
-
 ### PlatformIO / Arduino IDE (espota)
 
 Build the firmware normally and upload it over WiFi with PlatformIO, replacing the IP address and
@@ -497,7 +483,7 @@ python espota.py -i 192.168.1.100 -p 3232 -a ESP32CAM-RTSP -f .pio/build/esp32ca
 
 > [!NOTE]
 > Only upload a `firmware.bin` that was built for the same board / flash layout as the installed
-> firmware. The web updater accepts `.bin` files only.
+> firmware.
 
 ## API
 
@@ -527,15 +513,6 @@ Calling this URL will start the form for configuring the device in the browser. 
 
 Calling this URL will return a JPEG snapshot of the camera in the browser.
 This request can also be used (for example using cURL) to save the snapshot to a file.
-
-### POST: /update
-
-Uploads a firmware image (`.bin`) to update the device over the air. Authentication is required when
-RTSP credentials are configured. A browser upload form is available on the root page.
-
-```sh
-curl -u user:pass -F "update=@.pio/build/esp32cam_ai_thinker/firmware.bin" http://192.168.1.100/update
-```
 
 ## Issues / Nice to know
 
@@ -635,7 +612,7 @@ esp32cam-rtsp depends on PlatformIO, IotWebConf, Bootstrap 5, micro-moustache an
 - August 2026
   - Rewrote the RTSP server (`micro-rtsp-server`): RTP/UDP and RTP/RTSP/TCP, SRTP, G.711 audio
   - Improved streaming stability and performance
-  - Added over-the-air (OTA) firmware updates: web updater + ArduinoOTA/espota, with an
+  - Added over-the-air (OTA) firmware updates via ArduinoOTA/espota, with an
     OTA-capable partition table (`partitions/ota.csv`) for the 4MB boards
 - August 2024
   - Added support for M5Stack M5PoECAM-W

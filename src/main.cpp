@@ -9,8 +9,6 @@
 #include <ArduinoOTA.h>
 #include <Update.h>
 #include <esp_ota_ops.h>
-#include <libb64/cdecode.h>
-#include <vector>
 #include <lookup_camera_effect.h>
 #include <lookup_camera_frame_size.h>
 #include <lookup_camera_gainceiling.h>
@@ -398,50 +396,12 @@ bool is_authenticated()
   return false;
 }
 
-// Pure OTA_PASSWORD check (no response is sent, so it is safe to call from the
-// streaming upload handler, which cannot send a response mid-body). Returns true
-// when the "Authorization: Basic base64(user:password)" header's password equals
-// OTA_PASSWORD (any username is accepted); an empty OTA_PASSWORD disables auth.
-bool ota_authorized()
-{
-  if (OTA_PASSWORD[0] == '\0')
-    return true;
-
-  auto auth = web_server.header("Authorization");
-  if (auth.startsWith("Basic "))
-  {
-    auto token = auth.substring(6);
-    token.trim();
-
-    const auto capacity = base64_decode_expected_len(token.length()) + 1;
-    std::vector<char> decoded(capacity);
-    const auto len = base64_decode_chars(token.c_str(), static_cast<int>(token.length()), decoded.data());
-    if (len > 0)
-    {
-      const String credentials(decoded.data(), len); // "user:password"
-      const auto colon = credentials.indexOf(':');
-      const auto password = colon >= 0 ? credentials.substring(colon + 1) : credentials;
-      if (password == OTA_PASSWORD)
-        return true;
-    }
-  }
-  return false;
-}
-
 // --- Over-the-air (OTA) firmware updates ---------------------------------------
 //
-// Two mechanisms are provided:
-//   1. ArduinoOTA (espota protocol, port 3232) - used by PlatformIO
-//      (`pio run -t upload --upload-protocol espota`) and the Arduino IDE.
-//   2. A web updater at /update - upload firmware.bin through the browser. The
-//      upload form is embedded in the root page and the endpoint is protected by
-//      OTA_PASSWORD (include/settings.h), independent of the RTSP credentials.
-//
-// Both require a partition table with two app slots (see partitions/ota.csv);
-// 8MB/16MB boards already ship one.
-
-static String ota_error = "";
-static bool ota_authenticated = false;
+// Firmware is updated over WiFi with the ArduinoOTA / espota protocol (port 3232),
+// used by PlatformIO (`pio run -t upload --upload-protocol espota`) and the
+// Arduino IDE. This requires a partition table with two app slots
+// (see partitions/ota.csv); 8MB/16MB boards already ship one.
 
 void setup_ota()
 {
@@ -490,105 +450,6 @@ void setup_ota()
 
   ArduinoOTA.begin();
   log_i("ArduinoOTA (espota) service started");
-}
-
-// Post-upload response. Runs after the multipart body has been fully received.
-void handle_update_done()
-{
-  log_v("handle_update_done");
-
-  // Auth is only recorded at UPLOAD_FILE_START; answer 401 here (after the body
-  // has been consumed) when the OTA_PASSWORD credentials were missing.
-  if (!ota_authenticated)
-  {
-    web_server.requestAuthentication(BASIC_AUTH, DEFAULT_WWW_REALM);
-    return;
-  }
-
-  if (ota_error.length() > 0 || Update.hasError())
-  {
-    auto error = ota_error.length() > 0 ? ota_error.c_str() : Update.errorString();
-    log_e("OTA update failed: %s", error);
-    // Bring the camera and RTSP server back up after a failed update.
-    update_camera_settings();
-    if (iotWebConf.getState() == iotwebconf::NetworkState::OnLine)
-      start_rtsp_server();
-
-    web_server.send(200, "text/plain", String("Update failed: ") + error);
-    return;
-  }
-
-  log_w("OTA update success (%u bytes), rebooting...", Update.size());
-  web_server.send(200, "text/plain", "Update success! Rebooting...");
-  web_server.client().stop();
-  delay(100);
-  ESP.restart();
-}
-
-// Streams the uploaded firmware into the Update (esp_ota) machinery.
-void handle_update_upload()
-{
-  // Reference, not copy: HTTPUpload holds a large buffer and web_server.upload()
-  // dereferences a pointer that can be null, so copying would crash (LoadProhibited).
-  HTTPUpload &upload = web_server.upload();
-  if (upload.status == UPLOAD_FILE_START)
-  {
-    log_w("OTA upload start: %s (%u bytes)", upload.filename.c_str(), upload.totalSize);
-    ota_error = "";
-
-    // Authenticate once at the start. A 401 cannot be sent here while the body is
-    // still streaming (it corrupts the WebServer upload state), so an unauthorized
-    // upload is simply not written; handle_update_done() sends the 401 afterwards.
-    ota_authenticated = ota_authorized();
-    if (!ota_authenticated)
-    {
-      log_e("OTA upload rejected: authentication required");
-      return;
-    }
-
-    if (!upload.filename.endsWith(".bin"))
-    {
-      ota_error = "Only .bin firmware files are supported";
-      log_e("%s", ota_error.c_str());
-      return;
-    }
-
-    // Free memory and dedicate the Wi-Fi path to the upload: stop the RTSP server and release the camera frame buffers.
-    rtsp_server.end();
-    if (camera_init_result == ESP_OK)
-    {
-      esp_camera_deinit();
-      camera_init_result = ESP_FAIL;
-    }
-
-    // UPDATE_SIZE_UNKNOWN + end(true) accepts the actually received size.
-    if (!Update.begin(UPDATE_SIZE_UNKNOWN))
-    {
-      ota_error = String("Update.begin failed: ") + Update.errorString();
-      log_e("%s", ota_error.c_str());
-    }
-  }
-  else if (ota_authenticated && upload.status == UPLOAD_FILE_WRITE && ota_error.length() == 0)
-  {
-    if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
-    {
-      ota_error = String("Update.write failed: ") + Update.errorString();
-      log_e("%s", ota_error.c_str());
-    }
-  }
-  else if (ota_authenticated && upload.status == UPLOAD_FILE_END && ota_error.length() == 0)
-  {
-    if (!Update.end(true))
-    {
-      ota_error = String("Update.end failed: ") + Update.errorString();
-      log_e("%s", ota_error.c_str());
-    }
-  }
-  else if (upload.status == UPLOAD_FILE_ABORTED)
-  {
-    log_w("OTA upload aborted");
-    Update.abort();
-  }
 }
 
 void setup()
@@ -727,14 +588,6 @@ void setup()
                 {
                   if (is_authenticated())
                     handle_restart(); });
-  // Firmware update (OTA): the upload form is embedded in the root page; /update
-  // accepts the firmware.bin upload (multipart/form-data). It is protected by
-  // OTA_PASSWORD (include/settings.h), independent of the RTSP credentials.
-  web_server.on("/update", HTTP_GET, []()
-                { 
-                  web_server.sendHeader("Location", "/");
-                  web_server.send(302, "text/plain", ""); });
-  web_server.on("/update", HTTP_POST, handle_update_done, handle_update_upload);
   web_server.onNotFound([]()
                         { iotWebConf.handleNotFound(); });
 
