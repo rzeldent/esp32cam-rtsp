@@ -75,7 +75,11 @@ micro_rtsp_server rtsp_server(DEFAULT_WWW_REALM, &camera);
 WebServer web_server;
 
 auto macAddress = String(ESP.getEfuseMac(), 16);
-auto thingName = String(WIFI_SSID) + "-" + macAddress;
+// Format hostname format: esp32-<mac address>.local
+auto hostname = "esp32-" + macAddress + ".local";
+auto thingName = String(APP_TITLE) + "-" + macAddress;
+
+// IotWebConf instance for configuration portal and settings management
 IotWebConf iotWebConf(thingName.c_str(), &dnsServer, &web_server, WIFI_PASSWORD, CONFIG_VERSION);
 
 // Camera initialization result (ESP_FAIL until the camera is initialized)
@@ -87,9 +91,6 @@ void handle_root()
   // Let IotWebConf test and handle captive portal requests.
   if (iotWebConf.handleCaptivePortal())
     return;
-
-  // Format hostname format: esp32-<mac address>.local
-  auto hostname = "esp32-" + macAddress + ".local";
 
   // Wifi Modes
   const char *wifi_modes[] = {"NULL", "STA", "AP", "STA+AP"};
