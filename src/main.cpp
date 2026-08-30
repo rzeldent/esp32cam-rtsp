@@ -62,8 +62,8 @@ micro_rtsp_source_video_camera camera;
 #ifdef MIC_I2S_BCLK
 // Optional audio: capture from the onboard I2S MEMS microphone and stream it
 // as G.711 a-law together with the video (see boards/*.json for the pins).
-micro_rtsp_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
-micro_rtsp_server server(DEFAULT_WWW_REALM, &camera, &audio);
+micro_rtsp_source_audio_i2s audio(MIC_I2S_BCLK, MIC_I2S_WS, MIC_I2S_DIN);
+micro_rtsp_server rtsp_server(DEFAULT_WWW_REALM, &camera, &audio);
 #else
 micro_rtsp_server rtsp_server(DEFAULT_WWW_REALM, &camera);
 #endif
