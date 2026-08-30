@@ -1,11 +1,11 @@
 #include <esp32-hal-log.h>
 #include <esp_random.h>
-
 #include <sstream>
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
 #include <regex>
+
 #include "micro_rtsp_requests.h"
 
 // https://datatracker.ietf.org/doc/html/rfc2326
@@ -13,24 +13,25 @@
 
 namespace
 {
+    static const char table_b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
     // Minimal base64 encoder (RFC 4648), used to carry the SRTP master key and salt in the "a=crypto" attribute.
     std::string base64_encode(const uint8_t *data, size_t len)
     {
-        static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         std::string out;
         out.reserve(((len + 2) / 3) * 4);
         for (size_t i = 0; i < len; i += 3)
         {
-            uint32_t n = (uint32_t)data[i] << 16;
+            auto n = (uint32_t)data[i] << 16;
             if (i + 1 < len)
                 n |= (uint32_t)data[i + 1] << 8;
             if (i + 2 < len)
                 n |= data[i + 2];
 
-            out += table[(n >> 18) & 0x3f];
-            out += table[(n >> 12) & 0x3f];
-            out += (i + 1 < len) ? table[(n >> 6) & 0x3f] : '=';
-            out += (i + 2 < len) ? table[n & 0x3f] : '=';
+            out += table_b64[(n >> 18) & 0x3f];
+            out += table_b64[(n >> 12) & 0x3f];
+            out += (i + 1 < len) ? table_b64[(n >> 6) & 0x3f] : '=';
+            out += (i + 2 < len) ? table_b64[n & 0x3f] : '=';
         }
         return out;
     }
@@ -39,18 +40,19 @@ namespace
     // authorization header. Returns an empty string on invalid input.
     std::string base64_decode(const std::string &in)
     {
-        static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         std::string out;
-        int buffer = 0;
-        int bits = 0;
+        // Each group of 4 base64 characters decodes to 3 bytes; reserve that upper bound
+        out.reserve((in.size() * 3) / 4);
+        auto buffer = 0;
+        auto bits = 0;
         for (char c : in)
         {
             if (c == '=' || c == '\r' || c == '\n' || c == ' ')
                 continue;
-            const char *p = strchr(table, c);
+            auto p = strchr(table_b64, c);
             if (p == nullptr)
                 return {};
-            buffer = (buffer << 6) | (int)(p - table);
+            buffer = (buffer << 6) | (int)(p - table_b64);
             bits += 6;
             if (bits >= 8)
             {

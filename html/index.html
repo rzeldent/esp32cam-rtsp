@@ -249,6 +249,90 @@
         <div><a href="http://{{IPv4}}/restart " target="_blank" rel="noopener">http://{{IPv4}}/restart</a> </div>
     </div>
 
+    {{#OtaSupported}}
+    <h2 class="text-center">Firmware update (OTA)</h2>
+    <div class="alert alert-info">
+        <p class="text-center">Upload a compiled firmware image (e.g. <code>.pio/build/&lt;env&gt;/firmware.bin</code>) to update the device over the air.</p>
+        <p class="text-center">The RTSP server and camera are stopped during the upload and the device restarts automatically when the update succeeds.</p>
+        <div class="text-center">
+            <div><input type="file" id="ota-file" accept=".bin"></div>
+            <div><input type="password" id="ota-password" placeholder="OTA password" autocomplete="current-password"></div>
+            <div><button type="button" id="ota-button" class="btn btn-lg btn-primary">Update firmware</button></div>
+        </div>
+        <div id="ota-progress-wrap" style="display:none;">
+            <div id="ota-progress" style="height:20px;background-color:#337ab7;width:0%;border-radius:4px;"></div>
+            <div id="ota-status" class="text-center" style="margin-top:8px;"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var fileInput = document.getElementById('ota-file');
+            var passwordInput = document.getElementById('ota-password');
+            var button = document.getElementById('ota-button');
+            var wrap = document.getElementById('ota-progress-wrap');
+            var bar = document.getElementById('ota-progress');
+            var status = document.getElementById('ota-status');
+
+            function setProgress(pct, text) {
+                wrap.style.display = 'block';
+                bar.style.width = pct + '%';
+                status.textContent = text;
+            }
+
+            button.addEventListener('click', function () {
+                var file = fileInput.files[0];
+                if (!file) {
+                    setProgress(0, 'Select a firmware (.bin) file first');
+                    return;
+                }
+                if (file.name.slice(-4).toLowerCase() !== '.bin') {
+                    setProgress(0, 'Only .bin firmware files are supported');
+                    return;
+                }
+
+                button.disabled = true;
+                wrap.style.display = 'block';
+                status.textContent = 'Uploading ' + file.name + ' ...';
+                bar.style.width = '0%';
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/update', true);
+                // The web updater is protected by OTA_PASSWORD: send it as HTTP
+                // Basic credentials (any username; only the password is checked).
+                if (passwordInput.value) {
+                    xhr.setRequestHeader('Authorization', 'Basic ' + btoa('admin:' + passwordInput.value));
+                }
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        var pct = Math.round(e.loaded * 100 / e.total);
+                        setProgress(pct, 'Uploading ... ' + pct + '%');
+                    }
+                };
+                xhr.onload = function () {
+                    if (xhr.status === 401) {
+                        setProgress(0, 'Authentication failed - check the OTA password');
+                        button.disabled = false;
+                        return;
+                    }
+                    if (xhr.status >= 400) {
+                        setProgress(0, 'Update failed (HTTP ' + xhr.status + '). Check the serial monitor.');
+                        button.disabled = false;
+                        return;
+                    }
+                    setProgress(100, 'Update finished (HTTP ' + xhr.status + '). Rebooting ...');
+                    setTimeout(function () { location.href = '/'; }, 5000);
+                };
+                xhr.onerror = function () {
+                    status.textContent = 'Upload failed. Check the serial monitor for details.';
+                    button.disabled = false;
+                };
+                xhr.send(file);
+            });
+        })();
+    </script>
+    {{/OtaSupported}}
+
 </body>
 
 </html>
