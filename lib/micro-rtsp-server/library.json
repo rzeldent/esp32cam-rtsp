@@ -1,0 +1,20 @@
+{
+    "name": "micro-rtsp-server",
+    "version": "1.1.0",
+    "description": "Micro RTSP server streaming JPEG video (and optional G.711 audio) from an ESP32 camera",
+    "keywords": "rtsp, camera, jpeg, rtp, esp32, video, streaming",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/rzeldent/micro-rtsp-streamer"
+    },
+
+    "build": {
+        "srcDir": "src/",
+        "includeDir": "include/"
+    },
+
+    "dependencies": {
+        "micro-jpg": "^1.0.0",
+        "espressif/esp32-camera": "^2.0.4"
+    }
+}

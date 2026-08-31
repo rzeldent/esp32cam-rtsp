@@ -1,0 +1,25 @@
+# Python tooling for the ESP32CAM-RTSP project.
+#
+# Two helper scripts need third-party packages:
+#   - tools/srtp_client.py  -> cryptography  (RFC 3711 AES-CM decrypt)
+#   - minify.py             -> minify-html   (generate_html.* pipeline)
+#
+# Compatible with pip, Poetry and uv:
+#   pip install .
+#   poetry install
+#   uv sync
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esp32cam-rtsp-tools"
+version = "0.1.0"
+description = "Python helper tools for the ESP32CAM-RTSP project (SRTP test client, HTML minifier)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "cryptography>=41.0",  # tools/srtp_client.py
+    "minify-html>=0.12",   # minify.py
+]

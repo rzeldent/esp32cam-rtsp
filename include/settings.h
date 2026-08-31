@@ -5,14 +5,18 @@
 
 #define WIFI_SSID "ESP32CAM-RTSP"
 #define WIFI_PASSWORD nullptr
-#define CONFIG_VERSION "1.6"
+#define CONFIG_VERSION "1.7"
 
 #define OTA_PASSWORD "ESP32CAM-RTSP"
 
-#define RTSP_PORT 554
+// Time servers
+#define NTP_SERVER_1 "nl.pool.ntp.org"
+#define NTP_SERVER_2 "europe.pool.ntp.org"
+#define NTP_SERVER_3 "time.nist.gov"
+#define NTP_SERVERS NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3
 
 #define DEFAULT_FRAME_DURATION 200
-#define DEFAULT_FRAME_SIZE "VGA (640x480)"
+#define DEFAULT_FRAME_SIZE "QVGA (320x240)"
 #define DEFAULT_JPEG_QUALITY (psramFound() ? 12 : 14)
 
 #define DEFAULT_BRIGHTNESS 0
@@ -39,3 +43,5 @@
 #define DEFAULT_COLORBAR false
 
 #define DEFAULT_LED_INTENSITY 0
+
+#define DEFAULT_WWW_REALM "ESP32CAM-RTSP"

@@ -1,0 +1,18 @@
+# ESP32 4MB OTA-capable partition table
+#
+# Two ~1.94MB app slots (ota_0 + ota_1) + otadata so the bootloader can
+# swap between the current and the new firmware during an over-the-air
+# update. No SPIFFS/LittleFS partition: this firmware stores all settings
+# in NVS and embeds the web page in the app image.
+#
+# Used by the classic ESP32 (4MB flash) boards, overriding the single-slot
+# "huge_app.csv" they would otherwise use. Boards with 8MB/16MB flash keep
+# their own default tables (default_8MB.csv / default_16MB.csv), which are
+# already OTA-capable.
+#
+# Name,     Type, SubType,  Offset,   Size,     Flags
+nvs,        data, nvs,      0x9000,   0x5000,
+otadata,    data, ota,      0xe000,   0x2000,
+app0,       app,  ota_0,    0x10000,  0x1f0000,
+app1,       app,  ota_1,    0x200000, 0x1f0000,
+coredump,   data, coredump, 0x3f0000, 0x10000,
