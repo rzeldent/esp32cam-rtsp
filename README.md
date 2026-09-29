@@ -60,6 +60,7 @@ Supported protocols
 This software supports the following ESP32-CAM (and alike) modules:
 
 - AI THINKER
+- ESP32-S3-CAM V3 (Type-C)
 - Espressif ESP-EYE
 - Espressif ESP32S2-CAM
 - Espressif ESP32S3-CAM-LCD
@@ -132,6 +133,7 @@ To select the right board use the table below and use the configuration that is 
 |---                              |---                                                                                                  |---                      |---     |---     | ---   |---              |---          |---                                                                                                                                |
 | Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
 | AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
+| ESP32-S3-CAM V3 (Type-C)        | ![img](assets/boards/esp32s3-cam-v3.jpg) ![img](assets/boards/esp32s3-cam-v3-camera.jpg)           | ESP32-S3R8              | 512KB  | 8MB    | 8MB   | OV2640 / OV3660 | Flash LED   | [https://nl.aliexpress.com/item/1005008678466795.html](https://nl.aliexpress.com/item/1005008678466795.html)                      |
 | Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
 | Espressif ESP32-S3-EYE          | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4MB    | 8MB   | OV2640          |             | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview)  |
 | LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4MB    | 8MB   | OV2640 / OV5640 |             |                                                                                                                                   |
@@ -152,6 +154,14 @@ More information can be found at: [https://docs.platformio.org/en/latest/install
 Install [Visual Studio Code](https://code.visualstudio.com) and install the PlatformIO plugin.
 
 ## Putting the ESP32-CAM in download mode
+
+### USB Type-C
+
+Modules with an onboard USB Type-C connector (for example the ESP32-S3-CAM V3) can be programmed directly
+over USB; no FTDI adapter or ESP32-CAM-MB board is required.
+Connect the module with a USB-C cable and it will normally enter download mode automatically.
+If uploading fails, put it in download mode manually by holding **BOOT**, pressing and releasing **RESET**,
+and then releasing **BOOT**.
 
 ### ESP32-CAM-MB
 
@@ -571,6 +581,7 @@ Not all the boards are equipped with PSRAM:
 | M5STACK_UNITCAMS3  | 8MB            |
 | M5STACK_M5PoECAM-W | 8MB            |
 | AI_THINKER         | 4MB            |
+| S3_CAM_V3          | 8MB            |
 | TTGO_T_JOURNAL     | No             |
 | ESP32_CAM_BOARD    | ?              |
 | ESP32S2_CAM_BOARD  | ?              |
@@ -609,6 +620,8 @@ esp32cam-rtsp depends on PlatformIO, IotWebConf, Bootstrap 5, micro-moustache an
 
 ## Change history
 
+- September 2026
+  - Added support for the ESP32-S3-CAM V3 (Type-C), an ESP32-S3 camera module
 - August 2026
   - Rewrote the RTSP server (`micro-rtsp-server`): RTP/UDP and RTP/RTSP/TCP, SRTP, G.711 audio
   - Improved streaming stability and performance
