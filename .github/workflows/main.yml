@@ -4,32 +4,78 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        environment:
+          - esp32cam_ai_thinker
+          - esp32cam_espressif_esp_eye
+          - esp32cam_espressif_esp32s2_cam_board
+          - esp32cam_espressif_esp32s2_cam_header
+          - esp32cam_espressif_esp32s3_cam_lcd
+          - esp32cam_espressif_esp32s3_eye
+          - esp32cam_freenove_s3_wroom_n8r8
+          - esp32cam_freenove_wrover_kit
+          - esp32cam_m5stack_atoms3r
+          - esp32cam_m5stack_camera
+          - esp32cam_m5stack_camera_psram
+          - esp32cam_m5stack_esp32cam
+          - esp32cam_m5stack_m5poecam_w
+          - esp32cam_m5stack_unitcam
+          - esp32cam_m5stack_unitcams3
+          - esp32cam_m5stack_wide
+          - esp32cam_s3_cam_v3
+          - esp32cam_s3_wroom_n16r8
+          - esp32cam_seeed_xiao_esp32s3_sense
+          - esp32cam_ttgo_t_camera
+          - esp32cam_ttgo_t_journal
+          - m5stack-timer-cam
+
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: 'true'
+
       - name: Generate HTML files
         run: |
           chmod +x ./generate_html.sh
           ./generate_html.sh
         shell: bash
+        
       - uses: actions/cache@v6
         with:
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
-          key: ${{ runner.os }}-pio          
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.9'
+
       - name: Install PlatformIO
         run: python -m pip install platformio
-      - name: Build firmware
-        run: platformio run
-      - name: Archive
+
+      - name: Build firmware -e ${{ matrix.environment }}
+        run: platformio run -e ${{ matrix.environment }}
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/${{ matrix.environment }}
+          cp .pio/build/${{ matrix.environment }}/firmware.bin artifacts/${{ matrix.environment }}/
+
+          # Generate build info
+          echo "Build Date: $(date)" > artifacts/${{ matrix.environment }}/build-info.txt
+          echo "Environment: ${{ matrix.environment }}" >> artifacts/${{ matrix.environment }}/build-info.txt
+          echo "Commit: ${{ github.sha }}" >> artifacts/${{ matrix.environment }}/build-info.txt
+          echo "Ref: ${{ github.ref }}" >> artifacts/${{ matrix.environment }}/build-info.txt
+
+      - name: Upload firmwares
         uses: actions/upload-artifact@v7
         with:
-          name: firmwares.zip
-          path: .pio/build/*/firmware.bin
+          name: ${{ matrix.environment }}
+          path: artifacts/${{ matrix.environment }}/*.*
