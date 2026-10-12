@@ -134,6 +134,7 @@ To select the right board use the table below and use the configuration that is 
 | Espressif ESP32-Wrover CAM      | ![img](assets/boards/esp32-wrover-cam.jpg)                                                          | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
 | AI-Thinker ESP32-CAM            | ![img](assets/boards/ai-thinker-esp32-cam-ipex.jpg) ![img](assets/boards/ai-thinker-esp32-cam.jpg)  | ESP32                   | 520KB  | 4MB    | 4MB   | OV2640          |             | [https://docs.ai-thinker.com/esp32-cam](https://docs.ai-thinker.com/esp32-cam)                                                    |
 | ESP32-S3-CAM V3 (Type-C)        | ![img](assets/boards/esp32s3-cam-v3.jpg) ![img](assets/boards/esp32s3-cam-v3-camera.jpg)           | ESP32-S3R8              | 512KB  | 8MB    | 8MB   | OV2640 / OV3660 | Flash LED   | [https://nl.aliexpress.com/item/1005008678466795.html](https://nl.aliexpress.com/item/1005008678466795.html)                      |
+| ESP32-S3-CAM V3 (Type-C) with external INMP441 microphone | ![img](assets/boards/esp32s3-cam-v3.jpg) ![img](assets/boards/esp32s3-cam-v3-camera.jpg) | ESP32-S3R8 | 512KB | 8MB | 8MB | OV2640 / OV3660 | Flash LED, External MEMS Mic | [https://nl.aliexpress.com/item/1005008678466795.html](https://nl.aliexpress.com/item/1005008678466795.html) |
 | Espressif ESP-EYE               | ![img](assets/boards/espressif-esp-eye.jpg)                                                         | ESP32                   | 520KB  | 4MB    | 8MB   | OV2640          |             |                                                                                                                                   |
 | Espressif ESP32-S3-EYE          | ![img](assets/boards/espressif-esps3-eye.jpg)                                                       | ESP32-S3                | 520KB  | 4MB    | 8MB   | OV2640          |             | [https://www.espressif.com/en/products/devkits/esp-eye/overview](https://www.espressif.com/en/products/devkits/esp-eye/overview)  |
 | LilyGo camera module            | ![img](assets/boards/lilygo-camera-module.jpg)                                                      | ESP32 Wrover            | 520KB  | 4MB    | 8MB   | OV2640 / OV5640 |             |                                                                                                                                   |
@@ -404,6 +405,42 @@ configuration, for example:
 "'-D MIC_I2S_WS=42'",
 "'-D MIC_I2S_DIN=41'"
 ```
+
+#### External MEMS Microphone (INMP441) for ESP32-S3-CAM V3
+
+The ESP32-S3-CAM V3 (Type-C) board can be used with an external **INMP441 I2S MEMS microphone** to add audio streaming capability. A pre-configured board definition `esp32cam_s3_cam_v3_inmp441` is available in PlatformIO.
+
+**Wiring the INMP441 to ESP32-S3-CAM V3:**
+
+| INMP441 Pin | ESP32-S3-CAM V3 GPIO | Description |
+|-------------|---------------------|-------------|
+| VDD         | 3.3V                | Power supply (3.3V) |
+| GND         | GND                 | Ground |
+| SCK (BCLK)  | GPIO 2              | I2S Bit Clock |
+| WS          | GPIO 4              | I2S Word Select (Left/Right Clock) |
+| SD (DIN)    | GPIO 13             | I2S Serial Data Input |
+| L/R         | GND                 | Left channel (connect to GND for mono) |
+
+**Note:** The INMP441 is a bottom-port microphone, so ensure the sound port is not blocked when mounting.
+
+**To use the external microphone:**
+
+1. Select the `esp32cam_s3_cam_v3_inmp441` environment in PlatformIO:
+   ```ini
+   default_envs = esp32cam_s3_cam_v3_inmp441
+   ```
+   Or build/upload with:
+   ```sh
+   pio run -e esp32cam_s3_cam_v3_inmp441
+   pio run -t upload -e esp32cam_s3_cam_v3_inmp441
+   ```
+
+2. The board configuration automatically defines the I2S pins:
+   - `MIC_I2S_BCLK=2`
+   - `MIC_I2S_WS=4`
+   - `MIC_I2S_DIN=13`
+
+3. After flashing, the RTSP stream will include an audio track (G.711 a-law, 8 kHz mono) alongside the video.
 
 ### ffmpeg
 

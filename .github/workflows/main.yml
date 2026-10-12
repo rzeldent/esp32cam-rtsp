@@ -31,6 +31,8 @@ jobs:
           - esp32cam_ttgo_t_camera
           - esp32cam_ttgo_t_journal
           - m5stack-timer-cam
+          - esp32cam_s3_cam_v3
+          - esp32cam_s3_cam_v3_inmp441
 
     steps:
       - uses: actions/checkout@v7
