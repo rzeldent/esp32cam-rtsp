@@ -473,7 +473,7 @@ void setup()
 #ifdef FLASH_LED_GPIO
   pinMode(FLASH_LED_GPIO, OUTPUT);
   // Set resolution to 8 bits
-  analogWriteResolution(8);
+  analogWriteResolution(FLASH_LED_GPIO, 8);
   // Turn flash led off
   analogWrite(FLASH_LED_GPIO, 0);
 #endif
